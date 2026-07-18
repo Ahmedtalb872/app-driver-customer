@@ -71,11 +71,7 @@ class CustomStateWidget extends StatelessWidget {
                 color: AppColors.primary.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                icon,
-                size: 64,
-                color: AppColors.primary,
-              ),
+              child: Icon(icon, size: 64, color: AppColors.primary),
             ),
             const SizedBox(height: 24),
             Text(

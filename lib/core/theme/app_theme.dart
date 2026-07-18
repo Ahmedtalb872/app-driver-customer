@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../constants/colors.dart';
 
 class AppTheme {
   static ThemeData get lightTheme {
+    // Registers the real Cairo font under the 'Cairo' family name via
+    // google_fonts. Every TextStyle(fontFamily: 'Cairo') already
+    // hardcoded across the app's screens resolves through this same
+    // font-family name once it's loaded here, so this one call is enough
+    // to make Cairo render everywhere - no per-widget changes needed.
+    final cairoTextTheme = GoogleFonts.cairoTextTheme();
+
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
@@ -14,17 +22,17 @@ class AppTheme {
         error: AppColors.error,
       ),
       scaffoldBackgroundColor: AppColors.background,
-      fontFamily: 'Cairo', // Falls back to system sans-serif if Cairo is not available
-      
+      fontFamily: GoogleFonts.cairo().fontFamily,
+      textTheme: cairoTextTheme,
+      primaryTextTheme: cairoTextTheme,
+
       cardTheme: ThemeData.light().cardTheme.copyWith(
         color: AppColors.surface,
         elevation: 2,
         shadowColor: AppColors.darkText.withValues(alpha: 0.08),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
-      
+
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
@@ -41,7 +49,7 @@ class AppTheme {
           ),
         ),
       ),
-      
+
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.primary,
@@ -57,7 +65,7 @@ class AppTheme {
           ),
         ),
       ),
-      
+
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.primary,
@@ -68,11 +76,14 @@ class AppTheme {
           ),
         ),
       ),
-      
+
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.surface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 18,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
           borderSide: const BorderSide(color: AppColors.border, width: 1),
@@ -104,7 +115,7 @@ class AppTheme {
           fontFamily: 'Cairo',
         ),
       ),
-      
+
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.surface,
         foregroundColor: AppColors.darkText,
@@ -117,7 +128,7 @@ class AppTheme {
           fontFamily: 'Cairo',
         ),
       ),
-      
+
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: AppColors.surface,
         elevation: 8,

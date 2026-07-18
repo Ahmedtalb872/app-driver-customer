@@ -1,11 +1,11 @@
 {
-    "name": "alhudhud",
-    "short_name": "alhudhud",
+    "name": "الهدهد - لوحة التحكم",
+    "short_name": "الهدهد",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F8FAFC",
+    "theme_color": "#0B6E72",
+    "description": "لوحة تحكم الهدهد (AL HODHOD) - إدارة تطبيق النقل الذكي.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

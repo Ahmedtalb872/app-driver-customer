@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../providers/app_state_provider.dart';
-import '../../models/models.dart';
 
 class ChatScreen extends StatefulWidget {
   final bool showAppBar;
@@ -38,7 +37,10 @@ class _ChatScreenState extends State<ChatScreen> {
   void _handleSend() {
     final text = _messageController.text.trim();
     if (text.isNotEmpty) {
-      Provider.of<AppStateProvider>(context, listen: false).sendChatMessage(text);
+      Provider.of<AppStateProvider>(
+        context,
+        listen: false,
+      ).sendChatMessage(text);
       _messageController.clear();
       _scrollToBottom();
     }
@@ -46,7 +48,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _shareLocation() {
     final provider = Provider.of<AppStateProvider>(context, listen: false);
-    
+
     // Simulate sending location card
     provider.sendChatMessage('📍 مشاركة موقعي الحالي: (18.1025, -15.9754)');
     _scrollToBottom();
@@ -54,15 +56,15 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _simulateCall() {
     final provider = Provider.of<AppStateProvider>(context, listen: false);
-    final targetName = provider.userType == UserType.customer 
-        ? (provider.activeTrip?.captainName ?? 'الكابتن') 
-        : (provider.activeTrip?.customerName ?? 'الزبون');
-        
+    final targetName = provider.activeTrip?.customerName ?? 'الزبون';
+
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+          ),
           title: const Text(
             'اتصال هاتفي',
             style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
@@ -79,13 +81,21 @@ class _ChatScreenState extends State<ChatScreen> {
               const SizedBox(height: 16),
               Text(
                 'جاري الاتصال بـ $targetName...',
-                style: const TextStyle(fontFamily: 'Cairo', fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               const Text(
                 'سيتم فتح تطبيق الاتصال الافتراضي في جهازك.',
-                style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: AppColors.secondaryText),
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 12,
+                  color: AppColors.secondaryText,
+                ),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -94,7 +104,9 @@ class _ChatScreenState extends State<ChatScreen> {
             Center(
               child: ElevatedButton.icon(
                 onPressed: () => Navigator.of(context).pop(),
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.error,
+                ),
                 icon: const Icon(Icons.call_end_rounded),
                 label: const Text('إنهاء المكالمة'),
               ),
@@ -109,11 +121,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     final provider = Provider.of<AppStateProvider>(context);
     final messages = provider.chatMessages;
-    final isCustomer = provider.userType == UserType.customer;
-    
-    final targetName = isCustomer
-        ? (provider.activeTrip?.captainName ?? 'كابتن الهدهد')
-        : (provider.activeTrip?.customerName ?? 'الزبون');
+    final targetName = provider.activeTrip?.customerName ?? 'الزبون';
 
     // Trigger scroll to bottom on load
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
@@ -135,11 +143,19 @@ class _ChatScreenState extends State<ChatScreen> {
                 children: [
                   Text(
                     targetName,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Cairo',
+                    ),
                   ),
                   const Text(
                     'نشط الآن',
-                    style: TextStyle(fontSize: 10, color: AppColors.success, fontFamily: 'Cairo'),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: AppColors.success,
+                      fontFamily: 'Cairo',
+                    ),
                   ),
                 ],
               ),
@@ -167,10 +183,15 @@ class _ChatScreenState extends State<ChatScreen> {
                 bool isMe = msg.isMe;
 
                 return Align(
-                  alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                  alignment: isMe
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     constraints: BoxConstraints(
                       maxWidth: MediaQuery.of(context).size.width * 0.75,
                     ),
@@ -202,14 +223,20 @@ class _ChatScreenState extends State<ChatScreen> {
                             Text(
                               msg.time,
                               style: TextStyle(
-                                color: isMe ? Colors.white70 : AppColors.secondaryText,
+                                color: isMe
+                                    ? Colors.white70
+                                    : AppColors.secondaryText,
                                 fontSize: 9,
                                 fontFamily: 'Cairo',
                               ),
                             ),
                             if (isMe) ...[
                               const SizedBox(width: 4),
-                              const Icon(Icons.done_all_rounded, color: Colors.white70, size: 12),
+                              const Icon(
+                                Icons.done_all_rounded,
+                                color: Colors.white70,
+                                size: 12,
+                              ),
                             ],
                           ],
                         ),
@@ -220,7 +247,7 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
-          
+
           // Chat Input panel
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -233,10 +260,13 @@ class _ChatScreenState extends State<ChatScreen> {
                 children: [
                   // Location Share button
                   IconButton(
-                    icon: const Icon(Icons.location_on_rounded, color: AppColors.primary),
+                    icon: const Icon(
+                      Icons.location_on_rounded,
+                      color: AppColors.primary,
+                    ),
                     onPressed: _shareLocation,
                   ),
-                  
+
                   // Text input
                   Expanded(
                     child: TextField(
@@ -253,7 +283,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       onSubmitted: (_) => _handleSend(),
                     ),
                   ),
-                  
+
                   // Send button
                   Container(
                     decoration: const BoxDecoration(
@@ -261,7 +291,11 @@ class _ChatScreenState extends State<ChatScreen> {
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
-                      icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                      icon: const Icon(
+                        Icons.send_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                       onPressed: _handleSend,
                     ),
                   ),

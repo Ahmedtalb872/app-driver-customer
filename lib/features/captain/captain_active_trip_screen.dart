@@ -6,6 +6,7 @@ import '../../models/models.dart';
 import '../../core/widgets/real_map_widget.dart';
 import '../support/chat_screen.dart';
 import 'captain_trip_summary_screen.dart';
+import 'open_trip_active_screen.dart';
 
 class CaptainActiveTripScreen extends StatelessWidget {
   const CaptainActiveTripScreen({super.key});
@@ -15,14 +16,26 @@ class CaptainActiveTripScreen extends StatelessWidget {
       context: context,
       builder: (context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-          title: const Text('اتصال هاتفي', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-          content: Text('جاري الاتصال بـ $name...\n(+222 44444444)', style: const TextStyle(fontFamily: 'Cairo', fontSize: 14), textAlign: TextAlign.center),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+          ),
+          title: const Text(
+            'اتصال هاتفي',
+            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          content: Text(
+            'جاري الاتصال بـ $name...\n(+222 44444444)',
+            style: const TextStyle(fontFamily: 'Cairo', fontSize: 14),
+            textAlign: TextAlign.center,
+          ),
           actions: [
             Center(
               child: ElevatedButton.icon(
                 onPressed: () => Navigator.of(context).pop(),
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.error,
+                ),
                 icon: const Icon(Icons.call_end_rounded),
                 label: const Text('إنهاء المكالمة'),
               ),
@@ -38,15 +51,34 @@ class CaptainActiveTripScreen extends StatelessWidget {
     final provider = Provider.of<AppStateProvider>(context);
     final trip = provider.activeTrip;
 
+    // Open (destination-unknown) trips use their own dedicated flow: a
+    // multi-stage state machine, live GPS meter, and metered fare — distinct
+    // enough from the fixed-route normal flow below to warrant its own screen.
+    if (trip != null &&
+        trip.isOpenTrip &&
+        trip.status != TripStatus.completed) {
+      return const OpenTripActiveScreen();
+    }
+
     if (trip == null) {
       return Scaffold(
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.check_circle_rounded, size: 48, color: AppColors.success),
+              const Icon(
+                Icons.check_circle_rounded,
+                size: 48,
+                color: AppColors.success,
+              ),
               const SizedBox(height: 16),
-              const Text('تم إكمال المشوار بنجاح!', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
+              const Text(
+                'تم إكمال المشوار بنجاح!',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 12),
               ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -62,7 +94,9 @@ class CaptainActiveTripScreen extends StatelessWidget {
     if (trip.status == TripStatus.completed) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const CaptainTripSummaryScreen()),
+          MaterialPageRoute(
+            builder: (context) => const CaptainTripSummaryScreen(),
+          ),
         );
       });
     }
@@ -115,27 +149,40 @@ class CaptainActiveTripScreen extends StatelessWidget {
                     destLng: trip.destLng,
                     animateCar: true,
                   ),
-                  
+
                   // Float ETA indicator
                   Positioned(
                     top: 16,
                     right: 16,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
-                        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
+                        boxShadow: const [
+                          BoxShadow(color: Colors.black12, blurRadius: 4),
+                        ],
                       ),
                       child: Column(
                         children: [
                           Text(
                             '${trip.distance} كم',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primary),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: AppColors.primary,
+                            ),
                           ),
                           const Text(
                             'المسافة الكلية',
-                            style: TextStyle(fontSize: 10, color: AppColors.secondaryText, fontFamily: 'Cairo'),
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: AppColors.secondaryText,
+                              fontFamily: 'Cairo',
+                            ),
                           ),
                         ],
                       ),
@@ -144,7 +191,7 @@ class CaptainActiveTripScreen extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             // Bottom Sheet control board
             Container(
               padding: const EdgeInsets.all(24),
@@ -160,8 +207,12 @@ class CaptainActiveTripScreen extends StatelessWidget {
                   Row(
                     children: [
                       Icon(
-                        trip.status == TripStatus.started ? Icons.flag_rounded : Icons.radio_button_checked_rounded,
-                        color: trip.status == TripStatus.started ? AppColors.error : AppColors.success,
+                        trip.status == TripStatus.started
+                            ? Icons.flag_rounded
+                            : Icons.radio_button_checked_rounded,
+                        color: trip.status == TripStatus.started
+                            ? AppColors.error
+                            : AppColors.success,
                         size: 20,
                       ),
                       const SizedBox(width: 12),
@@ -171,11 +222,20 @@ class CaptainActiveTripScreen extends StatelessWidget {
                           children: [
                             Text(
                               addressLabel,
-                              style: const TextStyle(fontSize: 10, color: AppColors.secondaryText, fontFamily: 'Cairo'),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: AppColors.secondaryText,
+                                fontFamily: 'Cairo',
+                              ),
                             ),
                             Text(
                               addressValue,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.darkText, fontFamily: 'Cairo'),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: AppColors.darkText,
+                                fontFamily: 'Cairo',
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -185,14 +245,18 @@ class CaptainActiveTripScreen extends StatelessWidget {
                     ],
                   ),
                   const Divider(height: 24),
-                  
+
                   // Customer details and actions row
                   Row(
                     children: [
                       const CircleAvatar(
                         radius: 20,
                         backgroundColor: AppColors.primary,
-                        child: Icon(Icons.person, color: Colors.white, size: 22),
+                        child: Icon(
+                          Icons.person,
+                          color: Colors.white,
+                          size: 22,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -201,35 +265,56 @@ class CaptainActiveTripScreen extends StatelessWidget {
                           children: [
                             Text(
                               trip.customerName,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'Cairo'),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                fontFamily: 'Cairo',
+                              ),
                             ),
                             Text(
                               trip.customerPhone,
-                              style: const TextStyle(fontSize: 11, color: AppColors.secondaryText),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.secondaryText,
+                              ),
                             ),
                           ],
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.primary, size: 20),
+                        icon: const Icon(
+                          Icons.chat_bubble_outline_rounded,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
                         onPressed: () {
                           Navigator.of(context).push(
-                            MaterialPageRoute(builder: (context) => const ChatScreen(showAppBar: true)),
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const ChatScreen(showAppBar: true),
+                            ),
                           );
                         },
                       ),
                       IconButton(
-                        icon: const Icon(Icons.call_outlined, color: AppColors.primary, size: 20),
-                        onPressed: () => _simulateCall(context, trip.customerName),
+                        icon: const Icon(
+                          Icons.call_outlined,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
+                        onPressed: () =>
+                            _simulateCall(context, trip.customerName),
                       ),
                     ],
                   ),
                   const SizedBox(height: 20),
-                  
+
                   // Status change confirm action button
                   ElevatedButton(
                     onPressed: onAction,
-                    style: ElevatedButton.styleFrom(backgroundColor: actionColor),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: actionColor,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [

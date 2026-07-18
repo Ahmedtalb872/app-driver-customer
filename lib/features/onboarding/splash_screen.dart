@@ -1,7 +1,8 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../core/constants/colors.dart';
-import 'user_type_selection_screen.dart';
+import '../authentication/captain_login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -10,46 +11,54 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fadeAnimation;
-  late Animation<double> _scaleAnimation;
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _logoFade;
+  late final Animation<double> _logoScale;
+  late final Animation<double> _contentFade;
+  Timer? _navigationTimer;
 
   @override
   void initState() {
     super.initState();
+    // A single, short fade+scale entrance - no rotation, no bounce/overshoot
+    // curve, and it never repeats.
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 700),
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
-    );
-
-    _scaleAnimation = Tween<double>(begin: 0.6, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
+    _logoFade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
+    _logoScale = Tween<double>(
+      begin: 0.92,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    _contentFade = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.4, 1.0, curve: Curves.easeOut),
     );
 
     _controller.forward();
 
-    Timer(const Duration(milliseconds: 2800), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) => const UserTypeSelectionScreen(),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-            transitionDuration: const Duration(milliseconds: 600),
-          ),
-        );
-      }
+    _navigationTimer = Timer(const Duration(milliseconds: 2600), () {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const CaptainLoginScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 500),
+        ),
+      );
     });
   }
 
   @override
   void dispose() {
+    _navigationTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -57,123 +66,205 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primary,
-      body: Stack(
-        children: [
-          // Background subtle pattern
-          Positioned(
-            top: -100,
-            right: -100,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.05),
+      backgroundColor: Colors.white,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          final height = constraints.maxHeight;
+
+          // The logo gets a generous, responsive slice of the available
+          // space - never a fixed height box, so BoxFit.contain always has
+          // room to lay out the full image without cropping it. Bounded by
+          // height as well as width so short/wide viewports (tablets in
+          // landscape, split-screen, ...) never push the content below the
+          // fold - the SingleChildScrollView further down is only a safety
+          // net for anything still tighter than that.
+          final logoWidth = math
+              .min(width * 0.55, height * 0.3)
+              .clamp(140.0, 300.0);
+          final taglineFontSize = (width * 0.038).clamp(13.0, 17.0);
+          final curveHeight = (height * 0.2).clamp(110.0, 200.0);
+
+          return Stack(
+            children: [
+              // Decorative bottom curves in the logo's brand colors - a
+              // full-bleed background layer, intentionally outside the
+              // SafeArea below so it can still touch the screen edges.
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: SizedBox(
+                  width: width,
+                  height: curveHeight,
+                  child: CustomPaint(painter: _SplashCurvesPainter()),
+                ),
               ),
-            ),
-          ),
-          Positioned(
-            bottom: -50,
-            left: -50,
-            child: Container(
-              width: 250,
-              height: 250,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.03),
-              ),
-            ),
-          ),
-          
-          // Main content
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ScaleTransition(
-                  scale: _scaleAnimation,
-                  child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black12,
-                            blurRadius: 20,
-                            offset: Offset(0, 10),
-                          )
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.local_taxi_rounded,
-                        size: 80,
-                        color: AppColors.primary,
+
+              // All real content (logo, tagline, loading indicator) stays
+              // clear of the status bar and the bottom system/gesture bar.
+              SafeArea(
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: LayoutBuilder(
+                        builder: (context, innerConstraints) {
+                          return SingleChildScrollView(
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                minHeight: innerConstraints.maxHeight,
+                              ),
+                              child: Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 16,
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      FadeTransition(
+                                        opacity: _logoFade,
+                                        child: ScaleTransition(
+                                          scale: _logoScale,
+                                          child: ConstrainedBox(
+                                            constraints: BoxConstraints(
+                                              maxWidth: logoWidth,
+                                            ),
+                                            child: Image.asset(
+                                              'assets/images/al-houdhoud-logo.png',
+                                              width: logoWidth,
+                                              fit: BoxFit.contain,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      SizedBox(height: logoWidth * 0.12),
+                                      FadeTransition(
+                                        opacity: _contentFade,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 18,
+                                            vertical: 8,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primary.withValues(
+                                              alpha: 0.08,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              30,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            'نقل سريع، آمن وأسهل',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize: taglineFontSize,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppColors.primaryDark,
+                                              fontFamily: 'Cairo',
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Column(
-                    children: [
-                      const Text(
-                        'الهدهد',
-                        style: TextStyle(
-                          fontSize: 42,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          fontFamily: 'Cairo',
-                          letterSpacing: 1.5,
+                    FadeTransition(
+                      opacity: _contentFade,
+                      child: Padding(
+                        padding: EdgeInsets.only(bottom: curveHeight + 20),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: 26,
+                              height: 26,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.6,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  AppColors.primary,
+                                ),
+                                backgroundColor: AppColors.primary.withValues(
+                                  alpha: 0.15,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              'جاري التحميل...',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.secondaryText,
+                                fontFamily: 'Cairo',
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        child: const Text(
-                          'نقل سريع، آمن وأسهل',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                            fontFamily: 'Cairo',
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Bottom loading/progress indicator
-          Positioned(
-            bottom: 60,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: SizedBox(
-                width: 40,
-                height: 40,
-                child: CircularProgressIndicator(
-                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                  strokeWidth: 3,
-                  backgroundColor: Colors.white.withOpacity(0.2),
+                    ),
+                  ],
                 ),
               ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
+}
+
+class _SplashCurvesPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final greenPaint = Paint()..color = AppColors.primary;
+    final greenPath = Path()
+      ..moveTo(0, size.height * 0.58)
+      ..quadraticBezierTo(
+        size.width * 0.22,
+        size.height * 0.28,
+        size.width * 0.52,
+        size.height * 0.46,
+      )
+      ..quadraticBezierTo(
+        size.width * 0.78,
+        size.height * 0.62,
+        size.width,
+        size.height * 0.32,
+      )
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(greenPath, greenPaint);
+
+    final orangePaint = Paint()..color = AppColors.accent;
+    final orangePath = Path()
+      ..moveTo(0, size.height * 0.8)
+      ..quadraticBezierTo(
+        size.width * 0.28,
+        size.height,
+        size.width * 0.58,
+        size.height * 0.8,
+      )
+      ..quadraticBezierTo(
+        size.width * 0.8,
+        size.height * 0.64,
+        size.width,
+        size.height * 0.86,
+      )
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(orangePath, orangePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _SplashCurvesPainter oldDelegate) => false;
 }

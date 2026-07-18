@@ -1,24 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../core/auth/app_role.dart';
+import '../../core/auth/auth_service.dart';
+import '../../core/config/supabase_config.dart';
 import '../../core/constants/colors.dart';
+import '../../models/models.dart';
 import '../../providers/app_state_provider.dart';
-import '../captain/captain_home_screen.dart';
+import '../profile/captain_documents_status_screen.dart';
 
 class CaptainRegisterStepperScreen extends StatefulWidget {
   const CaptainRegisterStepperScreen({super.key});
 
   @override
-  State<CaptainRegisterStepperScreen> createState() => _CaptainRegisterStepperScreenState();
+  State<CaptainRegisterStepperScreen> createState() =>
+      _CaptainRegisterStepperScreenState();
 }
 
-class _CaptainRegisterStepperScreenState extends State<CaptainRegisterStepperScreen> {
+class _CaptainRegisterStepperScreenState
+    extends State<CaptainRegisterStepperScreen> {
   int _currentStep = 1;
   bool _isSuccess = false;
   bool _termsApproved = false;
+  bool _isSubmittingAccount = false;
 
   // Step 1 Controllers
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   String _selectedCity = 'نواكشوط';
@@ -34,22 +43,11 @@ class _CaptainRegisterStepperScreenState extends State<CaptainRegisterStepperScr
   final _carPlateController = TextEditingController(text: '1234 AA 00');
   int _carSeats = 4;
 
-  // Step 3 Upload states
-  final Map<String, bool> _uploadStates = {
-    'الصورة الشخصية': false,
-    'بطاقة الهوية الوطنية': false,
-    'رخصة السياقة': false,
-    'البطاقة الرمادية': false,
-    'صورة السيارة': false,
-    'تأمين السيارة': false,
-    'تصريح العمل الإضافي': false,
-  };
-  String? _uploadingDoc;
-
   @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _addressController.dispose();
@@ -78,28 +76,6 @@ class _CaptainRegisterStepperScreenState extends State<CaptainRegisterStepperScr
     }
   }
 
-  void _simulateUpload(String docName) {
-    setState(() {
-      _uploadingDoc = docName;
-    });
-
-    Future.delayed(const Duration(milliseconds: 1200), () {
-      if (mounted) {
-        setState(() {
-          _uploadStates[docName] = true;
-          _uploadingDoc = null;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('تم رفع $docName بنجاح'),
-            backgroundColor: AppColors.success,
-            duration: const Duration(seconds: 1),
-          ),
-        );
-      }
-    });
-  }
-
   void _submitApplication() {
     if (!_termsApproved) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -111,21 +87,84 @@ class _CaptainRegisterStepperScreenState extends State<CaptainRegisterStepperScr
       return;
     }
 
-    // Check if documents are uploaded
-    bool allDocsUploaded = _uploadStates.values.every((uploaded) => uploaded);
-    if (!allDocsUploaded) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('يرجى رفع جميع المستندات المطلوبة أولاً'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-      return;
-    }
-
     setState(() {
       _isSuccess = true;
     });
+  }
+
+  Future<void> _createCaptainAccount() async {
+    setState(() {
+      _isSubmittingAccount = true;
+    });
+
+    final phone = '+222${_phoneController.text}';
+    final name = _nameController.text.isNotEmpty
+        ? _nameController.text
+        : 'كابتن هدهد جديد';
+
+    try {
+      await AuthService.instance.signUp(
+        phone: phone,
+        password: _passwordController.text,
+        fullName: name,
+        role: AppRole.captain,
+      );
+
+      final email = _emailController.text.trim();
+      if (email.isNotEmpty) {
+        final uid = AuthService.instance.currentUser?.id;
+        if (uid != null) {
+          // Best effort - `profiles` RLS already lets the owner update their
+          // own row (20260712000006_rls_policies.sql), so no new RPC is
+          // needed. A failure here shouldn't block account creation, since
+          // email is optional and can be added later from the profile
+          // screen.
+          try {
+            await SupabaseConfig.client
+                .from('profiles')
+                .update({'email': email})
+                .eq('id', uid);
+          } catch (_) {}
+        }
+      }
+
+      if (!mounted) return;
+
+      final provider = Provider.of<AppStateProvider>(context, listen: false);
+      provider.registerCaptain(name, phone);
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (context) => const CaptainDocumentsStatusScreen(),
+        ),
+        (route) => false,
+      );
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message, style: const TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'تعذر إنشاء الحساب. تحقق من الاتصال بالإنترنت وحاول مرة أخرى.',
+            style: TextStyle(fontFamily: 'Cairo'),
+          ),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmittingAccount = false;
+        });
+      }
+    }
   }
 
   @override
@@ -137,14 +176,28 @@ class _CaptainRegisterStepperScreenState extends State<CaptainRegisterStepperScr
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('تسجيل كابتن جديد'),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClipOval(
+              child: Image.asset(
+                'assets/images/al-houdhoud-logo.png',
+                width: 32,
+                height: 32,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Text('تسجيل كابتن جديد'),
+          ],
+        ),
       ),
       body: SafeArea(
         child: Column(
           children: [
             // Stepper indicator
             _buildStepperIndicator(),
-            
+
             // Step contents
             Expanded(
               child: SingleChildScrollView(
@@ -152,7 +205,7 @@ class _CaptainRegisterStepperScreenState extends State<CaptainRegisterStepperScr
                 child: _buildCurrentStepContent(),
               ),
             ),
-            
+
             // Bottom buttons
             _buildBottomButtons(),
           ],
@@ -195,10 +248,12 @@ class _CaptainRegisterStepperScreenState extends State<CaptainRegisterStepperScr
             color: isCompleted
                 ? AppColors.primary
                 : isActive
-                    ? AppColors.primary
-                    : Colors.white,
+                ? AppColors.primary
+                : Colors.white,
             border: Border.all(
-              color: isCompleted || isActive ? AppColors.primary : AppColors.border,
+              color: isCompleted || isActive
+                  ? AppColors.primary
+                  : AppColors.border,
               width: 2,
             ),
           ),
@@ -223,7 +278,7 @@ class _CaptainRegisterStepperScreenState extends State<CaptainRegisterStepperScr
             color: isActive ? AppColors.primary : AppColors.secondaryText,
             fontFamily: 'Cairo',
           ),
-        )
+        ),
       ],
     );
   }
@@ -260,21 +315,51 @@ class _CaptainRegisterStepperScreenState extends State<CaptainRegisterStepperScr
       children: [
         const Text(
           'المعلومات الشخصية',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.darkText, fontFamily: 'Cairo'),
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppColors.darkText,
+            fontFamily: 'Cairo',
+          ),
         ),
         const SizedBox(height: 16),
-        _buildTextField('الاسم الكامل', _nameController, hint: 'أدخل اسمك الكامل كما في الهوية'),
+        _buildTextField(
+          'الاسم الكامل',
+          _nameController,
+          hint: 'أدخل اسمك الكامل كما في الهوية',
+        ),
         const SizedBox(height: 16),
         _buildPhoneField('رقم الهاتف', _phoneController),
         const SizedBox(height: 16),
-        _buildTextField('كلمة المرور', _passwordController, obscure: true, hint: 'أدخل كلمة المرور لحسابك'),
+        _buildTextField(
+          'البريد الإلكتروني (اختياري)',
+          _emailController,
+          hint: 'example@email.com',
+        ),
         const SizedBox(height: 16),
-        _buildTextField('تأكيد كلمة المرور', _confirmPasswordController, obscure: true, hint: 'أعد كتابة كلمة المرور'),
+        _buildTextField(
+          'كلمة المرور',
+          _passwordController,
+          obscure: true,
+          hint: 'أدخل كلمة المرور لحسابك',
+        ),
+        const SizedBox(height: 16),
+        _buildTextField(
+          'تأكيد كلمة المرور',
+          _confirmPasswordController,
+          obscure: true,
+          hint: 'أعد كتابة كلمة المرور',
+        ),
         const SizedBox(height: 16),
         // City dropdown
         const Text(
           'المدينة',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.darkText, fontFamily: 'Cairo'),
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: AppColors.darkText,
+            fontFamily: 'Cairo',
+          ),
         ),
         const SizedBox(height: 8),
         Container(
@@ -288,7 +373,11 @@ class _CaptainRegisterStepperScreenState extends State<CaptainRegisterStepperScr
             child: DropdownButton<String>(
               value: _selectedCity,
               isExpanded: true,
-              style: const TextStyle(color: AppColors.darkText, fontSize: 16, fontFamily: 'Cairo'),
+              style: const TextStyle(
+                color: AppColors.darkText,
+                fontSize: 16,
+                fontFamily: 'Cairo',
+              ),
               onChanged: (value) {
                 if (value != null) {
                   setState(() {
@@ -298,16 +387,21 @@ class _CaptainRegisterStepperScreenState extends State<CaptainRegisterStepperScr
               },
               items: <String>['نواكشوط', 'نواذيبو', 'روصو', 'أطار', 'كيفه']
                   .map<DropdownMenuItem<String>>((String val) {
-                return DropdownMenuItem<String>(
-                  value: val,
-                  child: Text(val),
-                );
-              }).toList(),
+                    return DropdownMenuItem<String>(
+                      value: val,
+                      child: Text(val),
+                    );
+                  })
+                  .toList(),
             ),
           ),
         ),
         const SizedBox(height: 16),
-        _buildTextField('العنوان بالتفصيل', _addressController, hint: 'مثال: تفرغ زينة - كارفور موري سانتر'),
+        _buildTextField(
+          'العنوان بالتفصيل',
+          _addressController,
+          hint: 'مثال: تفرغ زينة - كارفور موري سانتر',
+        ),
         const SizedBox(height: 16),
         _buildTextField('تاريخ الميلاد', _dobController, hint: 'YYYY-MM-DD'),
       ],
@@ -320,47 +414,90 @@ class _CaptainRegisterStepperScreenState extends State<CaptainRegisterStepperScr
       children: [
         const Text(
           'معلومات السيارة',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.darkText, fontFamily: 'Cairo'),
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppColors.darkText,
+            fontFamily: 'Cairo',
+          ),
         ),
         const SizedBox(height: 4),
         const Text(
           'ملاحظة: الخدمة حالياً مخصصة فقط لنقل الركاب بالسيارات العادية.',
-          style: TextStyle(fontSize: 12, color: AppColors.secondaryText, fontFamily: 'Cairo'),
+          style: TextStyle(
+            fontSize: 12,
+            color: AppColors.secondaryText,
+            fontFamily: 'Cairo',
+          ),
         ),
         const SizedBox(height: 20),
-        
+
         // Car Type selection (Custom cards)
         const Text(
           'فئة السيارة',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.darkText, fontFamily: 'Cairo'),
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: AppColors.darkText,
+            fontFamily: 'Cairo',
+          ),
         ),
         const SizedBox(height: 8),
         Row(
           children: [
-            _buildCarTypeCard('economy', 'إقتصادية', Icons.directions_car_filled_outlined),
+            _buildCarTypeCard(
+              'economy',
+              'إقتصادية',
+              Icons.directions_car_filled_outlined,
+            ),
             const SizedBox(width: 8),
             _buildCarTypeCard('comfort', 'مريحة', Icons.local_taxi_rounded),
             const SizedBox(width: 8),
-            _buildCarTypeCard('family', 'عائلية', Icons.airport_shuttle_rounded),
+            _buildCarTypeCard(
+              'family',
+              'عائلية',
+              Icons.airport_shuttle_rounded,
+            ),
           ],
         ),
         const SizedBox(height: 20),
-        
-        _buildTextField('ماركة السيارة', _carBrandController, hint: 'مثال: تويوتا'),
+
+        _buildTextField(
+          'ماركة السيارة',
+          _carBrandController,
+          hint: 'مثال: تويوتا',
+        ),
         const SizedBox(height: 16),
-        _buildTextField('الموديل', _carModelController, hint: 'مثال: كورولا / أفينسيس'),
+        _buildTextField(
+          'الموديل',
+          _carModelController,
+          hint: 'مثال: كورولا / أفينسيس',
+        ),
         const SizedBox(height: 16),
         _buildTextField('سنة الصنع', _carYearController, hint: 'مثال: 2018'),
         const SizedBox(height: 16),
-        _buildTextField('لون السيارة', _carColorController, hint: 'مثال: رمادي / أبيض'),
+        _buildTextField(
+          'لون السيارة',
+          _carColorController,
+          hint: 'مثال: رمادي / أبيض',
+        ),
         const SizedBox(height: 16),
-        _buildTextField('رقم اللوحة', _carPlateController, hint: 'مثال: 1234 AA 00'),
+        _buildTextField(
+          'رقم اللوحة',
+          _carPlateController,
+          hint: 'مثال: 1234 AA 00',
+        ),
         const SizedBox(height: 16),
-        
+
         // Seats dropdown
         const Text(
           'عدد المقاعد المتاحة للركاب',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.darkText, fontFamily: 'Cairo'),
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: AppColors.darkText,
+            fontFamily: 'Cairo',
+          ),
         ),
         const SizedBox(height: 8),
         Container(
@@ -374,7 +511,11 @@ class _CaptainRegisterStepperScreenState extends State<CaptainRegisterStepperScr
             child: DropdownButton<int>(
               value: _carSeats,
               isExpanded: true,
-              style: const TextStyle(color: AppColors.darkText, fontSize: 16, fontFamily: 'Cairo'),
+              style: const TextStyle(
+                color: AppColors.darkText,
+                fontSize: 16,
+                fontFamily: 'Cairo',
+              ),
               onChanged: (value) {
                 if (value != null) {
                   setState(() {
@@ -382,8 +523,7 @@ class _CaptainRegisterStepperScreenState extends State<CaptainRegisterStepperScr
                   });
                 }
               },
-              items: <int>[4, 6, 7]
-                  .map<DropdownMenuItem<int>>((int val) {
+              items: <int>[4, 6, 7].map<DropdownMenuItem<int>>((int val) {
                 return DropdownMenuItem<int>(
                   value: val,
                   child: Text('$val مقاعد'),
@@ -423,7 +563,11 @@ class _CaptainRegisterStepperScreenState extends State<CaptainRegisterStepperScr
           ),
           child: Column(
             children: [
-              Icon(icon, color: isSel ? Colors.white : AppColors.secondaryText, size: 28),
+              Icon(
+                icon,
+                color: isSel ? Colors.white : AppColors.secondaryText,
+                size: 28,
+              ),
               const SizedBox(height: 6),
               Text(
                 label,
@@ -433,7 +577,7 @@ class _CaptainRegisterStepperScreenState extends State<CaptainRegisterStepperScr
                   fontFamily: 'Cairo',
                   fontSize: 13,
                 ),
-              )
+              ),
             ],
           ),
         ),
@@ -442,100 +586,95 @@ class _CaptainRegisterStepperScreenState extends State<CaptainRegisterStepperScr
   }
 
   Widget _buildStep3Documents() {
+    // The captain account (and therefore an authenticated captain_id for
+    // Supabase Storage/RLS) doesn't exist until _createCaptainAccount runs
+    // on the success screen after this stepper - so this step can only be
+    // an honest "have these ready" checklist, not a real upload. The real
+    // upload happens on CaptainDocumentsStatusScreen immediately after
+    // account creation, where auth.uid() actually resolves to a captain.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
           'المستندات والأوراق الرسمية',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.darkText, fontFamily: 'Cairo'),
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppColors.darkText,
+            fontFamily: 'Cairo',
+          ),
         ),
         const SizedBox(height: 8),
         const Text(
-          'يرجى الضغط على كل مستند لتجربة رفعه من ملفات هاتفك.',
-          style: TextStyle(fontSize: 12, color: AppColors.secondaryText, fontFamily: 'Cairo'),
+          'جهّز هذه المستندات الآن - سيُطلب منك رفعها فعلياً مباشرة بعد '
+          'إنشاء حسابك في الخطوة الأخيرة.',
+          style: TextStyle(
+            fontSize: 12,
+            color: AppColors.secondaryText,
+            fontFamily: 'Cairo',
+          ),
         ),
         const SizedBox(height: 20),
-        
+
         ListView.separated(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: _uploadStates.length,
+          itemCount: CaptainDocument.allTypes.length,
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
-            String docName = _uploadStates.keys.elementAt(index);
-            bool isUploaded = _uploadStates[docName]!;
-            bool isThisUploading = _uploadingDoc == docName;
-
-            return InkWell(
-              onTap: isUploaded || isThisUploading ? null : () => _simulateUpload(docName),
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: isUploaded ? AppColors.success.withOpacity(0.5) : AppColors.border,
-                    width: isUploaded ? 1.5 : 1,
+            final type = CaptainDocument.allTypes[index];
+            return Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: const BoxDecoration(
+                      color: AppColors.background,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.description_outlined,
+                      color: AppColors.secondaryText,
+                      size: 24,
+                    ),
                   ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: isUploaded
-                            ? AppColors.success.withOpacity(0.1)
-                            : AppColors.background,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        isUploaded ? Icons.done_rounded : Icons.upload_file_rounded,
-                        color: isUploaded ? AppColors.success : AppColors.secondaryText,
-                        size: 24,
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      type.labelArabic,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: AppColors.darkText,
+                        fontFamily: 'Cairo',
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            docName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: AppColors.darkText,
-                              fontFamily: 'Cairo',
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            isUploaded ? 'حالة الملف: تم الرفع' : 'حالة الملف: لم يتم الرفع بعد',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: isUploaded ? AppColors.success : AppColors.secondaryText,
-                              fontFamily: 'Cairo',
-                            ),
-                          ),
-                        ],
+                  ),
+                  if (type.isMandatory)
+                    const Text(
+                      'إلزامي',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.warning,
+                        fontFamily: 'Cairo',
+                      ),
+                    )
+                  else
+                    const Text(
+                      'اختياري',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.secondaryText,
+                        fontFamily: 'Cairo',
                       ),
                     ),
-                    if (isThisUploading)
-                      const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.primary,
-                        ),
-                      )
-                    else if (isUploaded)
-                      const Icon(Icons.check_circle_outline_rounded, color: AppColors.success)
-                    else
-                      const Icon(Icons.chevron_left_rounded, color: AppColors.secondaryText),
-                  ],
-                ),
+                ],
               ),
             );
           },
@@ -550,10 +689,15 @@ class _CaptainRegisterStepperScreenState extends State<CaptainRegisterStepperScr
       children: [
         const Text(
           'مراجعة وتأكيد البيانات',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.darkText, fontFamily: 'Cairo'),
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppColors.darkText,
+            fontFamily: 'Cairo',
+          ),
         ),
         const SizedBox(height: 16),
-        
+
         // Summary Card
         Card(
           child: Padding(
@@ -563,46 +707,77 @@ class _CaptainRegisterStepperScreenState extends State<CaptainRegisterStepperScr
               children: [
                 _buildReviewRow('الاسم الكامل', _nameController.text),
                 _buildReviewRow('رقم الهاتف', '+222 ${_phoneController.text}'),
-                _buildReviewRow('المدينة والعنوان', '$_selectedCity - ${_addressController.text}'),
+                _buildReviewRow(
+                  'المدينة والعنوان',
+                  '$_selectedCity - ${_addressController.text}',
+                ),
                 _buildReviewRow('تاريخ الميلاد', _dobController.text),
                 const Divider(height: 24),
-                _buildReviewRow('نوع السيارة', _carType == 'economy' ? 'إقتصادية' : _carType == 'comfort' ? 'مريحة' : 'عائلية'),
-                _buildReviewRow('الماركة والموديل', '${_carBrandController.text} ${_carModelController.text} (${_carYearController.text})'),
+                _buildReviewRow(
+                  'نوع السيارة',
+                  _carType == 'economy'
+                      ? 'إقتصادية'
+                      : _carType == 'comfort'
+                      ? 'مريحة'
+                      : 'عائلية',
+                ),
+                _buildReviewRow(
+                  'الماركة والموديل',
+                  '${_carBrandController.text} ${_carModelController.text} (${_carYearController.text})',
+                ),
                 _buildReviewRow('رقم لوحة السيارة', _carPlateController.text),
                 _buildReviewRow('المقاعد المتاحة', '$_carSeats مقاعد'),
                 const Divider(height: 24),
-                
-                // Documents check list
+
+                // Documents note - the actual upload happens right after
+                // account creation (see _createCaptainAccount), not here.
                 const Text(
-                  'حالة المستندات المرفوعة:',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo', fontSize: 13),
+                  'المستندات المطلوبة:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Cairo',
+                    fontSize: 13,
+                  ),
                 ),
                 const SizedBox(height: 8),
-                ..._uploadStates.entries.map((entry) {
-                  return Padding(
+                for (final type in CaptainDocument.mandatoryTypes)
+                  Padding(
                     padding: const EdgeInsets.symmetric(vertical: 2.0),
                     child: Row(
                       children: [
-                        Icon(
-                          entry.value ? Icons.check_circle_outline : Icons.cancel_outlined,
+                        const Icon(
+                          Icons.description_outlined,
                           size: 16,
-                          color: entry.value ? AppColors.success : AppColors.error,
+                          color: AppColors.secondaryText,
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          entry.key,
-                          style: const TextStyle(fontSize: 12, fontFamily: 'Cairo', color: AppColors.secondaryText),
+                          type.labelArabic,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontFamily: 'Cairo',
+                            color: AppColors.secondaryText,
+                          ),
                         ),
                       ],
                     ),
-                  );
-                }).toList(),
+                  ),
+                const SizedBox(height: 4),
+                const Text(
+                  'سيُطلب منك رفع هذه المستندات مباشرة بعد إنشاء الحساب.',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontFamily: 'Cairo',
+                    fontStyle: FontStyle.italic,
+                    color: AppColors.secondaryText,
+                  ),
+                ),
               ],
             ),
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Edit Button
         OutlinedButton(
           onPressed: () {
@@ -613,7 +788,7 @@ class _CaptainRegisterStepperScreenState extends State<CaptainRegisterStepperScr
           child: const Text('تعديل المعلومات الشخصية والسيارة'),
         ),
         const SizedBox(height: 16),
-        
+
         // Approve Checkbox
         Row(
           children: [
@@ -629,7 +804,11 @@ class _CaptainRegisterStepperScreenState extends State<CaptainRegisterStepperScr
             const Expanded(
               child: Text(
                 'أقر بأن جميع البيانات والمستندات المرفوعة صحيحة وأوافق على شروط كابتن الهدهد.',
-                style: TextStyle(fontSize: 12, color: AppColors.darkText, fontFamily: 'Cairo'),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.darkText,
+                  fontFamily: 'Cairo',
+                ),
               ),
             ),
           ],
@@ -646,12 +825,21 @@ class _CaptainRegisterStepperScreenState extends State<CaptainRegisterStepperScr
         children: [
           Text(
             '$label: ',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.secondaryText, fontFamily: 'Cairo'),
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+              color: AppColors.secondaryText,
+              fontFamily: 'Cairo',
+            ),
           ),
           Expanded(
             child: Text(
               value.isNotEmpty ? value : 'غير محدد',
-              style: const TextStyle(fontSize: 13, color: AppColors.darkText, fontFamily: 'Cairo'),
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.darkText,
+                fontFamily: 'Cairo',
+              ),
             ),
           ),
         ],
@@ -659,21 +847,29 @@ class _CaptainRegisterStepperScreenState extends State<CaptainRegisterStepperScr
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, {bool obscure = false, String? hint}) {
+  Widget _buildTextField(
+    String label,
+    TextEditingController controller, {
+    bool obscure = false,
+    String? hint,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.darkText, fontFamily: 'Cairo'),
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: AppColors.darkText,
+            fontFamily: 'Cairo',
+          ),
         ),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
           obscureText: obscure,
-          decoration: InputDecoration(
-            hintText: hint,
-          ),
+          decoration: InputDecoration(hintText: hint),
         ),
       ],
     );
@@ -685,22 +881,36 @@ class _CaptainRegisterStepperScreenState extends State<CaptainRegisterStepperScr
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.darkText, fontFamily: 'Cairo'),
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: AppColors.darkText,
+            fontFamily: 'Cairo',
+          ),
         ),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
           keyboardType: TextInputType.phone,
           textAlign: TextAlign.left,
-          style: const TextStyle(fontSize: 16, letterSpacing: 1.5, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            fontSize: 16,
+            letterSpacing: 1.5,
+            fontWeight: FontWeight.bold,
+          ),
           decoration: InputDecoration(
             hintText: '36 00 00 00',
-            hintStyle: const TextStyle(letterSpacing: 1.0, fontWeight: FontWeight.normal),
+            hintStyle: const TextStyle(
+              letterSpacing: 1.0,
+              fontWeight: FontWeight.normal,
+            ),
             prefixIcon: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
               margin: const EdgeInsets.only(left: 10),
               decoration: const BoxDecoration(
-                border: Border(left: BorderSide(color: AppColors.border, width: 1)),
+                border: Border(
+                  left: BorderSide(color: AppColors.border, width: 1),
+                ),
               ),
               child: const Text(
                 '+222',
@@ -771,11 +981,19 @@ class _CaptainRegisterStepperScreenState extends State<CaptainRegisterStepperScr
               const SizedBox(height: 32),
               const Text(
                 'تم إرسال طلبك بنجاح!',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.darkText, fontFamily: 'Cairo'),
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.darkText,
+                  fontFamily: 'Cairo',
+                ),
               ),
               const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.warning.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(30),
@@ -792,28 +1010,37 @@ class _CaptainRegisterStepperScreenState extends State<CaptainRegisterStepperScr
               ),
               const SizedBox(height: 20),
               const Text(
-                'سيتم مراجعة حسابك ومستنداتك وتفعيل الحساب من قبل الإدارة في أقرب وقت. ستتلقى إشعاراً فور تفعيل الحساب.',
-                style: TextStyle(fontSize: 14, color: AppColors.secondaryText, fontFamily: 'Cairo'),
+                'الخطوة التالية: قم بإنشاء حسابك ثم ارفع مستنداتك الرسمية. '
+                'سيتم تفعيل حسابك من قبل الإدارة بعد اعتماد جميع المستندات الإلزامية.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.secondaryText,
+                  fontFamily: 'Cairo',
+                ),
                 textAlign: TextAlign.center,
               ),
               const Spacer(),
-              
-              // Simulate proceeding to Captain Dashboard
+
+              // Create the captain's account, then go straight to the real
+              // document upload screen - the account (and therefore an
+              // authenticated captain_id for Supabase Storage/RLS) doesn't
+              // exist until this call succeeds, so real uploads can only
+              // start now, not during the step 3 checklist above.
               ElevatedButton(
-                onPressed: () {
-                  final provider = Provider.of<AppStateProvider>(context, listen: false);
-                  provider.registerCaptain(_nameController.text.isNotEmpty ? _nameController.text : 'كابتن هدهد جديد', '+222${_phoneController.text}');
-                  
-                  // Go to Captain Home Screen directly
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (context) => const CaptainHomeScreen()),
-                    (route) => false,
-                  );
-                },
-                child: const Text('دخول لوحة تحكم الكابتن تجريبياً'),
+                onPressed: _isSubmittingAccount ? null : _createCaptainAccount,
+                child: _isSubmittingAccount
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2.5,
+                        ),
+                      )
+                    : const Text('إنشاء الحساب ورفع المستندات'),
               ),
               const SizedBox(height: 12),
-              
+
               TextButton(
                 onPressed: () {
                   Navigator.of(context).popUntil((route) => route.isFirst);

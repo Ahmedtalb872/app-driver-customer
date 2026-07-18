@@ -1,0 +1,84 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../core/config/supabase_config.dart';
+
+/// Backs the Operator Dispatch page: looks up a calling customer by phone,
+/// reads live pricing to show an estimated fare, and creates the trip via
+/// the `admin_dispatch_trip` RPC (20260713000030_operator_dispatch.sql).
+class AdminDispatchRepository {
+  SupabaseClient get _client => SupabaseConfig.client;
+
+  /// Finds an existing customer account by phone number. Returns null if no
+  /// registered customer has that number - manual dispatch requires the
+  /// caller to already have the app (this app has no service-role-backed
+  /// account-creation path available to the client, by design - see
+  /// docs/admin_web_deployment.md section 3).
+  Future<Map<String, dynamic>?> findCustomerByPhone(String phone) async {
+    final trimmed = phone.trim();
+    if (trimmed.isEmpty) return null;
+    return _client
+        .from('customers')
+        .select('id, status, profiles!inner(full_name, phone)')
+        .eq('profiles.phone', trimmed)
+        .maybeSingle();
+  }
+
+  Future<Map<String, dynamic>?> fetchPricingConfig(String vehicleType) async {
+    return _client
+        .from('pricing_config')
+        .select()
+        .eq('vehicle_type', vehicleType)
+        .maybeSingle();
+  }
+
+  Future<Map<String, dynamic>> dispatchTrip({
+    required String customerPhone,
+    required String pickupAddress,
+    required double pickupLat,
+    required double pickupLng,
+    required String tripType, // 'normal' | 'open'
+    String? destinationAddress,
+    double? destinationLat,
+    double? destinationLng,
+    required String vehicleType,
+    required String paymentMethod,
+    double? estimatedPrice,
+    int? estimatedDurationMinutes,
+    double? distanceKm,
+    String? customerNote,
+    int timeoutSeconds = 45,
+  }) async {
+    try {
+      final row = await _client.rpc(
+        'admin_dispatch_trip',
+        params: {
+          'p_customer_phone': customerPhone,
+          'p_pickup_address': pickupAddress,
+          'p_pickup_lat': pickupLat,
+          'p_pickup_lng': pickupLng,
+          'p_trip_type': tripType,
+          'p_destination_address': destinationAddress,
+          'p_destination_lat': destinationLat,
+          'p_destination_lng': destinationLng,
+          'p_vehicle_type': vehicleType,
+          'p_payment_method': paymentMethod,
+          'p_estimated_price': estimatedPrice,
+          'p_estimated_duration_minutes': estimatedDurationMinutes,
+          'p_distance_km': distanceKm,
+          'p_customer_note': customerNote,
+          'p_timeout_seconds': timeoutSeconds,
+        },
+      );
+      return Map<String, dynamic>.from(row as Map);
+    } on PostgrestException catch (e) {
+      if (e.message.contains('CUSTOMER_NOT_FOUND')) {
+        throw CustomerNotFoundException();
+      }
+      rethrow;
+    }
+  }
+}
+
+/// Thrown when the phone number typed by the operator doesn't match any
+/// registered customer account.
+class CustomerNotFoundException implements Exception {}
