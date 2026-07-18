@@ -297,6 +297,10 @@ class _LiveOperationsScreenState extends State<LiveOperationsScreen> {
             final status = trip['status'] as String? ?? '';
             final customer =
                 trip['customers']?['profiles'] as Map<String, dynamic>?;
+            // Guest trip (no registered customer account) - fall back to
+            // the phone the dispatch operator typed, so the row still
+            // identifies who requested the ride instead of showing '-'.
+            final guestPhone = trip['guest_customer_phone'] as String?;
             final captain =
                 trip['captains']?['profiles'] as Map<String, dynamic>?;
             final requestedAt = trip['requested_at'] as String?;
@@ -305,7 +309,14 @@ class _LiveOperationsScreenState extends State<LiveOperationsScreen> {
               cells: [
                 DataCell(Text((trip['id'] as String).substring(0, 8))),
                 DataCell(StatusBadge.warning(_statusLabels[status] ?? status)),
-                DataCell(Text(customer?['full_name'] as String? ?? '-')),
+                DataCell(
+                  Text(
+                    (customer?['full_name'] as String?) ??
+                        (guestPhone != null
+                            ? '$guestPhone (غير مسجل)'
+                            : '-'),
+                  ),
+                ),
                 DataCell(
                   Text(captain?['full_name'] as String? ?? 'بدون كابتن'),
                 ),

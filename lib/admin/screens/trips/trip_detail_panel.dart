@@ -58,6 +58,24 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
 
   bool get _canBoard => (widget.trip['status'] as String?) == 'arrived';
 
+  /// The `customers` join is only present when this panel was opened from
+  /// a screen that fetched it (Live Operations); when opened from the plain
+  /// trips list, or when the trip has no registered customer account at all
+  /// (20260718000040_guest_dispatch_trip.sql), fall back to the phone
+  /// number the dispatch operator typed - always present as a plain column
+  /// either way.
+  String get _customerLabel {
+    final customer =
+        widget.trip['customers']?['profiles'] as Map<String, dynamic>?;
+    final name = customer?['full_name'] as String?;
+    if (name != null && name.trim().isNotEmpty) return name;
+    final guestPhone = widget.trip['guest_customer_phone'] as String?;
+    if (guestPhone != null && guestPhone.trim().isNotEmpty) {
+      return '$guestPhone (غير مسجل)';
+    }
+    return '-';
+  }
+
   Future<void> _saveNotes() async {
     await _repository.updateAdminNotes(
       widget.trip['id'] as String,
@@ -192,6 +210,7 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
                 spacing: 24,
                 runSpacing: 12,
                 children: [
+                  _infoTile('الزبون', _customerLabel),
                   _infoTile('الحالة', trip['status'] as String? ?? '-'),
                   _infoTile(
                     'طريقة الدفع',

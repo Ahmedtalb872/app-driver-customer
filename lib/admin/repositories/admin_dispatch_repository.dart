@@ -48,37 +48,31 @@ class AdminDispatchRepository {
     String? customerNote,
     int timeoutSeconds = 45,
   }) async {
-    try {
-      final row = await _client.rpc(
-        'admin_dispatch_trip',
-        params: {
-          'p_customer_phone': customerPhone,
-          'p_pickup_address': pickupAddress,
-          'p_pickup_lat': pickupLat,
-          'p_pickup_lng': pickupLng,
-          'p_trip_type': tripType,
-          'p_destination_address': destinationAddress,
-          'p_destination_lat': destinationLat,
-          'p_destination_lng': destinationLng,
-          'p_vehicle_type': vehicleType,
-          'p_payment_method': paymentMethod,
-          'p_estimated_price': estimatedPrice,
-          'p_estimated_duration_minutes': estimatedDurationMinutes,
-          'p_distance_km': distanceKm,
-          'p_customer_note': customerNote,
-          'p_timeout_seconds': timeoutSeconds,
-        },
-      );
-      return Map<String, dynamic>.from(row as Map);
-    } on PostgrestException catch (e) {
-      if (e.message.contains('CUSTOMER_NOT_FOUND')) {
-        throw CustomerNotFoundException();
-      }
-      rethrow;
-    }
+    // Customer registration is optional (20260718000040_guest_dispatch_trip.sql):
+    // if `customerPhone` doesn't match any registered account, the RPC still
+    // creates the trip - with no customer_id - and broadcasts it exactly
+    // like any other open trip. No CUSTOMER_NOT_FOUND case to special-case
+    // here anymore.
+    final row = await _client.rpc(
+      'admin_dispatch_trip',
+      params: {
+        'p_customer_phone': customerPhone,
+        'p_pickup_address': pickupAddress,
+        'p_pickup_lat': pickupLat,
+        'p_pickup_lng': pickupLng,
+        'p_trip_type': tripType,
+        'p_destination_address': destinationAddress,
+        'p_destination_lat': destinationLat,
+        'p_destination_lng': destinationLng,
+        'p_vehicle_type': vehicleType,
+        'p_payment_method': paymentMethod,
+        'p_estimated_price': estimatedPrice,
+        'p_estimated_duration_minutes': estimatedDurationMinutes,
+        'p_distance_km': distanceKm,
+        'p_customer_note': customerNote,
+        'p_timeout_seconds': timeoutSeconds,
+      },
+    );
+    return Map<String, dynamic>.from(row as Map);
   }
 }
-
-/// Thrown when the phone number typed by the operator doesn't match any
-/// registered customer account.
-class CustomerNotFoundException implements Exception {}

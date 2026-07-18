@@ -24,9 +24,16 @@ class RideRepository {
 
   SupabaseClient get _client => SupabaseConfig.client;
 
+  // `customers(...)` (not `customers!inner(...)`) is deliberate: a
+  // dispatched trip with no registered customer account has
+  // `customer_id is null` (see admin_dispatch_trip,
+  // 20260718000040_guest_dispatch_trip.sql). An inner-join embed would
+  // exclude such a trip from every query that uses this select entirely -
+  // `.single()` would throw "no rows", and watchIncomingRequests would
+  // silently never surface it to any captain.
   static const String _fullJoin =
       '*, '
-      'customers!inner(avatar_url, rating, ratings_count, completed_trips_count, is_verified, profiles!inner(full_name, phone)), '
+      'customers(avatar_url, rating, ratings_count, completed_trips_count, is_verified, profiles(full_name, phone)), '
       'captains(vehicle_brand, vehicle_model, vehicle_plate, profiles(full_name, phone))';
 
   Trip _rowToTrip(Map<String, dynamic> row) {
@@ -39,6 +46,11 @@ class RideRepository {
       customerProfile: {
         if (customerProfile != null) ...customerProfile,
         if (customer != null) ...customer,
+        // Guest trip (no `customers` row at all) - fall back to the phone
+        // number the dispatch operator typed, so the captain still has a
+        // way to identify/call whoever requested the ride.
+        if (customer == null && row['guest_customer_phone'] != null)
+          'phone': row['guest_customer_phone'],
       },
       captainProfile: captain == null
           ? null

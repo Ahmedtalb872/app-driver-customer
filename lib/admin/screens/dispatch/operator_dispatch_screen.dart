@@ -367,6 +367,11 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
   /// the customer phone without the `+222` prefix used everywhere else in
   /// the app, the lookup silently never matched, and nothing on screen said
   /// so.
+  ///
+  /// Note a registered customer account is intentionally NOT required here:
+  /// `admin_dispatch_trip` (20260718000040_guest_dispatch_trip.sql) creates
+  /// the trip either way, so an unmatched phone number only blocks dispatch
+  /// on the phone format itself, never on account existence.
   List<String> get _validationMessages {
     final messages = <String>[];
     final localDigits = _phoneController.text.trim();
@@ -377,12 +382,6 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
       messages.add('رقم الهاتف يجب أن يتكون من 8 أرقام');
     } else if (_lookingUpCustomer) {
       messages.add('جارٍ البحث عن الزبون...');
-    } else if (_foundCustomer == null) {
-      messages.add(
-        _customerLookupFailed
-            ? 'لم يتم العثور على حساب زبون بهذا الرقم - تحقق من الرقم'
-            : 'اضغط "بحث" للتحقق من وجود حساب الزبون',
-      );
     }
 
     if (_pickupLat == null || _pickupLng == null) {
@@ -450,18 +449,6 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
         ),
       );
       _resetForm();
-    } on CustomerNotFoundException {
-      debugPrint(
-        '[OperatorDispatch] dispatch failed: CUSTOMER_NOT_FOUND for $_fullPhone',
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('لم يتم العثور على حساب زبون بهذا الرقم'),
-            backgroundColor: AdminColors.error,
-          ),
-        );
-      }
     } on PostgrestException catch (e, st) {
       // Surface the real server-side reason (e.g. an RLS/role rejection
       // from admin_dispatch_trip, or an invalid-status/invalid-type guard)
@@ -715,12 +702,16 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                 ),
               ] else if (_customerLookupFailed) ...[
                 const SizedBox(height: 8),
+                // Informational, not blocking: admin_dispatch_trip creates
+                // the trip either way (customer_id left null), so this only
+                // tells the operator what to expect, never stops dispatch.
                 const Text(
-                  'لم يتم العثور على حساب زبون بهذا الرقم',
+                  'لا يوجد حساب مسجل بهذا الرقم - سيتم إرسال المشوار كزبون '
+                  'غير مسجل وسيصل لجميع الكباتن كالمعتاد',
                   style: TextStyle(
                     fontFamily: 'Cairo',
                     fontSize: 11,
-                    color: AdminColors.error,
+                    color: AdminColors.warning,
                   ),
                 ),
               ],
