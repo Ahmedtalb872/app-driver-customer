@@ -7,39 +7,39 @@ import '../trips/my_trips_screen.dart';
 import '../support/support_screen.dart';
 import '../support/settings_screen.dart';
 import '../support/about_screen.dart';
-import 'captain_documents_status_screen.dart';
-import '../../dummy_data/dummy_data.dart';
 
 class ProfileScreen extends StatelessWidget {
   final bool showAppBar;
   const ProfileScreen({super.key, this.showAppBar = false});
 
-  void _showInfoDialog(BuildContext context, String title, String content) {
+  void _showEditNameDialog(BuildContext context, AppStateProvider provider) {
+    final controller = TextEditingController(text: provider.customerName);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-        title: Text(
-          title,
-          style: const TextStyle(
-            fontFamily: 'Cairo',
-            fontWeight: FontWeight.bold,
-          ),
+        title: const Text(
+          'تعديل الاسم',
+          style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
-        content: Text(
-          content,
-          style: const TextStyle(
-            fontFamily: 'Cairo',
-            fontSize: 13,
-            height: 1.5,
-          ),
-          textAlign: TextAlign.center,
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'اسمك الكامل'),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('إغلاق'),
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final name = controller.text.trim();
+              if (name.isNotEmpty) provider.setCustomerName(name);
+              Navigator.of(dialogContext).pop();
+            },
+            child: const Text('حفظ'),
           ),
         ],
       ),
@@ -50,11 +50,10 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final provider = Provider.of<AppStateProvider>(context);
 
-    final avatarUrl = DummyData.dummyCaptain.user.avatar;
-    final userName = provider.captainName;
-    final userPhone = provider.captainPhone;
-    final rating = DummyData.dummyCaptain.user.rating;
-    final tripsCount = provider.captainTripsCount;
+    final userName = provider.customerName.isNotEmpty
+        ? provider.customerName
+        : 'زبون الهدهد';
+    final userPhone = provider.customerPhone;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -78,18 +77,10 @@ class ProfileScreen extends StatelessWidget {
           children: [
             if (!showAppBar) const SizedBox(height: 20),
 
-            // Profile Header Card
-            _buildProfileHeader(
-              avatarUrl,
-              userName,
-              userPhone,
-              rating,
-              tripsCount,
-            ),
+            _buildProfileHeader(context, provider, userName, userPhone),
             const SizedBox(height: 24),
 
-            // Menu Items List
-            _buildCaptainMenu(context, provider),
+            _buildMenu(context, provider),
           ],
         ),
       ),
@@ -97,11 +88,10 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Widget _buildProfileHeader(
-    String avatar,
+    BuildContext context,
+    AppStateProvider provider,
     String name,
     String phone,
-    double rating,
-    int trips,
   ) {
     return Card(
       child: Padding(
@@ -110,20 +100,37 @@ class ProfileScreen extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 46,
-              backgroundImage: NetworkImage(avatar),
-              backgroundColor: AppColors.background,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              name,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.darkText,
-                fontFamily: 'Cairo',
+              backgroundColor: AppColors.primary.withOpacity(0.1),
+              child: Text(
+                name.isNotEmpty ? name.substring(0, 1) : '؟',
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                  fontFamily: 'Cairo',
+                ),
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.darkText,
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit_rounded, size: 18),
+                  color: AppColors.secondaryText,
+                  onPressed: () => _showEditNameDialog(context, provider),
+                ),
+              ],
+            ),
             Text(
               phone,
               style: const TextStyle(
@@ -131,88 +138,19 @@ class ProfileScreen extends StatelessWidget {
                 color: AppColors.secondaryText,
               ),
             ),
-            const SizedBox(height: 12),
-            const Divider(height: 1),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildHeaderStat('التقييم', '$rating ⭐'),
-                Container(width: 1, height: 30, color: AppColors.border),
-                _buildHeaderStat('المشاوير', '$trips مشوار'),
-              ],
-            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHeaderStat(String label, String value) {
+  Widget _buildMenu(BuildContext context, AppStateProvider provider) {
     return Column(
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 11,
-            color: AppColors.secondaryText,
-            fontFamily: 'Cairo',
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: AppColors.darkText,
-            fontFamily: 'Cairo',
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCaptainMenu(BuildContext context, AppStateProvider provider) {
-    return Column(
-      children: [
-        _buildMenuCard([
-          _buildMenuItem(
-            icon: Icons.person_outline_rounded,
-            title: 'معلومات الحساب الشخصي',
-            onTap: () => _showInfoDialog(
-              context,
-              'بيانات الكابتن',
-              'الاسم: ${provider.captainName}\nرقم الهاتف: ${provider.captainPhone}\nالدور: كابتن معتمد',
-            ),
-          ),
-          _buildMenuItem(
-            icon: Icons.directions_car_rounded,
-            title: 'بيانات وتفاصيل السيارة',
-            onTap: () {
-              final vehicle = DummyData.dummyCaptain.vehicle;
-              _showInfoDialog(
-                context,
-                'بيانات سيارتي',
-                'فئة السيارة: ${vehicle.typeArabic}\nالماركة والموديل: ${vehicle.brand} ${vehicle.model} (${vehicle.year})\nاللون: ${vehicle.color}\nرقم اللوحة: ${vehicle.plate}\nعدد المقاعد: ${vehicle.seats} ركاب',
-              );
-            },
-          ),
-          _buildMenuItem(
-            icon: Icons.assignment_rounded,
-            title: 'حالة المستندات المرفوعة',
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => const CaptainDocumentsStatusScreen(),
-              ),
-            ),
-          ),
-        ]),
-        const SizedBox(height: 16),
         _buildMenuCard([
           _buildMenuItem(
             icon: Icons.wallet_rounded,
-            title: 'المحفظة والأرباح اليومية',
+            title: 'المحفظة الرقمية',
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => const WalletScreen(showAppBar: true),
@@ -221,7 +159,7 @@ class ProfileScreen extends StatelessWidget {
           ),
           _buildMenuItem(
             icon: Icons.history_rounded,
-            title: 'سجل مشاوير الكابتن',
+            title: 'سجل رحلاتي',
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => const MyTripsScreen(showAppBar: true),
@@ -230,7 +168,7 @@ class ProfileScreen extends StatelessWidget {
           ),
           _buildMenuItem(
             icon: Icons.settings_outlined,
-            title: 'إعدادات تطبيق الكابتن',
+            title: 'الإعدادات',
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (context) => const SettingsScreen()),
             ),

@@ -6,7 +6,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'admin/admin_app.dart';
 import 'core/config/supabase_config.dart';
-import 'core/services/captain_session.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/app_state_provider.dart';
 import 'features/onboarding/splash_screen.dart';
@@ -16,7 +15,7 @@ Future<void> main() async {
   await dotenv.load(fileName: '.env');
   await SupabaseConfig.initialize();
 
-  // Web only ever serves the AL HODHOD admin dashboard - the captain-only
+  // Web only ever serves the AL HODHOD admin dashboard - the customer
   // mobile flow below is completely untouched on every other platform.
   // usePathUrlStrategy() is a documented no-op off web, so it's safe to
   // call unconditionally.
@@ -28,10 +27,7 @@ Future<void> main() async {
 
   runApp(
     MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AppStateProvider()),
-        ChangeNotifierProvider(create: (_) => CaptainSession()),
-      ],
+      providers: [ChangeNotifierProvider(create: (_) => AppStateProvider())],
       child: const MyApp(),
     ),
   );

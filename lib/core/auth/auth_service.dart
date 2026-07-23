@@ -112,6 +112,34 @@ class AuthService {
     return AppRoleX.fromValue(row?['role'] as String?);
   }
 
+  /// Reads the signed-in user's display name from `public.profiles`. Empty
+  /// for a brand-new account created via phone-OTP sign-up, which never
+  /// sends a `full_name` (see [requestPhoneCode]) - callers use that to
+  /// detect a first-time sign-in and prompt for one.
+  Future<String> fetchCurrentFullName() async {
+    final uid = currentUser?.id;
+    if (uid == null) return '';
+
+    final row = await SupabaseConfig.client
+        .from('profiles')
+        .select('full_name')
+        .eq('id', uid)
+        .maybeSingle();
+
+    return (row?['full_name'] as String?)?.trim() ?? '';
+  }
+
+  /// Persists a display name for the signed-in user, used the first time a
+  /// phone-OTP customer signs in (see [fetchCurrentFullName]).
+  Future<void> updateFullName(String fullName) async {
+    final uid = currentUser?.id;
+    if (uid == null) return;
+    await SupabaseConfig.client
+        .from('profiles')
+        .update({'full_name': fullName})
+        .eq('id', uid);
+  }
+
   /// Maps a phone number (e.g. `+22236000000`) to the deterministic
   /// synthetic email Supabase auth stores it under.
   String _phoneToEmail(String phone) {

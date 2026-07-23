@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
-import '../../core/services/ride_alert_service.dart';
-import '../../core/services/ride_settings_service.dart';
 import '../../providers/app_state_provider.dart';
-import '../authentication/captain_login_screen.dart';
+import '../authentication/phone_code_login_screen.dart';
+import '../home/customer_home_screen.dart';
 import 'about_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -19,25 +18,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _darkModeEnabled = false;
   bool _shareLocationEnabled = true;
   String _selectedLanguage = 'العربية';
-
-  bool _rideSettingsLoaded = false;
-  late bool _rideSoundEnabled;
-  late bool _rideVibrationEnabled;
-  late RideAlertVolume _rideVolume;
-
-  @override
-  void initState() {
-    super.initState();
-    RideSettingsService.instance.load().then((_) {
-      if (!mounted) return;
-      setState(() {
-        _rideSoundEnabled = RideSettingsService.instance.soundEnabled;
-        _rideVibrationEnabled = RideSettingsService.instance.vibrationEnabled;
-        _rideVolume = RideSettingsService.instance.volume;
-        _rideSettingsLoaded = true;
-      });
-    });
-  }
 
   void _showDeleteAccountDialog() {
     showDialog(
@@ -84,127 +64,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final provider = Provider.of<AppStateProvider>(context, listen: false);
     provider.logout();
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => const CaptainLoginScreen()),
-      (route) => false,
-    );
-  }
-
-  Future<void> _previewAlert() async {
-    await RideAlertService.instance.previewOnce(_rideVolume);
-  }
-
-  Widget _buildRideAlertSettingsCard() {
-    if (!_rideSettingsLoaded) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'تنبيهات طلبات المشاوير',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: AppColors.darkText,
-            fontFamily: 'Cairo',
-          ),
+      MaterialPageRoute(
+        builder: (context) => PhoneCodeLoginScreen(
+          title: 'تسجيل الدخول',
+          subtitle: 'أدخل رقم هاتفك لإرسال رمز التحقق إليه، لتتمكن من طلب مشاويرك.',
+          onSignedIn: () {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (context) => const CustomerHomeScreen()),
+              (route) => false,
+            );
+          },
         ),
-        const SizedBox(height: 8),
-        Card(
-          child: Column(
-            children: [
-              SwitchListTile(
-                activeColor: AppColors.primary,
-                title: const Text(
-                  'صوت تنبيه المشوار الجديد',
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-                value: _rideSoundEnabled,
-                onChanged: (value) {
-                  setState(() => _rideSoundEnabled = value);
-                  RideSettingsService.instance.setSoundEnabled(value);
-                },
-              ),
-              const Divider(height: 1, indent: 16, endIndent: 16),
-              SwitchListTile(
-                activeColor: AppColors.primary,
-                title: const Text(
-                  'الاهتزاز عند وصول طلب جديد',
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-                value: _rideVibrationEnabled,
-                onChanged: (value) {
-                  setState(() => _rideVibrationEnabled = value);
-                  RideSettingsService.instance.setVibrationEnabled(value);
-                },
-              ),
-              const Divider(height: 1, indent: 16, endIndent: 16),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'مستوى الصوت',
-                      style: TextStyle(
-                        fontFamily: 'Cairo',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        _volumeChip('منخفض', RideAlertVolume.low),
-                        const SizedBox(width: 8),
-                        _volumeChip('متوسط', RideAlertVolume.medium),
-                        const SizedBox(width: 8),
-                        _volumeChip('مرتفع', RideAlertVolume.high),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: _previewAlert,
-                      icon: const Icon(Icons.volume_up_rounded),
-                      label: const Text(
-                        'تجربة الصوت',
-                        style: TextStyle(fontFamily: 'Cairo'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-      ],
-    );
-  }
-
-  Widget _volumeChip(String label, RideAlertVolume level) {
-    final selected = _rideVolume == level;
-    return Expanded(
-      child: ChoiceChip(
-        label: Text(label, style: const TextStyle(fontFamily: 'Cairo')),
-        selected: selected,
-        selectedColor: AppColors.primary.withOpacity(0.15),
-        onSelected: (_) {
-          setState(() => _rideVolume = level);
-          RideSettingsService.instance.setVolume(level);
-        },
       ),
+      (route) => false,
     );
   }
 
@@ -340,7 +212,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ),
                     subtitle: const Text(
-                      'السماح للتطبيق بمشاركة موقعك لتسهيل الالتقاء.',
+                      'السماح للتطبيق بمشاركة موقعك لتسهيل الالتقاء بالكابتن.',
                       style: TextStyle(fontFamily: 'Cairo', fontSize: 11),
                     ),
                     value: _shareLocationEnabled,
@@ -354,8 +226,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             const SizedBox(height: 20),
-
-            _buildRideAlertSettingsCard(),
 
             // Security Card
             const Text(
@@ -371,29 +241,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Card(
               child: Column(
                 children: [
-                  ListTile(
-                    leading: const Icon(
-                      Icons.lock_reset_rounded,
-                      color: AppColors.secondaryText,
-                    ),
-                    title: const Text(
-                      'تغيير كلمة المرور',
-                      style: TextStyle(fontFamily: 'Cairo', fontSize: 14),
-                    ),
-                    trailing: const Icon(Icons.chevron_left_rounded),
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'تم إرسال رابط تغيير كلمة المرور لهاتفك.',
-                            style: TextStyle(fontFamily: 'Cairo'),
-                          ),
-                          backgroundColor: AppColors.primary,
-                        ),
-                      );
-                    },
-                  ),
-                  const Divider(height: 1, indent: 16, endIndent: 16),
                   ListTile(
                     leading: const Icon(
                       Icons.delete_forever_rounded,

@@ -5,31 +5,30 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/auth/auth_service.dart';
 import '../../core/config/demo_mode_config.dart';
 import '../../core/constants/colors.dart';
-import '../../models/models.dart';
 import '../../providers/app_state_provider.dart';
 
-/// Phone number + verification-code login, shared by the customer and
-/// captain flows. Hudhud's fixed demo accounts (see [DemoModeConfig]) work
-/// end-to-end through this screen today; a real phone number goes through
-/// the exact same [AuthService.requestPhoneCode] / `verifyPhoneCode` calls,
-/// which requires an SMS provider to be configured on the Supabase project
-/// before a real code is ever delivered.
+/// Phone number + verification-code sign-in/sign-up for the customer app.
+/// Hudhud's fixed demo accounts (see [DemoModeConfig]) work end-to-end
+/// through this screen today; a real phone number goes through the exact
+/// same [AuthService.requestPhoneCode] / `verifyPhoneCode` calls, which
+/// requires an SMS provider to be configured on the Supabase project before
+/// a real code is ever delivered. Supabase's phone-OTP flow creates the
+/// account automatically on first verification, so this screen doubles as
+/// both login and sign-up - a brand-new customer is prompted for their name
+/// once, right after verifying (see [_ensureFullName]).
 class PhoneCodeLoginScreen extends StatefulWidget {
   const PhoneCodeLoginScreen({
     super.key,
-    required this.userType,
     required this.title,
     required this.subtitle,
     required this.onSignedIn,
   });
 
-  final UserType userType;
   final String title;
   final String subtitle;
 
   /// Called after a successful sign-in, with the login screen's own
-  /// [BuildContext] still valid - use it to navigate to the role's home
-  /// screen.
+  /// [BuildContext] still valid - use it to navigate to the home screen.
   final VoidCallback onSignedIn;
 
   @override
@@ -87,8 +86,11 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
       );
       if (!mounted) return;
 
+      final fullName = await _ensureFullName();
+      if (!mounted) return;
+
       final provider = Provider.of<AppStateProvider>(context, listen: false);
-      provider.login(_fullPhone!, widget.userType);
+      provider.login(_fullPhone!, fullName: fullName);
       widget.onSignedIn();
     } on AuthException catch (e) {
       _showError(e.message);
@@ -97,6 +99,86 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  /// Returns the signed-in customer's name, prompting for one first if this
+  /// is a brand-new account (phone-OTP sign-up never collects a name up
+  /// front - see [AuthService.requestPhoneCode]).
+  Future<String> _ensureFullName() async {
+    String existing = '';
+    try {
+      existing = await AuthService.instance.fetchCurrentFullName();
+    } catch (_) {
+      // Best effort - a transient profile-fetch failure shouldn't block an
+      // otherwise-successful sign-in; fall through and prompt for a name.
+    }
+    if (existing.isNotEmpty) return existing;
+    if (!mounted) return '';
+
+    final nameController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final name = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          title: const Text(
+            'مرحباً بك في الهدهد!',
+            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'ما اسمك الكامل؟',
+                  style: TextStyle(fontFamily: 'Cairo', fontSize: 13),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: nameController,
+                  autofocus: true,
+                  textInputAction: TextInputAction.done,
+                  decoration: const InputDecoration(hintText: 'مثال: أحمد سالم'),
+                  validator: (value) => (value == null || value.trim().isEmpty)
+                      ? 'الرجاء إدخال اسمك'
+                      : null,
+                  onFieldSubmitted: (_) {
+                    if (formKey.currentState!.validate()) {
+                      Navigator.of(
+                        dialogContext,
+                      ).pop(nameController.text.trim());
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                if (formKey.currentState!.validate()) {
+                  Navigator.of(dialogContext).pop(nameController.text.trim());
+                }
+              },
+              child: const Text('متابعة'),
+            ),
+          ],
+        ),
+      ),
+    );
+    nameController.dispose();
+
+    final fullName = name ?? '';
+    if (fullName.isNotEmpty) {
+      await AuthService.instance.updateFullName(fullName);
+    }
+    return fullName;
   }
 
   void _showError(String message) {

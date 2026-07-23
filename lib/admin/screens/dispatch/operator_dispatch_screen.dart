@@ -133,8 +133,8 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
   /// Every phone number elsewhere in this app (login, registration, the
   /// mobile captain/customer flows) is stored and matched as a fixed
   /// `+222` country code plus an 8-digit local number - see
-  /// `captain_login_screen.dart`, `admin_login_screen.dart`,
-  /// `phone_code_login_screen.dart`. This field used to accept free-form
+  /// `admin_login_screen.dart`, `phone_code_login_screen.dart`. This field
+  /// used to accept free-form
   /// text with only a hint suggesting the `+222` prefix, so an operator
   /// typing just the 8 local digits (as trained by every other phone field
   /// in the app) silently never matched `profiles.phone` in the database -

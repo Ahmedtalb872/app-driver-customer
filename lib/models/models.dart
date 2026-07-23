@@ -1,5 +1,3 @@
-enum UserType { captain }
-
 enum VehicleType { economy, comfort, family }
 
 enum TripStatus {
@@ -27,47 +25,12 @@ enum TransactionType {
   transfer,
 }
 
-class AppUser {
-  final String id;
-  final String name;
-  final String phone;
-  final double rating;
-  final int tripsCount;
-  final UserType type;
-  final String avatar;
-
-  AppUser({
-    required this.id,
-    required this.name,
-    required this.phone,
-    required this.rating,
-    required this.tripsCount,
-    required this.type,
-    required this.avatar,
-  });
-}
-
-class Vehicle {
-  final String brand;
-  final String model;
-  final int year;
-  final String color;
-  final String plate;
-  final int seats;
-  final VehicleType type;
-
-  Vehicle({
-    required this.brand,
-    required this.model,
-    required this.year,
-    required this.color,
-    required this.plate,
-    required this.seats,
-    required this.type,
-  });
-
+/// Display metadata for each ride tier a customer can request. Not tied to
+/// a specific vehicle/captain - matches [VehicleType], which is what a trip
+/// actually requests.
+extension VehicleTypeDisplayX on VehicleType {
   String get typeArabic {
-    switch (type) {
+    switch (this) {
       case VehicleType.economy:
         return 'إقتصادية';
       case VehicleType.comfort:
@@ -78,7 +41,7 @@ class Vehicle {
   }
 
   String get description {
-    switch (type) {
+    switch (this) {
       case VehicleType.economy:
         return 'سيارة عادية من 1 إلى 4 ركاب';
       case VehicleType.comfort:
@@ -87,22 +50,6 @@ class Vehicle {
         return 'سيارة أكبر من 1 إلى 6 ركاب';
     }
   }
-}
-
-class CaptainDetails {
-  final AppUser user;
-  final Vehicle vehicle;
-  final double acceptanceRate;
-  final double cancellationRate;
-  final Map<String, String> documentsStatus; // e.g. {'national_id': 'accepted'}
-
-  CaptainDetails({
-    required this.user,
-    required this.vehicle,
-    required this.acceptanceRate,
-    required this.cancellationRate,
-    required this.documentsStatus,
-  });
 }
 
 class Trip {
@@ -155,7 +102,7 @@ class Trip {
   // compiling unchanged.
   /// Passenger profile photo, when they uploaded one. Null shows a default
   /// avatar with the first letter of [customerName] instead - never a
-  /// broken image (see TripRequestScreen._CustomerAvatar).
+  /// broken image.
   final String? customerAvatarUrl;
   final double? customerRating;
   final int? customerRatingsCount;
@@ -177,14 +124,20 @@ class Trip {
   final double? liveTraveledDistanceKm;
   final DateTime? startedAt;
 
+  /// Captain's last reported GPS fix (`last_location_lat/lng`), when known.
+  /// Only ever populated while an Open Trip is running (see
+  /// `update_trip_live_tracking`) - null for a normal trip, since nothing
+  /// pushes a captain's live position for one today.
+  final double? captainLat;
+  final double? captainLng;
+
   /// Wall-clock expiry of a broadcasting request, used to drive the
   /// incoming-ride countdown from a real timestamp instead of a plain
   /// decrementing int, so it survives rebuilds/backgrounding correctly.
   final DateTime? requestExpiresAt;
 
-  /// True for a locally-generated demo/trial request (see
-  /// `DemoTripGenerator`), never for a real Supabase-backed trip. Lets
-  /// `CaptainHomeScreen` skip real `RideRepository` accept/ignore/expire RPCs
+  /// True for a locally-generated demo/trial trip, never for a real
+  /// Supabase-backed one - lets a caller skip real `RideRepository` calls
   /// for a request that has no backing `trips` row.
   final bool isDemoTrip;
 
@@ -236,6 +189,8 @@ class Trip {
     this.startedAt,
     this.requestExpiresAt,
     this.isDemoTrip = false,
+    this.captainLat,
+    this.captainLng,
   });
 
   bool get isOpenTrip => tripType == TripType.open;
@@ -317,6 +272,8 @@ class Trip {
       requestExpiresAt: expiresAtValue != null
           ? DateTime.parse(expiresAtValue).toLocal()
           : null,
+      captainLat: (row['last_location_lat'] as num?)?.toDouble(),
+      captainLng: (row['last_location_lng'] as num?)?.toDouble(),
       customerAvatarUrl: customerProfile?['avatar_url'] as String?,
       customerRating: (customerProfile?['rating'] as num?)?.toDouble(),
       customerRatingsCount: (customerProfile?['ratings_count'] as num?)
@@ -408,6 +365,8 @@ class Trip {
     DateTime? startedAt,
     DateTime? requestExpiresAt,
     bool? isDemoTrip,
+    double? captainLat,
+    double? captainLng,
   }) {
     return Trip(
       id: id ?? this.id,
@@ -461,6 +420,8 @@ class Trip {
       startedAt: startedAt ?? this.startedAt,
       requestExpiresAt: requestExpiresAt ?? this.requestExpiresAt,
       isDemoTrip: isDemoTrip ?? this.isDemoTrip,
+      captainLat: captainLat ?? this.captainLat,
+      captainLng: captainLng ?? this.captainLng,
     );
   }
 

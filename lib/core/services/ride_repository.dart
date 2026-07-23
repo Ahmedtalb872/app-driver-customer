@@ -291,6 +291,27 @@ class RideRepository {
         .eq('vehicle_type', vehicleType)
         .maybeSingle();
   }
+
+  // -------------------------------------------------------------------
+  // Customer: trip history.
+  // -------------------------------------------------------------------
+
+  /// The signed-in customer's past trips (most recent first), enriched the
+  /// same way [watchTrip]/[acceptTrip] already are so [MyTripsScreen] can
+  /// render them with [Trip] unchanged.
+  Future<List<Trip>> fetchCustomerTrips() async {
+    final customerId = _client.auth.currentUser?.id;
+    if (customerId == null) return [];
+    final rows = await _client
+        .from('trips')
+        .select(_fullJoin)
+        .eq('customer_id', customerId)
+        .order('requested_at', ascending: false);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(_rowToTrip)
+        .toList();
+  }
 }
 
 /// Thrown when a captain tries to accept a request that's no longer
