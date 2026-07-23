@@ -113,6 +113,8 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
       backgroundColor: AppColors.background,
       body: trip == null
           ? const Center(child: CircularProgressIndicator())
+          : trip.status == TripStatus.searching
+          ? _buildSearchingView()
           : Stack(
               children: [
                 Positioned.fill(
@@ -151,9 +153,69 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
     );
   }
 
+  /// Full-screen view for [TripStatus.searching]: a pulsing radar animation
+  /// around a car icon, standing in for the map (there is nothing to show
+  /// on it yet - no captain is assigned) while the request broadcasts.
+  Widget _buildSearchingView() {
+    return SafeArea(
+      child: Column(
+        children: [
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const _SearchingPulse(),
+                  const SizedBox(height: 28),
+                  const Text(
+                    'جاري البحث عن كابتن قريب منك...',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: AppColors.darkText,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'سيصلك إشعار فور قبول أحد الكباتن لطلبك.',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 12,
+                      color: AppColors.secondaryText,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+            child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: _isCancelling ? null : _cancelTrip,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.error,
+                  side: const BorderSide(color: AppColors.error),
+                ),
+                child: _isCancelling
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('إلغاء الطلب'),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTopBanner(Trip trip) {
     final (text, color) = switch (trip.status) {
-      TripStatus.searching => ('جاري البحث عن كابتن قريب منك...', AppColors.primary),
       TripStatus.accepted => ('الكابتن في الطريق إليك', AppColors.primary),
       TripStatus.enRoute => ('الكابتن في الطريق إليك', AppColors.primary),
       TripStatus.arrived => ('وصل الكابتن إلى موقعك', AppColors.success),
@@ -169,17 +231,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (trip.status == TripStatus.searching)
-              const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation(Colors.white),
-                ),
-              )
-            else
-              const Icon(Icons.local_taxi_rounded, color: Colors.white, size: 18),
+            const Icon(Icons.local_taxi_rounded, color: Colors.white, size: 18),
             const SizedBox(width: 10),
             Text(
               text,
@@ -197,8 +249,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
   }
 
   Widget _buildBottomCard(Trip trip) {
-    final canCancel =
-        trip.status == TripStatus.searching || trip.status == TripStatus.accepted;
+    final canCancel = trip.status == TripStatus.accepted;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
@@ -295,6 +346,95 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
           icon: const Icon(Icons.call_rounded),
         ),
       ],
+    );
+  }
+}
+
+/// A car icon inside a filled circle, with three expanding-and-fading rings
+/// radiating outward on a loop - a "radar ping" standing in for an actual
+/// map while [TripTrackingScreen] has nothing to show a captain on yet.
+class _SearchingPulse extends StatefulWidget {
+  const _SearchingPulse();
+
+  @override
+  State<_SearchingPulse> createState() => _SearchingPulseState();
+}
+
+class _SearchingPulseState extends State<_SearchingPulse>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return SizedBox(
+          width: 180,
+          height: 180,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              for (var i = 0; i < 3; i++) _buildRing(i),
+              child!,
+            ],
+          ),
+        );
+      },
+      child: Container(
+        width: 68,
+        height: 68,
+        decoration: const BoxDecoration(
+          color: AppColors.primary,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(color: Colors.black26, blurRadius: 12, offset: Offset(0, 4)),
+          ],
+        ),
+        child: const Icon(
+          Icons.local_taxi_rounded,
+          color: Colors.white,
+          size: 30,
+        ),
+      ),
+    );
+  }
+
+  /// [index] staggers each of the 3 rings a third of a cycle apart, so a new
+  /// ring starts just as the previous one is fading out - a continuous
+  /// pulse rather than three rings ticking in lockstep.
+  Widget _buildRing(int index) {
+    final phase = (_controller.value + index / 3) % 1.0;
+    final scale = 0.35 + phase * 1.1;
+    final opacity = (1 - phase).clamp(0.0, 1.0) * 0.45;
+    return Opacity(
+      opacity: opacity,
+      child: Transform.scale(
+        scale: scale,
+        child: Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.primary, width: 2),
+          ),
+        ),
+      ),
     );
   }
 }

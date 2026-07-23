@@ -12,9 +12,10 @@ import '../destinations/data/models/destination_suggestion.dart';
 import 'trip_tracking_screen.dart';
 
 /// Confirm-and-request screen: shown after the customer picks a destination
-/// on [DestinationSearchScreen]. Lets them pick a vehicle tier (with a
-/// live, client-side fare estimate - see [RideRepository.fetchPricingConfig])
-/// and payment method, then calls [RideRepository.requestTrip].
+/// on [DestinationSearchScreen]. Every ride requests the single standard
+/// ([VehicleType.economy]) tier - there is no vehicle-class picker - with a
+/// live, client-side fare estimate (see [RideRepository.fetchPricingConfig])
+/// and a payment method, then calls [RideRepository.requestTrip].
 class RequestRideScreen extends StatefulWidget {
   const RequestRideScreen({
     super.key,
@@ -35,15 +36,15 @@ class RequestRideScreen extends StatefulWidget {
 
 class _RequestRideScreenState extends State<RequestRideScreen> {
   static const _routeEstimator = HaversineRouteEstimator();
+  static const _vehicleType = VehicleType.economy;
 
   late final RouteEstimate? _route;
-  VehicleType _selectedVehicle = VehicleType.economy;
   String _paymentMethod = 'نقداً';
   int _passengerCount = 1;
   final _noteController = TextEditingController();
 
-  bool _loadingPrices = true;
-  final Map<VehicleType, double> _estimatedPrices = {};
+  bool _loadingPrice = true;
+  double? _estimatedPrice;
   bool _isRequesting = false;
   String? _error;
 
@@ -54,7 +55,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
       pickup: LatLng(widget.pickupLat, widget.pickupLng),
       destination: LatLng(widget.destination.latitude, widget.destination.longitude),
     );
-    _loadPrices();
+    _loadPrice();
   }
 
   @override
@@ -63,13 +64,12 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
     super.dispose();
   }
 
-  Future<void> _loadPrices() async {
-    for (final vehicle in VehicleType.values) {
-      try {
-        final config = await RideRepository.instance.fetchPricingConfig(
-          vehicle.name,
-        );
-        if (config == null || _route == null) continue;
+  Future<void> _loadPrice() async {
+    try {
+      final config = await RideRepository.instance.fetchPricingConfig(
+        _vehicleType.name,
+      );
+      if (config != null && _route != null) {
         final baseFare = (config['base_fare'] as num).toDouble();
         final pricePerKm = (config['price_per_km'] as num).toDouble();
         final pricePerMinute = (config['price_per_minute'] as num).toDouble();
@@ -80,12 +80,12 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                 _route.distanceKm * pricePerKm +
                 _route.durationMinutes * pricePerMinute) *
             surge;
-        _estimatedPrices[vehicle] = raw < minimumFare ? minimumFare : raw;
-      } catch (_) {
-        // Best effort - the vehicle card falls back to "غير متوفر" below.
+        _estimatedPrice = raw < minimumFare ? minimumFare : raw;
       }
+    } catch (_) {
+      // Best effort - the bottom bar falls back to a price-less button.
     }
-    if (mounted) setState(() => _loadingPrices = false);
+    if (mounted) setState(() => _loadingPrice = false);
   }
 
   Future<void> _handleRequest() async {
@@ -102,7 +102,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
         destinationAddress: widget.destination.title,
         destinationLat: widget.destination.latitude,
         destinationLng: widget.destination.longitude,
-        vehicleType: _selectedVehicle,
+        vehicleType: _vehicleType,
         paymentMethod: _paymentMethod,
         customerNote: _noteController.text.trim().isEmpty
             ? null
@@ -151,17 +151,6 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildRouteSummary(),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'اختر فئة السيارة',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  ...VehicleType.values.map(_buildVehicleCard),
                   const SizedBox(height: 20),
                   const Text(
                     'طريقة الدفع',
@@ -278,79 +267,6 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
     );
   }
 
-  Widget _buildVehicleCard(VehicleType vehicle) {
-    final selected = _selectedVehicle == vehicle;
-    final price = _estimatedPrices[vehicle];
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => setState(() => _selectedVehicle = vehicle),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: selected ? AppColors.primary.withOpacity(0.06) : Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: selected ? AppColors.primary : AppColors.border,
-              width: selected ? 1.5 : 1,
-            ),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.directions_car_filled_rounded,
-                color: selected ? AppColors.primary : AppColors.secondaryText,
-                size: 30,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      vehicle.typeArabic,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                    Text(
-                      vehicle.description,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 11,
-                        color: AppColors.secondaryText,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              _loadingPrices
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(
-                      price != null
-                          ? '${price.toStringAsFixed(0)} أوقية'
-                          : 'غير متوفر',
-                      style: TextStyle(
-                        fontFamily: 'Cairo',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: selected ? AppColors.primary : AppColors.darkText,
-                      ),
-                    ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildPaymentSelector() {
     return Row(
       children: [
@@ -432,7 +348,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
   }
 
   Widget _buildBottomBar() {
-    final price = _estimatedPrices[_selectedVehicle];
+    final price = _estimatedPrice;
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       decoration: const BoxDecoration(
@@ -458,6 +374,8 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
               : Text(
                   price != null
                       ? 'اطلب الآن - ${price.toStringAsFixed(0)} أوقية'
+                      : _loadingPrice
+                      ? 'جارٍ حساب السعر...'
                       : 'اطلب الآن',
                 ),
         ),
