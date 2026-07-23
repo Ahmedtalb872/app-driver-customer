@@ -2,20 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../admin/admin_app.dart';
+import '../../core/auth/app_role.dart';
 import '../../core/auth/auth_service.dart';
 import '../../core/config/demo_mode_config.dart';
 import '../../core/constants/colors.dart';
 import '../../providers/app_state_provider.dart';
 
-/// Phone number + verification-code sign-in/sign-up for the customer app.
-/// Hudhud's fixed demo accounts (see [DemoModeConfig]) work end-to-end
-/// through this screen today; a real phone number goes through the exact
-/// same [AuthService.requestPhoneCode] / `verifyPhoneCode` calls, which
-/// requires an SMS provider to be configured on the Supabase project before
-/// a real code is ever delivered. Supabase's phone-OTP flow creates the
-/// account automatically on first verification, so this screen doubles as
-/// both login and sign-up - a brand-new customer is prompted for their name
-/// once, right after verifying (see [_ensureFullName]).
+/// Phone number + verification-code sign-in/sign-up, shared by every role
+/// this app supports on mobile. Hudhud's fixed demo accounts (see
+/// [DemoModeConfig]) work end-to-end through this screen today; a real
+/// phone number goes through the exact same [AuthService.requestPhoneCode]
+/// / `verifyPhoneCode` calls, which requires an SMS provider to be
+/// configured on the Supabase project before a real code is ever
+/// delivered. Supabase's phone-OTP flow creates the account automatically
+/// on first verification, so this screen doubles as both login and sign-up
+/// for a customer - a brand-new one is prompted for their name once, right
+/// after verifying (see [_ensureFullName]).
+///
+/// Routing after a successful verify is role-based: a `customer` account
+/// calls [onSignedIn] (the caller owns navigating to the customer home
+/// screen); an `admin` account is sent straight into [AdminApp] - which
+/// shares the same underlying Supabase session (see `AdminAuthService`),
+/// so it never shows its own login screen again for them. There is no
+/// mobile flow for a `captain` account since the captain app was removed.
 class PhoneCodeLoginScreen extends StatefulWidget {
   const PhoneCodeLoginScreen({
     super.key,
@@ -86,12 +96,35 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
       );
       if (!mounted) return;
 
-      final fullName = await _ensureFullName();
+      final role = await AuthService.instance.fetchCurrentRole();
       if (!mounted) return;
 
-      final provider = Provider.of<AppStateProvider>(context, listen: false);
-      provider.login(_fullPhone!, fullName: fullName);
-      widget.onSignedIn();
+      switch (role) {
+        case AppRole.admin:
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const AdminApp()),
+            (route) => false,
+          );
+          break;
+        case AppRole.customer:
+          final fullName = await _ensureFullName();
+          if (!mounted) return;
+          final provider = Provider.of<AppStateProvider>(
+            context,
+            listen: false,
+          );
+          provider.login(_fullPhone!, fullName: fullName);
+          widget.onSignedIn();
+          break;
+        case AppRole.captain:
+        case null:
+          await AuthService.instance.signOut();
+          if (!mounted) return;
+          _showError(
+            'هذا الحساب غير مدعوم على تطبيق الموبايل حالياً. تواصل مع الدعم.',
+          );
+          break;
+      }
     } on AuthException catch (e) {
       _showError(e.message);
     } catch (_) {
