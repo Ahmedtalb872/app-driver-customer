@@ -110,18 +110,18 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
     }
   }
 
-  /// Puts the document on hold (status back to 'pending') with a mandatory
-  /// reason - a softer outcome than [_rejectDocument]: it doesn't count as
-  /// a rejection against the captain, just asks for a fix/re-upload.
-  Future<void> _setDocumentPending(CaptainDocument doc) async {
+  /// Same reject RPC as [_rejectDocument] - the 4 stored statuses don't
+  /// include a separate "replacement requested" state, so this is a reject
+  /// with dialog copy that tells the captain to re-upload.
+  Future<void> _requestReplacement(CaptainDocument doc) async {
     final reason = await showReasonDialog(
       context,
-      title: 'سبب تعليق "${doc.documentType.labelArabic}" (إلزامي)',
+      title: 'طلب استبدال "${doc.documentType.labelArabic}" - وضّح السبب',
       hint: 'مثال: الصورة غير واضحة، يرجى إعادة الرفع',
     );
     if (reason == null) return;
     try {
-      await _repository.setDocumentPending(doc.id, reason);
+      await _repository.rejectDocument(doc.id, reason);
       _loadDocuments();
     } catch (_) {
       _showDocError();
@@ -274,9 +274,9 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
                       onReject: _documents[type] == null
                           ? null
                           : () => _rejectDocument(_documents[type]!),
-                      onSetPending: _documents[type] == null
+                      onRequestReplacement: _documents[type] == null
                           ? null
-                          : () => _setDocumentPending(_documents[type]!),
+                          : () => _requestReplacement(_documents[type]!),
                     ),
                   ),
                 ),
@@ -424,14 +424,14 @@ class _AdminDocumentCard extends StatelessWidget {
   final CaptainDocument? document;
   final VoidCallback? onApprove;
   final VoidCallback? onReject;
-  final VoidCallback? onSetPending;
+  final VoidCallback? onRequestReplacement;
 
   const _AdminDocumentCard({
     required this.documentType,
     required this.document,
     required this.onApprove,
     required this.onReject,
-    required this.onSetPending,
+    required this.onRequestReplacement,
   });
 
   @override
@@ -517,18 +517,15 @@ class _AdminDocumentCard extends StatelessWidget {
                         fontFamily: 'Cairo',
                       ),
                     ),
-                  if ((doc.status == DocumentStatus.rejected ||
-                          doc.status == DocumentStatus.pending) &&
+                  if (doc.status == DocumentStatus.rejected &&
                       (doc.rejectionReason ?? '').isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
                         'السبب: ${doc.rejectionReason}',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 11,
-                          color: doc.status == DocumentStatus.rejected
-                              ? AdminColors.error
-                              : AdminColors.warning,
+                          color: AdminColors.error,
                           fontFamily: 'Cairo',
                         ),
                       ),
@@ -542,8 +539,11 @@ class _AdminDocumentCard extends StatelessWidget {
                         _actionChip('اعتماد', AdminColors.success, onApprove),
                       if (doc.status != DocumentStatus.rejected)
                         _actionChip('رفض', AdminColors.error, onReject),
-                      if (doc.status != DocumentStatus.pending)
-                        _actionChip('تعليق', AdminColors.warning, onSetPending),
+                      _actionChip(
+                        'طلب استبدال',
+                        AdminColors.warning,
+                        onRequestReplacement,
+                      ),
                       _actionChip(
                         'تنزيل',
                         AdminColors.textSecondary,

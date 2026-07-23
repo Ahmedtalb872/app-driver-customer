@@ -139,20 +139,12 @@ class AdminCaptainsRepository {
     );
   }
 
+  /// Also used for the "request replacement" action - same RPC, the
+  /// dashboard just shows a different dialog title/copy for it (see
+  /// captain_detail_panel.dart).
   Future<void> rejectDocument(String documentId, String reason) async {
     await _client.rpc(
       'admin_reject_document',
-      params: {'p_document_id': documentId, 'p_reason': reason},
-    );
-  }
-
-  /// Puts a document back on hold ("قيد المراجعة") with a mandatory reason -
-  /// e.g. "the photo is blurry, please re-upload" - without it counting as
-  /// a hard rejection against the captain (see captain_detail_panel.dart's
-  /// "تعليق" action).
-  Future<void> setDocumentPending(String documentId, String reason) async {
-    await _client.rpc(
-      'admin_set_document_pending',
       params: {'p_document_id': documentId, 'p_reason': reason},
     );
   }
