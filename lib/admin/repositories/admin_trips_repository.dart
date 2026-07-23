@@ -62,6 +62,37 @@ class AdminTripsRepository {
     await _client.from('trips').update({'admin_notes': notes}).eq('id', tripId);
   }
 
+  /// Corrects a trip's pickup and/or destination (address + coordinates)
+  /// after the fact - e.g. the customer's app dropped the pin in the wrong
+  /// spot, or picked the wrong place from search. A plain owner-or-admin
+  /// update (RLS: `Trip owner, assigned captain, or admin can update`,
+  /// 20260712000026_admin_rls.sql) - no RPC needed, same as
+  /// [updateAdminNotes]. [destinationAddress]/[destinationLat]/
+  /// [destinationLng] are only sent when non-null, so calling this for an
+  /// Open Trip (no destination yet) only ever touches the pickup fields.
+  Future<void> updateRoute(
+    String tripId, {
+    required String pickupAddress,
+    required double pickupLat,
+    required double pickupLng,
+    String? destinationAddress,
+    double? destinationLat,
+    double? destinationLng,
+  }) async {
+    await _client
+        .from('trips')
+        .update({
+          'pickup_address': pickupAddress,
+          'pickup_lat': pickupLat,
+          'pickup_lng': pickupLng,
+          if (destinationAddress != null)
+            'destination_address': destinationAddress,
+          if (destinationLat != null) 'destination_lat': destinationLat,
+          if (destinationLng != null) 'destination_lng': destinationLng,
+        })
+        .eq('id', tripId);
+  }
+
   Future<void> cancel(String tripId, String reason) async {
     await _client.rpc(
       'admin_cancel_trip',
