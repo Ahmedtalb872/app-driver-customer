@@ -1,0 +1,35 @@
+{
+    "name": "الهدهد - لوحة التحكم",
+    "short_name": "الهدهد",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#F8FAFC",
+    "theme_color": "#0B6E72",
+    "description": "لوحة تحكم الهدهد (AL HODHOD) - إدارة تطبيق النقل الذكي.",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}
