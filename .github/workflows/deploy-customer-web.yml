@@ -1,0 +1,56 @@
+name: Deploy customer web preview
+
+# Builds a real, working web build of the customer app (lib/main_customer_web.dart)
+# and publishes it to GitHub Pages at /customer-app/, alongside the static
+# design mockup already served from the repo root. This is a *preview*
+# build only - some mobile-only behavior (GPS, phone dialing) won't work
+# the same way in a browser.
+#
+# Requires two repository secrets before this will produce a working app
+# (Settings -> Secrets and variables -> Actions):
+#   SUPABASE_URL       - the Supabase project URL
+#   SUPABASE_ANON_KEY  - the Supabase project's public anon key
+on:
+  push:
+    branches:
+      - main
+      - claude/project-nature-3gwftj
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Write .env
+        run: |
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build web (customer app)
+        run: |
+          flutter build web --release \
+            -t lib/main_customer_web.dart \
+            --base-href /app-driver-customer/customer-app/
+
+      - name: Deploy to GitHub Pages (customer-app/ subfolder)
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build/web
+          publish_branch: gh-pages
+          destination_dir: customer-app
+          keep_files: true
