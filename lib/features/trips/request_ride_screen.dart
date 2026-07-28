@@ -14,7 +14,8 @@ import 'trip_tracking_screen.dart';
 /// Confirm-and-request screen: shown after the customer picks a destination
 /// on [DestinationSearchScreen]. Every ride requests the single standard
 /// ([VehicleType.economy]) tier - there is no vehicle-class picker - with a
-/// live, client-side fare estimate (see [RideRepository.fetchPricingConfig])
+/// live, client-side fare estimate (see [RideRepository.fetchPricingConfig]),
+/// a trip type ([TripType.normal] fixed-quote vs [TripType.open] metered),
 /// and a payment method, then calls [RideRepository.requestTrip].
 class RequestRideScreen extends StatefulWidget {
   const RequestRideScreen({
@@ -39,6 +40,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
   static const _vehicleType = VehicleType.economy;
 
   late final RouteEstimate? _route;
+  TripType _tripType = TripType.normal;
   String _paymentMethod = 'نقداً';
   int _passengerCount = 1;
   final _noteController = TextEditingController();
@@ -98,7 +100,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
         pickupAddress: widget.pickupAddress,
         pickupLat: widget.pickupLat,
         pickupLng: widget.pickupLng,
-        tripType: TripType.normal,
+        tripType: _tripType,
         destinationAddress: widget.destination.title,
         destinationLat: widget.destination.latitude,
         destinationLng: widget.destination.longitude,
@@ -151,6 +153,17 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildRouteSummary(),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'نوع المشوار',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _buildTripTypeSelector(),
                   const SizedBox(height: 20),
                   const Text(
                     'طريقة الدفع',
@@ -267,6 +280,81 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
     );
   }
 
+  Widget _buildTripTypeSelector() {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildTripTypeChip(
+            type: TripType.normal,
+            icon: Icons.route_rounded,
+            label: 'عادي',
+            subtitle: 'وجهة محددة وسعر ثابت',
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _buildTripTypeChip(
+            type: TripType.open,
+            icon: Icons.timelapse_rounded,
+            label: 'مفتوح',
+            subtitle: 'السعر يُحسب حسب المسافة والوقت الفعلي',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTripTypeChip({
+    required TripType type,
+    required IconData icon,
+    required String label,
+    required String subtitle,
+  }) {
+    final selected = _tripType == type;
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => setState(() => _tripType = type),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary.withOpacity(0.08) : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected ? AppColors.primary : AppColors.border,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: selected ? AppColors.primary : AppColors.secondaryText,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+                color: selected ? AppColors.primary : AppColors.darkText,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 9.5,
+                color: AppColors.secondaryText,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildPaymentSelector() {
     return Row(
       children: [
@@ -373,7 +461,9 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                 )
               : Text(
                   price != null
-                      ? 'اطلب الآن - ${price.toStringAsFixed(0)} أوقية'
+                      ? _tripType == TripType.open
+                            ? 'اطلب الآن - بداية من ${price.toStringAsFixed(0)} أوقية تقريباً'
+                            : 'اطلب الآن - ${price.toStringAsFixed(0)} أوقية'
                       : _loadingPrice
                       ? 'جارٍ حساب السعر...'
                       : 'اطلب الآن',
