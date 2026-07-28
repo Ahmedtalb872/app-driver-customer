@@ -82,82 +82,103 @@ async function verifyWebhook(
   return JSON.parse(payload) as SendSmsPayload;
 }
 
+const JSON_HEADERS = { 'Content-Type': 'application/json' };
+
 Deno.serve(async (req) => {
-  const payload = await req.text();
-  const headers = Object.fromEntries(req.headers);
-
-  const hookSecret = Deno.env.get('SEND_SMS_HOOK_SECRET') ?? '';
-  if (!hookSecret) {
-    return new Response(
-      JSON.stringify({ error: { http_code: 500, message: 'SEND_SMS_HOOK_SECRET is not configured.' } }),
-      { status: 500 },
-    );
-  }
-
-  let user: SendSmsPayload['user'];
-  let sms: SendSmsPayload['sms'];
   try {
-    ({ user, sms } = await verifyWebhook(payload, headers, hookSecret));
-  } catch (error) {
-    return new Response(
-      JSON.stringify({ error: { http_code: 401, message: `Invalid webhook signature: ${error}` } }),
-      { status: 401 },
-    );
-  }
+    const payload = await req.text();
+    const headers = Object.fromEntries(req.headers);
+    console.log('send-sms-hook: request received', { headerKeys: Object.keys(headers) });
 
-  if (!user.phone) {
-    return new Response(
-      JSON.stringify({ error: { http_code: 400, message: 'Missing user phone number.' } }),
-      { status: 400 },
-    );
-  }
-
-  const validationKey = Deno.env.get('CHINGUISOFT_VALIDATION_KEY');
-  const validationToken = Deno.env.get('CHINGUISOFT_VALIDATION_TOKEN');
-  if (!validationKey || !validationToken) {
-    return new Response(
-      JSON.stringify({
-        error: { http_code: 500, message: 'Chinguisoft credentials are not configured.' },
-      }),
-      { status: 500 },
-    );
-  }
-
-  try {
-    const response = await fetch(
-      `https://chinguisoft.com/api/sms/validation/${validationKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Validation-token': validationToken,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          phone: toLocalMauritanianNumber(user.phone),
-          lang: 'ar',
-          code: sms.otp,
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      const body = await response.text();
+    const hookSecret = Deno.env.get('SEND_SMS_HOOK_SECRET') ?? '';
+    if (!hookSecret) {
+      console.error('send-sms-hook: SEND_SMS_HOOK_SECRET is not set');
       return new Response(
-        JSON.stringify({
-          error: {
-            http_code: 502,
-            message: `Chinguisoft rejected the SMS request (${response.status}): ${body}`,
-          },
-        }),
-        { status: 502 },
+        JSON.stringify({ error: { http_code: 500, message: 'SEND_SMS_HOOK_SECRET is not configured.' } }),
+        { status: 500, headers: JSON_HEADERS },
       );
     }
+
+    let user: SendSmsPayload['user'];
+    let sms: SendSmsPayload['sms'];
+    try {
+      ({ user, sms } = await verifyWebhook(payload, headers, hookSecret));
+    } catch (error) {
+      console.error('send-sms-hook: webhook verification failed', error);
+      return new Response(
+        JSON.stringify({ error: { http_code: 401, message: `Invalid webhook signature: ${error}` } }),
+        { status: 401, headers: JSON_HEADERS },
+      );
+    }
+
+    if (!user.phone) {
+      console.error('send-sms-hook: payload had no user.phone', { user, sms });
+      return new Response(
+        JSON.stringify({ error: { http_code: 400, message: 'Missing user phone number.' } }),
+        { status: 400, headers: JSON_HEADERS },
+      );
+    }
+
+    const validationKey = Deno.env.get('CHINGUISOFT_VALIDATION_KEY');
+    const validationToken = Deno.env.get('CHINGUISOFT_VALIDATION_TOKEN');
+    if (!validationKey || !validationToken) {
+      console.error('send-sms-hook: Chinguisoft secrets missing', {
+        hasKey: Boolean(validationKey),
+        hasToken: Boolean(validationToken),
+      });
+      return new Response(
+        JSON.stringify({
+          error: { http_code: 500, message: 'Chinguisoft credentials are not configured.' },
+        }),
+        { status: 500, headers: JSON_HEADERS },
+      );
+    }
+
+    try {
+      const response = await fetch(
+        `https://chinguisoft.com/api/sms/validation/${validationKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Validation-token': validationToken,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            phone: toLocalMauritanianNumber(user.phone),
+            lang: 'ar',
+            code: sms.otp,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const body = await response.text();
+        console.error('send-sms-hook: Chinguisoft rejected the request', response.status, body);
+        return new Response(
+          JSON.stringify({
+            error: {
+              http_code: 502,
+              message: `Chinguisoft rejected the SMS request (${response.status}): ${body}`,
+            },
+          }),
+          { status: 502, headers: JSON_HEADERS },
+        );
+      }
+    } catch (error) {
+      console.error('send-sms-hook: failed to reach Chinguisoft', error);
+      return new Response(
+        JSON.stringify({ error: { http_code: 502, message: `Failed to reach Chinguisoft: ${error}` } }),
+        { status: 502, headers: JSON_HEADERS },
+      );
+    }
+
+    console.log('send-sms-hook: SMS sent successfully');
+    return new Response(JSON.stringify({}), { status: 200, headers: JSON_HEADERS });
   } catch (error) {
+    console.error('send-sms-hook: unhandled exception', error);
     return new Response(
-      JSON.stringify({ error: { http_code: 502, message: `Failed to reach Chinguisoft: ${error}` } }),
-      { status: 502 },
+      JSON.stringify({ error: { http_code: 500, message: `Unhandled error: ${error}` } }),
+      { status: 500, headers: JSON_HEADERS },
     );
   }
-
-  return new Response(JSON.stringify({}), { status: 200 });
 });
