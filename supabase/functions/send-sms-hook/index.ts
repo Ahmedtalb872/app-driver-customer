@@ -30,12 +30,18 @@ Deno.serve(async (req) => {
   const headers = Object.fromEntries(req.headers);
 
   const hookSecret = Deno.env.get('SEND_SMS_HOOK_SECRET') ?? '';
-  const base64Secret = hookSecret.replace('v1,whsec_', '');
-  const wh = new Webhook(base64Secret);
+  if (!hookSecret) {
+    return new Response(
+      JSON.stringify({ error: { http_code: 500, message: 'SEND_SMS_HOOK_SECRET is not configured.' } }),
+      { status: 500 },
+    );
+  }
 
   let user: SendSmsPayload['user'];
   let sms: SendSmsPayload['sms'];
   try {
+    const base64Secret = hookSecret.replace('v1,whsec_', '');
+    const wh = new Webhook(base64Secret);
     ({ user, sms } = wh.verify(payload, headers) as SendSmsPayload);
   } catch (error) {
     return new Response(
