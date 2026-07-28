@@ -54,7 +54,6 @@ dependencies:
   flutter_local_notifications: ^18.0.1
   shared_preferences: ^2.3.3
   image_picker: ^1.1.2
-  file_picker: ^8.1.6
   url_launcher: ^6.3.1
   flutter_web_plugins:
     sdk: flutter
