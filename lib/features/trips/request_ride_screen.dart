@@ -11,25 +11,36 @@ import '../../providers/app_state_provider.dart';
 import '../destinations/data/models/destination_suggestion.dart';
 import 'trip_tracking_screen.dart';
 
-/// Confirm-and-request screen: shown after the customer picks a destination
-/// on [DestinationSearchScreen]. Every ride requests the single standard
-/// ([VehicleType.economy]) tier - there is no vehicle-class picker - with a
-/// live, client-side fare estimate (see [RideRepository.fetchPricingConfig]),
-/// a trip type ([TripType.normal] fixed-quote vs [TripType.open] metered),
-/// and a payment method, then calls [RideRepository.requestTrip].
+/// Confirm-and-request screen: shown either after the customer picks a
+/// destination on [DestinationSearchScreen] (a [TripType.normal] trip), or
+/// directly from the home screen with no destination at all for a
+/// [TripType.open] trip - its whole point is that the destination is
+/// discovered as the ride happens rather than picked up front. Every ride
+/// requests the single standard ([VehicleType.economy]) tier - there is no
+/// vehicle-class picker - with a live, client-side fare estimate (see
+/// [RideRepository.fetchPricingConfig]) when a destination is known, and a
+/// payment method, then calls [RideRepository.requestTrip].
 class RequestRideScreen extends StatefulWidget {
   const RequestRideScreen({
     super.key,
     required this.pickupLat,
     required this.pickupLng,
     required this.pickupAddress,
-    required this.destination,
+    this.destination,
+    this.tripType = TripType.normal,
   });
 
   final double pickupLat;
   final double pickupLng;
   final String pickupAddress;
-  final DestinationSuggestion destination;
+
+  /// Null for a trip started as [TripType.open] straight from the home
+  /// screen's trip-type selector, with no destination search step at all.
+  final DestinationSuggestion? destination;
+
+  /// Initial trip type. Forced to [TripType.open] whenever [destination] is
+  /// null, since there's nothing to switch back to [TripType.normal] with.
+  final TripType tripType;
 
   @override
   State<RequestRideScreen> createState() => _RequestRideScreenState();
@@ -40,7 +51,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
   static const _vehicleType = VehicleType.economy;
 
   late final RouteEstimate? _route;
-  TripType _tripType = TripType.normal;
+  late TripType _tripType;
   String _paymentMethod = 'نقداً';
   int _passengerCount = 1;
   final _noteController = TextEditingController();
@@ -53,11 +64,19 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
   @override
   void initState() {
     super.initState();
-    _route = _routeEstimator.estimate(
-      pickup: LatLng(widget.pickupLat, widget.pickupLng),
-      destination: LatLng(widget.destination.latitude, widget.destination.longitude),
-    );
-    _loadPrice();
+    final destination = widget.destination;
+    _tripType = destination == null ? TripType.open : widget.tripType;
+    _route = destination == null
+        ? null
+        : _routeEstimator.estimate(
+            pickup: LatLng(widget.pickupLat, widget.pickupLng),
+            destination: LatLng(destination.latitude, destination.longitude),
+          );
+    if (_route == null) {
+      _loadingPrice = false;
+    } else {
+      _loadPrice();
+    }
   }
 
   @override
@@ -101,9 +120,9 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
         pickupLat: widget.pickupLat,
         pickupLng: widget.pickupLng,
         tripType: _tripType,
-        destinationAddress: widget.destination.title,
-        destinationLat: widget.destination.latitude,
-        destinationLng: widget.destination.longitude,
+        destinationAddress: widget.destination?.title,
+        destinationLat: widget.destination?.latitude,
+        destinationLng: widget.destination?.longitude,
         vehicleType: _vehicleType,
         paymentMethod: _paymentMethod,
         customerNote: _noteController.text.trim().isEmpty
@@ -142,8 +161,8 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
               showRoute: true,
               pickupLat: widget.pickupLat,
               pickupLng: widget.pickupLng,
-              destLat: widget.destination.latitude,
-              destLng: widget.destination.longitude,
+              destLat: widget.destination?.latitude,
+              destLng: widget.destination?.longitude,
             ),
           ),
           Expanded(
@@ -153,17 +172,19 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildRouteSummary(),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'نوع المشوار',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
+                  if (widget.destination != null) ...[
+                    const SizedBox(height: 20),
+                    const Text(
+                      'نوع المشوار',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  _buildTripTypeSelector(),
+                    const SizedBox(height: 10),
+                    _buildTripTypeSelector(),
+                  ],
                   const SizedBox(height: 20),
                   const Text(
                     'طريقة الدفع',
@@ -218,6 +239,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
   }
 
   Widget _buildRouteSummary() {
+    final destination = widget.destination;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -233,24 +255,37 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
             AppColors.success,
             widget.pickupAddress,
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 6, horizontal: 9),
-            child: SizedBox(
-              height: 16,
-              child: VerticalDivider(width: 2, thickness: 2),
+          if (destination != null) ...[
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 6, horizontal: 9),
+              child: SizedBox(
+                height: 16,
+                child: VerticalDivider(width: 2, thickness: 2),
+              ),
             ),
-          ),
-          _buildLocationRow(
-            Icons.location_on_rounded,
-            AppColors.error,
-            widget.destination.displayLabel,
-          ),
-          if (_route != null) ...[
+            _buildLocationRow(
+              Icons.location_on_rounded,
+              AppColors.error,
+              destination.displayLabel,
+            ),
+            if (_route != null) ...[
+              const Divider(height: 24),
+              Text(
+                'المسافة التقريبية ${_route.distanceKm.toStringAsFixed(1)} كم - '
+                'حوالي ${_route.durationMinutes} دقيقة',
+                style: const TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 12,
+                  color: AppColors.secondaryText,
+                ),
+              ),
+            ],
+          ] else ...[
             const Divider(height: 24),
-            Text(
-              'المسافة التقريبية ${_route.distanceKm.toStringAsFixed(1)} كم - '
-              'حوالي ${_route.durationMinutes} دقيقة',
-              style: const TextStyle(
+            const Text(
+              'مشوار مفتوح - بدون وجهة محددة، سيتم تحديد المسار مع الكابتن '
+              'أثناء الرحلة والسعر يُحسب حسب المسافة والوقت الفعلي.',
+              style: TextStyle(
                 fontFamily: 'Cairo',
                 fontSize: 12,
                 color: AppColors.secondaryText,
@@ -466,6 +501,8 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                             : 'اطلب الآن - ${price.toStringAsFixed(0)} أوقية'
                       : _loadingPrice
                       ? 'جارٍ حساب السعر...'
+                      : widget.destination == null
+                      ? 'اطلب الآن - السعر يُحسب حسب المسافة والوقت الفعلي'
                       : 'اطلب الآن',
                 ),
         ),

@@ -30,6 +30,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   double? _pickupLng;
   String _pickupAddress = 'موقعي الحالي';
   bool _isLocating = false;
+  TripType _tripType = TripType.normal;
 
   @override
   void initState() {
@@ -71,7 +72,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     }
   }
 
-  Future<void> _openDestinationSearch() async {
+  Future<void> _startRequest() async {
     if (_pickupLat == null || _pickupLng == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -83,6 +84,24 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       );
       return;
     }
+
+    // An open trip has no destination to search for - its whole point is
+    // that one is picked as the ride happens - so it skips straight to the
+    // confirm screen with none.
+    if (_tripType == TripType.open) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => RequestRideScreen(
+            pickupLat: _pickupLat!,
+            pickupLng: _pickupLng!,
+            pickupAddress: _pickupAddress,
+            tripType: TripType.open,
+          ),
+        ),
+      );
+      return;
+    }
+
     final destination = await Navigator.of(context).push<DestinationSuggestion>(
       MaterialPageRoute(builder: (context) => const DestinationSearchScreen()),
     );
@@ -94,6 +113,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           pickupLng: _pickupLng!,
           pickupAddress: _pickupAddress,
           destination: destination,
+          tripType: TripType.normal,
         ),
       ),
     );
@@ -187,49 +207,129 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   }
 
   Widget _buildWhereToBar() {
+    final isOpen = _tripType == TripType.open;
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(18),
       elevation: 6,
       shadowColor: Colors.black26,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: _openDestinationSearch,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          child: Row(
-            children: [
-              const Icon(Icons.search_rounded, color: AppColors.primary),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'إلى أين تريد الذهاب؟',
-                      style: TextStyle(
-                        fontFamily: 'Cairo',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: AppColors.darkText,
-                      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          InkWell(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+            onTap: _startRequest,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: Row(
+                children: [
+                  Icon(
+                    isOpen ? Icons.timelapse_rounded : Icons.search_rounded,
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isOpen ? 'اطلب مشوار مفتوح الآن' : 'إلى أين تريد الذهاب؟',
+                          style: const TextStyle(
+                            fontFamily: 'Cairo',
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: AppColors.darkText,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          isOpen
+                              ? 'بدون وجهة محددة - الانطلاق من: $_pickupAddress'
+                              : 'الانطلاق من: $_pickupAddress',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 11,
+                            color: AppColors.secondaryText,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'الانطلاق من: $_pickupAddress',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 11,
-                        color: AppColors.secondaryText,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+            child: _buildTripTypeSelector(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTripTypeSelector() {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildTripTypeChip(
+            type: TripType.normal,
+            icon: Icons.route_rounded,
+            label: 'عادي',
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildTripTypeChip(
+            type: TripType.open,
+            icon: Icons.timelapse_rounded,
+            label: 'مفتوح',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTripTypeChip({
+    required TripType type,
+    required IconData icon,
+    required String label,
+  }) {
+    final selected = _tripType == type;
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => setState(() => _tripType = type),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary.withOpacity(0.08) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? AppColors.primary : AppColors.border,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: selected ? AppColors.primary : AppColors.secondaryText,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+                color: selected ? AppColors.primary : AppColors.darkText,
+              ),
+            ),
+          ],
         ),
       ),
     );
