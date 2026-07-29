@@ -197,6 +197,26 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           top: 0,
           left: 0,
           right: 0,
+          height: 130,
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppColors.primary.withOpacity(0.18),
+                    AppColors.primary.withOpacity(0.0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
           child: SafeArea(
             bottom: false,
             child: Padding(
@@ -469,7 +489,17 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(data.icon, color: color, size: 24),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: selected
+                    ? AppColors.primary.withOpacity(0.1)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(data.icon, color: color, size: 22),
+            ),
             const SizedBox(height: 4),
             Text(
               data.label,
