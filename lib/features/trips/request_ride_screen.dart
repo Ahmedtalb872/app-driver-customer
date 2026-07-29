@@ -58,6 +58,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
 
   bool _loadingPrice = true;
   double? _estimatedPrice;
+  Map<String, dynamic>? _pricingConfig;
   bool _isRequesting = false;
   String? _error;
 
@@ -72,11 +73,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
             pickup: LatLng(widget.pickupLat, widget.pickupLng),
             destination: LatLng(destination.latitude, destination.longitude),
           );
-    if (_route == null) {
-      _loadingPrice = false;
-    } else {
-      _loadPrice();
-    }
+    _loadPrice();
   }
 
   @override
@@ -90,6 +87,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
       final config = await RideRepository.instance.fetchPricingConfig(
         _vehicleType.name,
       );
+      _pricingConfig = config;
       if (config != null && _route != null) {
         final baseFare = (config['base_fare'] as num).toDouble();
         final pricePerKm = (config['price_per_km'] as num).toDouble();
@@ -282,10 +280,9 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
             ],
           ] else ...[
             const Divider(height: 24),
-            const Text(
-              'مشوار مفتوح - بدون وجهة محددة، سيتم تحديد المسار مع الكابتن '
-              'أثناء الرحلة والسعر يُحسب حسب المسافة والوقت الفعلي.',
-              style: TextStyle(
+            Text(
+              _openTripStartingRateText(),
+              style: const TextStyle(
                 fontFamily: 'Cairo',
                 fontSize: 12,
                 color: AppColors.secondaryText,
@@ -295,6 +292,25 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
         ],
       ),
     );
+  }
+
+  /// Describes the open-trip flat starting rate from `pricing_config`
+  /// (`open_trip_base_fare`/`open_trip_base_distance_km`/
+  /// `open_trip_base_minutes` - see captain_end_trip for how it's actually
+  /// charged), falling back to a generic message while it's still loading
+  /// or if it couldn't be fetched.
+  String _openTripStartingRateText() {
+    final config = _pricingConfig;
+    if (config == null) {
+      return 'مشوار مفتوح - بدون وجهة محددة، سيتم تحديد المسار مع الكابتن '
+          'أثناء الرحلة والسعر يُحسب حسب المسافة والوقت الفعلي.';
+    }
+    final baseFare = (config['open_trip_base_fare'] as num).toDouble();
+    final baseKm = (config['open_trip_base_distance_km'] as num).toDouble();
+    final baseMinutes = (config['open_trip_base_minutes'] as num).toDouble();
+    return 'مشوار مفتوح - بدون وجهة محددة. يبدأ بـ ${baseFare.toStringAsFixed(0)} '
+        'أوقية لأول ${baseKm.toStringAsFixed(0)} كم أو ${baseMinutes.toStringAsFixed(0)} '
+        'دقائق، ثم يُحسب الإضافي حسب المسافة والوقت الفعلي.';
   }
 
   Widget _buildLocationRow(IconData icon, Color color, String label) {
@@ -470,6 +486,13 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
     );
   }
 
+  String _openTripButtonLabel() {
+    final config = _pricingConfig;
+    if (config == null) return 'اطلب الآن - السعر يُحسب حسب المسافة والوقت الفعلي';
+    final baseFare = (config['open_trip_base_fare'] as num).toDouble();
+    return 'اطلب الآن - يبدأ بـ ${baseFare.toStringAsFixed(0)} أوقية';
+  }
+
   Widget _buildBottomBar() {
     final price = _estimatedPrice;
     return Container(
@@ -502,7 +525,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                       : _loadingPrice
                       ? 'جارٍ حساب السعر...'
                       : widget.destination == null
-                      ? 'اطلب الآن - السعر يُحسب حسب المسافة والوقت الفعلي'
+                      ? _openTripButtonLabel()
                       : 'اطلب الآن',
                 ),
         ),

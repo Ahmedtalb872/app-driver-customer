@@ -30,6 +30,9 @@ class _AdminPricingScreenState extends State<AdminPricingScreen> {
     ('cancellation_fee', 'رسوم الإلغاء'),
     ('commission_percentage', 'نسبة عمولة المنصة (%)'),
     ('surge_multiplier', 'معامل التسعير المرتفع'),
+    ('open_trip_base_fare', 'أجرة بداية المشوار المفتوح'),
+    ('open_trip_base_distance_km', 'مسافة بداية المشوار المفتوح (كم)'),
+    ('open_trip_base_minutes', 'مدة بداية المشوار المفتوح (دقيقة)'),
   ];
 
   @override
