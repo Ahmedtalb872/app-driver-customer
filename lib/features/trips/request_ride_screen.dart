@@ -484,9 +484,11 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
   }
 
   String _openTripButtonLabel() {
-    final config = _pricingConfig;
-    if (config == null) return 'اطلب الآن - السعر يُحسب حسب المسافة والوقت الفعلي';
-    final baseFare = (config['open_trip_base_fare'] as num).toDouble();
+    final baseFare = (_pricingConfig?['open_trip_base_fare'] as num?)
+        ?.toDouble();
+    if (baseFare == null) {
+      return 'اطلب الآن - السعر يُحسب حسب المسافة والوقت الفعلي';
+    }
     return 'اطلب الآن - يبدأ بـ ${baseFare.toStringAsFixed(0)} أوقية';
   }
 
