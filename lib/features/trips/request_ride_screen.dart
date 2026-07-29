@@ -295,22 +295,19 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
   }
 
   /// Describes the open-trip flat starting rate from `pricing_config`
-  /// (`open_trip_base_fare`/`open_trip_base_distance_km`/
-  /// `open_trip_base_minutes` - see captain_end_trip for how it's actually
-  /// charged), falling back to a generic message while it's still loading
-  /// or if it couldn't be fetched.
+  /// (`open_trip_base_fare` only - the distance/time thresholds it covers
+  /// are metering mechanics for the captain app to reason about, not shown
+  /// here), falling back to a generic message while it's still loading or
+  /// if it couldn't be fetched.
   String _openTripStartingRateText() {
-    final config = _pricingConfig;
-    if (config == null) {
+    final baseFare = (_pricingConfig?['open_trip_base_fare'] as num?)
+        ?.toDouble();
+    if (baseFare == null) {
       return 'مشوار مفتوح - بدون وجهة محددة، سيتم تحديد المسار مع الكابتن '
           'أثناء الرحلة والسعر يُحسب حسب المسافة والوقت الفعلي.';
     }
-    final baseFare = (config['open_trip_base_fare'] as num).toDouble();
-    final baseKm = (config['open_trip_base_distance_km'] as num).toDouble();
-    final baseMinutes = (config['open_trip_base_minutes'] as num).toDouble();
     return 'مشوار مفتوح - بدون وجهة محددة. يبدأ بـ ${baseFare.toStringAsFixed(0)} '
-        'أوقية لأول ${baseKm.toStringAsFixed(0)} كم أو ${baseMinutes.toStringAsFixed(0)} '
-        'دقائق، ثم يُحسب الإضافي حسب المسافة والوقت الفعلي.';
+        'أوقية، ثم يُحسب الإضافي حسب المسافة والوقت الفعلي.';
   }
 
   Widget _buildLocationRow(IconData icon, Color color, String label) {
