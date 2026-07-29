@@ -10,18 +10,21 @@ import '../../core/constants/colors.dart';
 import '../../core/services/session_guard_service.dart';
 import '../../providers/app_state_provider.dart';
 
-enum _Step { phone, otp, setPassword, password }
+enum _Step { phone, otp, setPassword, password, directLogin }
 
 /// Phone number + password sign-in/sign-up, shared by every role this app
 /// supports on mobile. Hudhud's fixed demo accounts (see [DemoModeConfig])
 /// keep working exactly as before, entirely through the OTP step. For a
-/// real phone number the flow branches on whether it's already registered
-/// (see [AuthService.isPhoneRegistered]):
-///  - new number: send a real OTP, verify it (proves the customer owns the
+/// real phone number there are two entry points, from [AuthWelcomeScreen]:
+///  - "إنشاء حساب جديد" ([startAsReturningUser] false): starts at the
+///    phone-only step, which checks [AuthService.isPhoneRegistered] - a new
+///    number sends a real OTP, verifies it (proves the customer owns the
 ///    number), then [_buildSetPasswordStep] lets them choose a password for
-///    every later sign-in.
-///  - existing number: skip the OTP entirely and just ask for the password
-///    (see [_buildPasswordStep]).
+///    every later sign-in; a number that turns out to already be registered
+///    falls through to the password step instead ([_buildPasswordStep]).
+///  - "لدي حساب بالفعل" ([startAsReturningUser] true): skips straight to
+///    [_buildDirectLoginStep], a single combined phone+password form - no
+///    OTP, no registered-check round trip.
 ///
 /// Routing after a successful sign-in is role-based: a `customer` account
 /// calls [onSignedIn] (the caller owns navigating to the customer home
@@ -37,6 +40,7 @@ class PhoneCodeLoginScreen extends StatefulWidget {
     required this.title,
     required this.subtitle,
     required this.onSignedIn,
+    this.startAsReturningUser = false,
   });
 
   final String title;
@@ -45,6 +49,13 @@ class PhoneCodeLoginScreen extends StatefulWidget {
   /// Called after a successful sign-in, with the login screen's own
   /// [BuildContext] still valid - use it to navigate to the home screen.
   final VoidCallback onSignedIn;
+
+  /// True when opened from [AuthWelcomeScreen]'s "لدي حساب بالفعل" button -
+  /// the customer has already told us they have an account, so this skips
+  /// straight to a single combined phone+password form (see
+  /// [_buildDirectLoginStep]) instead of the phone-only step that would
+  /// otherwise re-derive the same thing via [AuthService.isPhoneRegistered].
+  final bool startAsReturningUser;
 
   @override
   State<PhoneCodeLoginScreen> createState() => _PhoneCodeLoginScreenState();
@@ -59,10 +70,16 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  _Step _step = _Step.phone;
+  late _Step _step;
   bool _isLoading = false;
   bool _isNewRealSignup = false;
   String? _fullPhone;
+
+  @override
+  void initState() {
+    super.initState();
+    _step = widget.startAsReturningUser ? _Step.directLogin : _Step.phone;
+  }
 
   @override
   void dispose() {
@@ -173,6 +190,33 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
       await _routeAfterAuth();
     } on AuthException catch (_) {
       _showError('كلمة السر غير صحيحة.');
+    } catch (_) {
+      _showError('تعذر تسجيل الدخول الآن. تحقق من الاتصال وحاول مرة أخرى.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// For [_Step.directLogin]: phone and password are entered together on
+  /// one form, so this skips [AuthService.isPhoneRegistered] entirely - if
+  /// the number turns out not to be registered (or the password is wrong),
+  /// [AuthException] covers both cases with one generic message, same as a
+  /// real ride-hailing app would rather than confirming which one it was.
+  Future<void> _submitDirectLogin() async {
+    if (!_phoneFormKey.currentState!.validate()) return;
+    final phone = '+222${_phoneController.text}';
+
+    setState(() => _isLoading = true);
+    try {
+      _fullPhone = phone;
+      await AuthService.instance.signInWithPhonePassword(
+        phone: phone,
+        password: _passwordController.text,
+      );
+      if (!mounted) return;
+      await _routeAfterAuth();
+    } on AuthException catch (_) {
+      _showError('رقم الهاتف أو كلمة السر غير صحيحة.');
     } catch (_) {
       _showError('تعذر تسجيل الدخول الآن. تحقق من الاتصال وحاول مرة أخرى.');
     } finally {
@@ -334,6 +378,7 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
             _Step.otp => _buildCodeStep(),
             _Step.setPassword => _buildSetPasswordStep(),
             _Step.password => _buildPasswordStep(),
+            _Step.directLogin => _buildDirectLoginStep(),
           },
         ),
       ),
@@ -637,6 +682,129 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
           const SizedBox(height: 12),
           ElevatedButton(
             onPressed: _isLoading ? null : _submitPasswordLogin,
+            child: _isLoading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.5,
+                    ),
+                  )
+                : const Text('تسجيل الدخول'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Phone + password together on one form - see [_submitDirectLogin] and
+  /// the [PhoneCodeLoginScreen.startAsReturningUser] doc comment.
+  Widget _buildDirectLoginStep() {
+    return Form(
+      key: _phoneFormKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 12),
+          Center(
+            child: ClipOval(
+              child: Image.asset(
+                'assets/images/al-houdhoud-logo.png',
+                width: 72,
+                height: 72,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'أدخل رقم هاتفك وكلمة السر لتسجيل الدخول.',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.secondaryText,
+              fontFamily: 'Cairo',
+            ),
+          ),
+          const SizedBox(height: 32),
+          const Text('رقم الهاتف', style: _labelStyle),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _phoneController,
+            keyboardType: TextInputType.phone,
+            textAlign: TextAlign.left,
+            style: const TextStyle(
+              fontSize: 16,
+              letterSpacing: 1.5,
+              fontWeight: FontWeight.bold,
+            ),
+            decoration: InputDecoration(
+              hintText: '36 00 00 00',
+              hintStyle: const TextStyle(
+                letterSpacing: 1.0,
+                fontWeight: FontWeight.normal,
+              ),
+              prefixIcon: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 15,
+                ),
+                margin: const EdgeInsets.only(left: 10),
+                decoration: const BoxDecoration(
+                  border: Border(
+                    left: BorderSide(color: AppColors.border, width: 1),
+                  ),
+                ),
+                child: const Text(
+                  '+222',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.darkText,
+                  ),
+                ),
+              ),
+            ),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'الرجاء إدخال رقم الهاتف';
+              }
+              if (value.length < 8) {
+                return 'رقم الهاتف يجب أن يتكون من 8 أرقام على الأقل';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          const Text('كلمة السر', style: _labelStyle),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _passwordController,
+            obscureText: true,
+            textInputAction: TextInputAction.done,
+            decoration: const InputDecoration(hintText: '••••••••'),
+            validator: (value) => (value == null || value.length < 6)
+                ? 'كلمة السر يجب أن تتكون من 6 أحرف على الأقل'
+                : null,
+            onFieldSubmitted: (_) => _submitDirectLogin(),
+          ),
+          const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: _isLoading
+                  ? null
+                  : () => setState(() {
+                      _step = _Step.phone;
+                      _phoneController.clear();
+                      _passwordController.clear();
+                    }),
+              child: const Text('ليس لدي حساب؟ إنشاء حساب جديد'),
+            ),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton(
+            onPressed: _isLoading ? null : _submitDirectLogin,
             child: _isLoading
                 ? const SizedBox(
                     width: 24,

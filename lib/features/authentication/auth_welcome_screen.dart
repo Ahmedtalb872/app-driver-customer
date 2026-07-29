@@ -9,22 +9,23 @@ import 'phone_code_login_screen.dart';
 /// SessionGuardService): a plain choice between creating a new account and
 /// signing into an existing one, before the phone-number step.
 ///
-/// Both buttons open the exact same [PhoneCodeLoginScreen] - it already
-/// figures out on its own, from the phone number entered, whether this is
-/// a new sign-up (real OTP, then choose a password) or an existing account
-/// (password only, see [PhoneCodeLoginScreen]'s own doc comment). This
-/// screen exists purely so a first-time visitor sees "إنشاء حساب/لدي حساب"
-/// up front instead of being dropped straight into a bare phone field.
+/// "إنشاء حساب جديد" opens [PhoneCodeLoginScreen] at its normal phone-first
+/// step (OTP, then choose a password, for a number that isn't registered
+/// yet). "لدي حساب بالفعل" skips straight to its combined phone+password
+/// form (see [PhoneCodeLoginScreen.startAsReturningUser]) - the customer
+/// already told us they have an account, so there's no reason to ask for
+/// the phone number on its own first.
 class AuthWelcomeScreen extends StatelessWidget {
   const AuthWelcomeScreen({super.key});
 
-  void _goToPhoneLogin(BuildContext context) {
+  void _goToPhoneLogin(BuildContext context, {required bool returningUser}) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => PhoneCodeLoginScreen(
           title: 'تسجيل الدخول',
           subtitle:
               'أدخل رقم هاتفك لإرسال رمز التحقق إليه، لتتمكن من طلب مشاويرك.',
+          startAsReturningUser: returningUser,
           onSignedIn: () {
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (context) => const CustomerHomeScreen()),
@@ -106,12 +107,14 @@ class AuthWelcomeScreen extends StatelessWidget {
                   ),
                   const Spacer(),
                   ElevatedButton(
-                    onPressed: () => _goToPhoneLogin(context),
+                    onPressed: () =>
+                        _goToPhoneLogin(context, returningUser: false),
                     child: const Text('إنشاء حساب جديد'),
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton(
-                    onPressed: () => _goToPhoneLogin(context),
+                    onPressed: () =>
+                        _goToPhoneLogin(context, returningUser: true),
                     child: const Text('لدي حساب بالفعل'),
                   ),
                   const SizedBox(height: 12),
