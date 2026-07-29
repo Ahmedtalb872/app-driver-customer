@@ -8,6 +8,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
+import 'package:alhudhud/features/authentication/auth_welcome_screen.dart';
 import 'package:alhudhud/features/authentication/phone_code_login_screen.dart';
 import 'package:alhudhud/main.dart';
 import 'package:alhudhud/providers/app_state_provider.dart';
@@ -37,7 +38,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('تنتقل الشاشة الافتتاحية تلقائياً إلى تسجيل الدخول', (
+  testWidgets('تنتقل الشاشة الافتتاحية تلقائياً إلى شاشة إنشاء حساب/تسجيل الدخول', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(wrappedApp());
@@ -46,7 +47,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 2700));
     await tester.pumpAndSettle(const Duration(milliseconds: 600));
 
-    expect(find.byType(PhoneCodeLoginScreen), findsOneWidget);
+    expect(find.byType(AuthWelcomeScreen), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

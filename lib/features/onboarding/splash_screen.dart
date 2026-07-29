@@ -2,8 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../core/constants/colors.dart';
-import '../authentication/phone_code_login_screen.dart';
-import '../home/customer_home_screen.dart';
+import '../authentication/auth_welcome_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -47,19 +46,7 @@ class _SplashScreenState extends State<SplashScreen>
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) =>
-              PhoneCodeLoginScreen(
-                title: 'تسجيل الدخول',
-                subtitle:
-                    'أدخل رقم هاتفك لإرسال رمز التحقق إليه، لتتمكن من طلب مشاويرك.',
-                onSignedIn: () {
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(
-                      builder: (context) => const CustomerHomeScreen(),
-                    ),
-                    (route) => false,
-                  );
-                },
-              ),
+              const AuthWelcomeScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },

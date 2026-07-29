@@ -4,8 +4,7 @@ import '../../core/auth/auth_service.dart';
 import '../../core/constants/colors.dart';
 import '../../core/services/session_guard_service.dart';
 import '../../providers/app_state_provider.dart';
-import '../authentication/phone_code_login_screen.dart';
-import '../home/customer_home_screen.dart';
+import '../authentication/auth_welcome_screen.dart';
 import 'about_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -69,18 +68,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final provider = Provider.of<AppStateProvider>(context, listen: false);
     provider.logout();
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (context) => PhoneCodeLoginScreen(
-          title: 'تسجيل الدخول',
-          subtitle: 'أدخل رقم هاتفك لإرسال رمز التحقق إليه، لتتمكن من طلب مشاويرك.',
-          onSignedIn: () {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (context) => const CustomerHomeScreen()),
-              (route) => false,
-            );
-          },
-        ),
-      ),
+      MaterialPageRoute(builder: (context) => const AuthWelcomeScreen()),
       (route) => false,
     );
   }
