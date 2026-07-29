@@ -269,7 +269,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 children: [
                   Icon(
                     isOpen ? Icons.timelapse_rounded : Icons.search_rounded,
-                    color: AppColors.primary,
+                    color: isOpen ? AppColors.accent : AppColors.primary,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -323,6 +323,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             type: TripType.normal,
             icon: Icons.route_rounded,
             label: 'عادي',
+            color: AppColors.primary,
           ),
         ),
         const SizedBox(width: 8),
@@ -331,6 +332,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             type: TripType.open,
             icon: Icons.timelapse_rounded,
             label: 'مفتوح',
+            color: AppColors.accent,
           ),
         ),
       ],
@@ -341,6 +343,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     required TripType type,
     required IconData icon,
     required String label,
+    required Color color,
   }) {
     final selected = _tripType == type;
     return InkWell(
@@ -349,20 +352,14 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? AppColors.primary.withOpacity(0.08) : Colors.transparent,
+          color: selected ? color.withOpacity(0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected ? AppColors.primary : AppColors.border,
-          ),
+          border: Border.all(color: selected ? color : AppColors.border),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 16,
-              color: selected ? AppColors.primary : AppColors.secondaryText,
-            ),
+            Icon(icon, size: 16, color: selected ? color : AppColors.secondaryText),
             const SizedBox(width: 6),
             Text(
               label,
@@ -370,7 +367,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 fontFamily: 'Cairo',
                 fontWeight: FontWeight.bold,
                 fontSize: 12,
-                color: selected ? AppColors.primary : AppColors.darkText,
+                color: selected ? color : AppColors.darkText,
               ),
             ),
           ],

@@ -114,7 +114,7 @@ class TripSummaryScreen extends StatelessWidget {
             fontFamily: 'Cairo',
             fontWeight: FontWeight.bold,
             fontSize: emphasize ? 18 : 14,
-            color: emphasize ? AppColors.primary : AppColors.darkText,
+            color: emphasize ? AppColors.accent : AppColors.darkText,
           ),
         ),
       ],

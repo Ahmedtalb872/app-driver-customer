@@ -18,8 +18,9 @@ import 'trip_tracking_screen.dart';
 /// discovered as the ride happens rather than picked up front. Every ride
 /// requests the single standard ([VehicleType.economy]) tier - there is no
 /// vehicle-class picker - with a live, client-side fare estimate (see
-/// [RideRepository.fetchPricingConfig]) when a destination is known, and a
-/// payment method, then calls [RideRepository.requestTrip].
+/// [RideRepository.fetchPricingConfig]) when a destination is known. Payment
+/// is always cash for now (no payment-method picker, to keep this screen to
+/// as few steps as possible), then calls [RideRepository.requestTrip].
 class RequestRideScreen extends StatefulWidget {
   const RequestRideScreen({
     super.key,
@@ -50,9 +51,10 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
   static const _routeEstimator = HaversineRouteEstimator();
   static const _vehicleType = VehicleType.economy;
 
+  static const _paymentMethod = 'نقداً';
+
   late final RouteEstimate? _route;
   late TripType _tripType;
-  String _paymentMethod = 'نقداً';
   int _passengerCount = 1;
   final _noteController = TextEditingController();
 
@@ -136,11 +138,14 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
         ),
         (route) => route.isFirst,
       );
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() {
         _isRequesting = false;
-        _error = 'تعذر إرسال طلب المشوار الآن. تحقق من الاتصال وحاول مرة أخرى.';
+        // The raw exception is appended (not just a generic message) so a
+        // screenshot of this screen is enough to diagnose a real failure,
+        // instead of needing another round-trip just to see what broke.
+        _error = 'تعذر إرسال طلب المشوار الآن. تحقق من الاتصال وحاول مرة أخرى.\n$e';
       });
     }
   }
@@ -183,17 +188,6 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                     const SizedBox(height: 10),
                     _buildTripTypeSelector(),
                   ],
-                  const SizedBox(height: 20),
-                  const Text(
-                    'طريقة الدفع',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  _buildPaymentSelector(),
                   const SizedBox(height: 20),
                   const Text(
                     'عدد الركاب',
@@ -337,6 +331,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
             icon: Icons.route_rounded,
             label: 'عادي',
             subtitle: 'وجهة محددة وسعر ثابت',
+            color: AppColors.primary,
           ),
         ),
         const SizedBox(width: 10),
@@ -346,6 +341,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
             icon: Icons.timelapse_rounded,
             label: 'مفتوح',
             subtitle: 'السعر يُحسب حسب المسافة والوقت الفعلي',
+            color: AppColors.accent,
           ),
         ),
       ],
@@ -357,6 +353,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
     required IconData icon,
     required String label,
     required String subtitle,
+    required Color color,
   }) {
     final selected = _tripType == type;
     return InkWell(
@@ -365,18 +362,15 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
         decoration: BoxDecoration(
-          color: selected ? AppColors.primary.withOpacity(0.08) : Colors.white,
+          color: selected ? color.withOpacity(0.1) : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: selected ? AppColors.primary : AppColors.border,
+            color: selected ? color : AppColors.border,
           ),
         ),
         child: Column(
           children: [
-            Icon(
-              icon,
-              color: selected ? AppColors.primary : AppColors.secondaryText,
-            ),
+            Icon(icon, color: selected ? color : AppColors.secondaryText),
             const SizedBox(height: 4),
             Text(
               label,
@@ -384,7 +378,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                 fontFamily: 'Cairo',
                 fontWeight: FontWeight.bold,
                 fontSize: 12,
-                color: selected ? AppColors.primary : AppColors.darkText,
+                color: selected ? color : AppColors.darkText,
               ),
             ),
             const SizedBox(height: 2),
@@ -395,56 +389,6 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                 fontFamily: 'Cairo',
                 fontSize: 9.5,
                 color: AppColors.secondaryText,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPaymentSelector() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildPaymentChip('نقداً', Icons.payments_outlined),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _buildPaymentChip('المحفظة', Icons.wallet_rounded),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPaymentChip(String value, IconData icon) {
-    final selected = _paymentMethod == value;
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: () => setState(() => _paymentMethod = value),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.primary.withOpacity(0.08) : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected ? AppColors.primary : AppColors.border,
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              color: selected ? AppColors.primary : AppColors.secondaryText,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: TextStyle(
-                fontFamily: 'Cairo',
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-                color: selected ? AppColors.primary : AppColors.darkText,
               ),
             ),
           ],

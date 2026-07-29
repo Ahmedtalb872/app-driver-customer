@@ -242,7 +242,7 @@ class _WalletScreenState extends State<WalletScreen> {
   Widget _buildBalanceCard(AppStateProvider provider) {
     final balance = provider.walletBalance;
     return Card(
-      color: AppColors.primary,
+      color: AppColors.accent,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(24),
