@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  static const Color primary = Color(0xFF0B8F87);
-  static const Color primaryDark = Color(0xFF086B65);
-  static const Color secondary = Color(0xFF14B8A6);
-  static const Color accent = Color(0xFFF59E0B);
+  // Brand palette, matching the actual logo artwork's colors: primary/
+  // primaryDark are the teal used for the gradient on the bird's body,
+  // secondary/accent are the gold used for its feathers and the
+  // "AL HODHOD" wordmark.
+  static const Color primary = Color(0xFF2F666F);
+  static const Color primaryDark = Color(0xFF234B52);
+  static const Color secondary = Color(0xFFD9963F);
+  static const Color accent = Color(0xFFE0A04D);
   static const Color background = Color(0xFFF8FAFC);
   static const Color surface = Color(0xFFFFFFFF);
 
