@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/colors.dart';
@@ -70,6 +71,26 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     } finally {
       if (mounted) setState(() => _isLocating = false);
     }
+  }
+
+  /// Lets the customer fine-tune (or fully override the GPS-detected)
+  /// pickup point by tapping or dragging the pin on the home screen map -
+  /// mirrors how the admin dispatch/route-editing maps already let an
+  /// operator set a point (see `RealMapWidget.pickupDraggable`).
+  Future<void> _handlePickupPointChanged(LatLng point) async {
+    setState(() {
+      _pickupLat = point.latitude;
+      _pickupLng = point.longitude;
+      _pickupAddress = 'جارٍ تحديد العنوان...';
+    });
+    final address = await GeocodingService.instance.reverseGeocode(
+      point.latitude,
+      point.longitude,
+    );
+    if (!mounted) return;
+    setState(() {
+      _pickupAddress = address ?? 'الموقع المحدد على الخريطة';
+    });
   }
 
   Future<void> _startRequest() async {
@@ -167,6 +188,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             interactive: true,
             pickupLat: _pickupLat,
             pickupLng: _pickupLng,
+            onMapTap: _handlePickupPointChanged,
+            pickupDraggable: true,
+            onPickupDragged: _handlePickupPointChanged,
           ),
         ),
         Positioned(
