@@ -23,7 +23,7 @@ void main() {
     await pumpApp(tester, _buildLoginScreen(), appState: appState);
 
     await tester.enterText(find.byType(TextFormField).first, '40000001');
-    await tester.tap(find.text('إرسال رمز التحقق'));
+    await tester.tap(find.text('متابعة'));
     await tester.pumpAndSettle();
 
     // The demo phone never hits the real backend to send a code (see
@@ -40,11 +40,11 @@ void main() {
     await pumpApp(tester, _buildLoginScreen(), appState: appState);
 
     await tester.enterText(find.byType(TextFormField).first, '40000001');
-    await tester.tap(find.text('إرسال رمز التحقق'));
+    await tester.tap(find.text('متابعة'));
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextFormField).last, '000000');
-    await tester.tap(find.text('تأكيد وتسجيل الدخول'));
+    await tester.tap(find.text('تأكيد'));
     await tester.pumpAndSettle();
 
     expect(find.byType(SnackBar), findsOneWidget);

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/auth/auth_service.dart';
 import '../../core/constants/colors.dart';
+import '../../core/services/session_guard_service.dart';
 import '../../providers/app_state_provider.dart';
 import '../authentication/phone_code_login_screen.dart';
 import '../home/customer_home_screen.dart';
@@ -60,7 +62,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _handleLogout() {
+  Future<void> _handleLogout() async {
+    SessionGuardService.instance.stop();
+    await AuthService.instance.signOut();
+    if (!mounted) return;
     final provider = Provider.of<AppStateProvider>(context, listen: false);
     provider.logout();
     Navigator.of(context).pushAndRemoveUntil(

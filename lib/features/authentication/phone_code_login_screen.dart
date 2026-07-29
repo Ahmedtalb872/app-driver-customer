@@ -7,25 +7,30 @@ import '../../core/auth/app_role.dart';
 import '../../core/auth/auth_service.dart';
 import '../../core/config/demo_mode_config.dart';
 import '../../core/constants/colors.dart';
+import '../../core/services/session_guard_service.dart';
 import '../../providers/app_state_provider.dart';
 
-/// Phone number + verification-code sign-in/sign-up, shared by every role
-/// this app supports on mobile. Hudhud's fixed demo accounts (see
-/// [DemoModeConfig]) work end-to-end through this screen today; a real
-/// phone number goes through the exact same [AuthService.requestPhoneCode]
-/// / `verifyPhoneCode` calls, which requires an SMS provider to be
-/// configured on the Supabase project before a real code is ever
-/// delivered. Supabase's phone-OTP flow creates the account automatically
-/// on first verification, so this screen doubles as both login and sign-up
-/// for a customer - a brand-new one is prompted for their name once, right
-/// after verifying (see [_ensureFullName]).
+enum _Step { phone, otp, setPassword, password }
+
+/// Phone number + password sign-in/sign-up, shared by every role this app
+/// supports on mobile. Hudhud's fixed demo accounts (see [DemoModeConfig])
+/// keep working exactly as before, entirely through the OTP step. For a
+/// real phone number the flow branches on whether it's already registered
+/// (see [AuthService.isPhoneRegistered]):
+///  - new number: send a real OTP, verify it (proves the customer owns the
+///    number), then [_buildSetPasswordStep] lets them choose a password for
+///    every later sign-in.
+///  - existing number: skip the OTP entirely and just ask for the password
+///    (see [_buildPasswordStep]).
 ///
-/// Routing after a successful verify is role-based: a `customer` account
+/// Routing after a successful sign-in is role-based: a `customer` account
 /// calls [onSignedIn] (the caller owns navigating to the customer home
-/// screen); an `admin` account is sent straight into [AdminApp] - which
-/// shares the same underlying Supabase session (see `AdminAuthService`),
-/// so it never shows its own login screen again for them. There is no
-/// mobile flow for a `captain` account since the captain app was removed.
+/// screen) and starts [SessionGuardService] so signing in elsewhere signs
+/// this device out; an `admin` account is sent straight into [AdminApp] -
+/// which shares the same underlying Supabase session (see
+/// `AdminAuthService`), so it never shows its own login screen again for
+/// them. There is no mobile flow for a `captain` account since the captain
+/// app was removed.
 class PhoneCodeLoginScreen extends StatefulWidget {
   const PhoneCodeLoginScreen({
     super.key,
@@ -48,37 +53,63 @@ class PhoneCodeLoginScreen extends StatefulWidget {
 class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
   final _phoneFormKey = GlobalKey<FormState>();
   final _codeFormKey = GlobalKey<FormState>();
+  final _passwordFormKey = GlobalKey<FormState>();
   final _phoneController = TextEditingController();
   final _codeController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
 
-  bool _codeSent = false;
+  _Step _step = _Step.phone;
   bool _isLoading = false;
+  bool _isNewRealSignup = false;
   String? _fullPhone;
 
   @override
   void dispose() {
     _phoneController.dispose();
     _codeController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  Future<void> _sendCode() async {
+  Future<void> _submitPhone() async {
     if (!_phoneFormKey.currentState!.validate()) return;
     final phone = '+222${_phoneController.text}';
 
     setState(() => _isLoading = true);
     try {
+      if (DemoModeConfig.isDemoPhone(phone)) {
+        setState(() {
+          _fullPhone = phone;
+          _isNewRealSignup = false;
+          _step = _Step.otp;
+        });
+        return;
+      }
+
+      final registered = await AuthService.instance.isPhoneRegistered(phone);
+      if (!mounted) return;
+      if (registered) {
+        setState(() {
+          _fullPhone = phone;
+          _step = _Step.password;
+        });
+        return;
+      }
+
       await AuthService.instance.requestPhoneCode(phone);
       if (!mounted) return;
       setState(() {
         _fullPhone = phone;
-        _codeSent = true;
+        _isNewRealSignup = true;
+        _step = _Step.otp;
       });
     } on AuthException catch (e) {
       _showError(e.message);
     } catch (_) {
       _showError(
-        'تعذر إرسال رمز التحقق. تحقق من الاتصال بالإنترنت وحاول مرة أخرى.',
+        'تعذر إتمام العملية الآن. تحقق من الاتصال بالإنترنت وحاول مرة أخرى.',
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -96,41 +127,102 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
       );
       if (!mounted) return;
 
-      final role = await AuthService.instance.fetchCurrentRole();
-      if (!mounted) return;
-
-      switch (role) {
-        case AppRole.admin:
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const AdminApp()),
-            (route) => false,
-          );
-          break;
-        case AppRole.customer:
-          final fullName = await _ensureFullName();
-          if (!mounted) return;
-          final provider = Provider.of<AppStateProvider>(
-            context,
-            listen: false,
-          );
-          provider.login(_fullPhone!, fullName: fullName);
-          widget.onSignedIn();
-          break;
-        case AppRole.captain:
-        case null:
-          await AuthService.instance.signOut();
-          if (!mounted) return;
-          _showError(
-            'هذا الحساب غير مدعوم على تطبيق الموبايل حالياً. تواصل مع الدعم.',
-          );
-          break;
+      if (_isNewRealSignup) {
+        setState(() => _step = _Step.setPassword);
+        return;
       }
+      await _routeAfterAuth();
     } on AuthException catch (e) {
       _showError(e.message);
     } catch (_) {
       _showError('رمز التحقق غير صحيح أو انتهت صلاحيته.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _submitNewPassword() async {
+    if (!_passwordFormKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await AuthService.instance.setPasswordForCurrentUser(
+        _passwordController.text,
+      );
+      if (!mounted) return;
+      await _routeAfterAuth();
+    } on AuthException catch (e) {
+      _showError(e.message);
+    } catch (_) {
+      _showError('تعذر حفظ كلمة السر الآن. حاول مرة أخرى.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _submitPasswordLogin() async {
+    if (!_passwordFormKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await AuthService.instance.signInWithPhonePassword(
+        phone: _fullPhone!,
+        password: _passwordController.text,
+      );
+      if (!mounted) return;
+      await _routeAfterAuth();
+    } on AuthException catch (_) {
+      _showError('كلمة السر غير صحيحة.');
+    } catch (_) {
+      _showError('تعذر تسجيل الدخول الآن. تحقق من الاتصال وحاول مرة أخرى.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// Shared tail for every successful sign-in path (password login, new
+  /// OTP+password sign-up, or a demo account) - reads the account's role and
+  /// routes accordingly.
+  Future<void> _routeAfterAuth() async {
+    final role = await AuthService.instance.fetchCurrentRole();
+    if (!mounted) return;
+
+    switch (role) {
+      case AppRole.admin:
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const AdminApp()),
+          (route) => false,
+        );
+        break;
+      case AppRole.customer:
+        final fullName = await _ensureFullName();
+        if (!mounted) return;
+
+        // Best effort - a transient failure here shouldn't block an
+        // otherwise-successful sign-in; this device just won't be forcibly
+        // signed out by a later login elsewhere until the next successful
+        // call.
+        try {
+          final sessionId = SessionGuardService.generateSessionId();
+          await AuthService.instance.setActiveSession(sessionId);
+          SessionGuardService.instance.start(sessionId);
+        } catch (_) {}
+
+        final provider = Provider.of<AppStateProvider>(
+          context,
+          listen: false,
+        );
+        provider.login(_fullPhone!, fullName: fullName);
+        widget.onSignedIn();
+        break;
+      case AppRole.captain:
+      case null:
+        await AuthService.instance.signOut();
+        if (!mounted) return;
+        _showError(
+          'هذا الحساب غير مدعوم على تطبيق الموبايل حالياً. تواصل مع الدعم.',
+        );
+        break;
     }
   }
 
@@ -237,11 +329,23 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-          child: _codeSent ? _buildCodeStep() : _buildPhoneStep(),
+          child: switch (_step) {
+            _Step.phone => _buildPhoneStep(),
+            _Step.otp => _buildCodeStep(),
+            _Step.setPassword => _buildSetPasswordStep(),
+            _Step.password => _buildPasswordStep(),
+          },
         ),
       ),
     );
   }
+
+  static const _labelStyle = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.bold,
+    color: AppColors.darkText,
+    fontFamily: 'Cairo',
+  );
 
   Widget _buildPhoneStep() {
     return Form(
@@ -270,15 +374,7 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
             ),
           ),
           const SizedBox(height: 32),
-          const Text(
-            'رقم الهاتف',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: AppColors.darkText,
-              fontFamily: 'Cairo',
-            ),
-          ),
+          const Text('رقم الهاتف', style: _labelStyle),
           const SizedBox(height: 8),
           TextFormField(
             controller: _phoneController,
@@ -340,7 +436,7 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
           ],
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: _isLoading ? null : _sendCode,
+            onPressed: _isLoading ? null : _submitPhone,
             child: _isLoading
                 ? const SizedBox(
                     width: 24,
@@ -350,7 +446,7 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
                       strokeWidth: 2.5,
                     ),
                   )
-                : const Text('إرسال رمز التحقق'),
+                : const Text('متابعة'),
           ),
         ],
       ),
@@ -373,15 +469,7 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
-            'رمز التحقق',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: AppColors.darkText,
-              fontFamily: 'Cairo',
-            ),
-          ),
+          const Text('رمز التحقق', style: _labelStyle),
           const SizedBox(height: 8),
           TextFormField(
             controller: _codeController,
@@ -411,7 +499,7 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
               onPressed: _isLoading
                   ? null
                   : () => setState(() {
-                      _codeSent = false;
+                      _step = _Step.phone;
                       _codeController.clear();
                     }),
               child: const Text('تغيير رقم الهاتف'),
@@ -429,7 +517,136 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
                       strokeWidth: 2.5,
                     ),
                   )
-                : const Text('تأكيد وتسجيل الدخول'),
+                : const Text('تأكيد'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSetPasswordStep() {
+    return Form(
+      key: _passwordFormKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 12),
+          const Text(
+            'أنشئ كلمة سر لحسابك',
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: AppColors.darkText,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'ستستخدمها لتسجيل الدخول لاحقاً بدلاً من طلب رمز تحقق جديد فى كل مرة.',
+            style: TextStyle(
+              fontSize: 13,
+              color: AppColors.secondaryText,
+              fontFamily: 'Cairo',
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text('كلمة السر', style: _labelStyle),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _passwordController,
+            obscureText: true,
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(hintText: '••••••••'),
+            validator: (value) => (value == null || value.length < 6)
+                ? 'كلمة السر يجب أن تتكون من 6 أحرف على الأقل'
+                : null,
+          ),
+          const SizedBox(height: 16),
+          const Text('تأكيد كلمة السر', style: _labelStyle),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _confirmPasswordController,
+            obscureText: true,
+            textInputAction: TextInputAction.done,
+            decoration: const InputDecoration(hintText: '••••••••'),
+            validator: (value) => value != _passwordController.text
+                ? 'كلمتا السر غير متطابقتين'
+                : null,
+            onFieldSubmitted: (_) => _submitNewPassword(),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: _isLoading ? null : _submitNewPassword,
+            child: _isLoading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.5,
+                    ),
+                  )
+                : const Text('متابعة'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPasswordStep() {
+    return Form(
+      key: _passwordFormKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 12),
+          Text(
+            'تسجيل الدخول إلى $_fullPhone',
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppColors.secondaryText,
+              fontFamily: 'Cairo',
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text('كلمة السر', style: _labelStyle),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _passwordController,
+            obscureText: true,
+            textInputAction: TextInputAction.done,
+            decoration: const InputDecoration(hintText: '••••••••'),
+            validator: (value) => (value == null || value.length < 6)
+                ? 'كلمة السر يجب أن تتكون من 6 أحرف على الأقل'
+                : null,
+            onFieldSubmitted: (_) => _submitPasswordLogin(),
+          ),
+          const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: _isLoading
+                  ? null
+                  : () => setState(() {
+                      _step = _Step.phone;
+                      _passwordController.clear();
+                    }),
+              child: const Text('تغيير رقم الهاتف'),
+            ),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton(
+            onPressed: _isLoading ? null : _submitPasswordLogin,
+            child: _isLoading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.5,
+                    ),
+                  )
+                : const Text('تسجيل الدخول'),
           ),
         ],
       ),

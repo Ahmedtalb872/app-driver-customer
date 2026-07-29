@@ -6,6 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'admin/admin_app.dart';
 import 'core/config/supabase_config.dart';
+import 'core/navigation/app_navigator.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/app_state_provider.dart';
 import 'features/onboarding/splash_screen.dart';
@@ -41,6 +42,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'الهدهد',
       debugShowCheckedModeBanner: false,
+      navigatorKey: AppNavigator.key,
       theme: AppTheme.lightTheme,
 
       // Arabic RTL Localization configuration

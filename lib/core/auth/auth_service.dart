@@ -56,6 +56,45 @@ class AuthService {
 
   Future<void> signOut() => _auth.signOut();
 
+  /// Whether [phone] already has an account - lets the login screen decide
+  /// between the password step (existing account) and the OTP sign-up flow
+  /// (new number), before any auth session exists.
+  Future<bool> isPhoneRegistered(String phone) async {
+    final result = await SupabaseConfig.client.rpc(
+      'check_phone_registered',
+      params: {'p_phone': phone},
+    );
+    return result as bool;
+  }
+
+  /// Signs in an existing account with its phone number and password -
+  /// the normal path once a customer has set a password (see
+  /// [setPasswordForCurrentUser]), no OTP needed.
+  Future<AuthResponse> signInWithPhonePassword({
+    required String phone,
+    required String password,
+  }) {
+    return _auth.signInWithPassword(phone: phone, password: password);
+  }
+
+  /// Sets a password credential on the already phone-OTP-verified current
+  /// user, right after a brand-new sign-up, so every later sign-in can use
+  /// [signInWithPhonePassword] instead of requesting a fresh OTP.
+  Future<void> setPasswordForCurrentUser(String password) async {
+    await _auth.updateUser(UserAttributes(password: password));
+  }
+
+  /// Overwrites this account's single allowed active session. Every other
+  /// device already signed in is watching this same value (see
+  /// `SessionGuardService`) and signs itself out the moment it sees one
+  /// that isn't its own.
+  Future<void> setActiveSession(String sessionId) async {
+    await SupabaseConfig.client.rpc(
+      'set_active_session',
+      params: {'p_session_id': sessionId},
+    );
+  }
+
   /// Requests a verification code for [phone]. This is Hudhud's "normal
   /// Supabase OTP flow": it calls Supabase Auth's real phone-OTP endpoint,
   /// which requires an SMS provider to be configured on the project
