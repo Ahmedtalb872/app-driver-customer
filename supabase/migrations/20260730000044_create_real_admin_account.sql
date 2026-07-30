@@ -1,0 +1,70 @@
+-- One-time provisioning of a real (non-demo) admin account, per the pattern
+-- documented in 20260712000004_create_admin_users.sql: admin accounts are
+-- not self-service, they're created by inserting directly into auth.users
+-- with role = 'admin' metadata, which handle_new_user then turns into the
+-- matching profiles/admin_users/wallets rows automatically.
+--
+-- Login: admin dashboard -> "كلمة المرور" (password) mode -> phone number
+-- below as the identifier. AdminAuthService/AuthService.signIn map a plain
+-- phone identifier to the same deterministic synthetic email
+-- (`<digits>@hudhud.app`) this migration writes directly, so a phone-shaped
+-- identifier "just works" without the caller ever seeing the email.
+do $$
+declare
+  v_phone text := '+22220522064';
+  v_password text := '20522064';
+  v_email text := '22220522064@hudhud.app';
+  v_user_id uuid;
+begin
+  if exists (select 1 from auth.users where email = v_email) then
+    return;
+  end if;
+
+  v_user_id := gen_random_uuid();
+
+  insert into auth.users (
+    instance_id, id, aud, role, email, encrypted_password,
+    email_confirmed_at, phone, phone_confirmed_at, confirmed_at,
+    created_at, updated_at, raw_app_meta_data, raw_user_meta_data,
+    is_super_admin, is_sso_user, is_anonymous
+  ) values (
+    '00000000-0000-0000-0000-000000000000',
+    v_user_id,
+    'authenticated',
+    'authenticated',
+    v_email,
+    extensions.crypt(v_password, extensions.gen_salt('bf')),
+    now(),
+    v_phone,
+    now(),
+    now(),
+    now(),
+    now(),
+    '{"provider":"email","providers":["email"]}',
+    jsonb_build_object('role', 'admin', 'full_name', 'مدير الهدهد', 'phone', v_phone),
+    false,
+    false,
+    false
+  );
+
+  insert into auth.identities (
+    id, user_id, provider_id, identity_data, provider,
+    last_sign_in_at, created_at, updated_at
+  ) values (
+    gen_random_uuid(),
+    v_user_id,
+    v_user_id::text,
+    jsonb_build_object('sub', v_user_id::text, 'email', v_email),
+    'email',
+    now(),
+    now(),
+    now()
+  );
+
+  -- handle_new_user already created the admin_users row (id only); fill in
+  -- the sub-role so every admin-only screen/action is available immediately
+  -- instead of only the ones that don't call has_admin_role().
+  update public.admin_users
+  set admin_role = 'super_admin', full_name = 'مدير الهدهد'
+  where id = v_user_id;
+end $$;
