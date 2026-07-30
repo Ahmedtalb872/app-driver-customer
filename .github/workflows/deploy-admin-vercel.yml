@@ -50,15 +50,23 @@ jobs:
       - name: Build web (admin dashboard)
         run: flutter build web --release
 
-      # build/web is already a finished static site - if the Vercel project's
-      # dashboard settings have a leftover Build/Install Command from however
-      # it was first created (e.g. a Node.js default), Vercel tries to run
-      # that server-side against a directory with no package.json and stalls
-      # instead of erroring. Ship an explicit "no build" vercel.json with the
-      # deployment so it always serves build/web as-is.
-      - name: Write vercel.json
+      # Copy the finished static site outside the git checkout before handing
+      # it to the Vercel CLI. Run from inside build/web (still under the repo's
+      # .git), the CLI auto-attaches commit metadata to the deployment, and
+      # Vercel then blocks it with "Git author <bot email> must have access to
+      # the team" - the CI token's own account is a team member, but that
+      # extra author-identity check isn't satisfied by a bot commit author,
+      # and the CLI just hangs polling a deployment that will never go ready.
+      # A directory with no .git ancestor has nothing for the CLI to attach,
+      # so the deploy is treated as a plain token-authenticated CLI deploy.
+      # Also ships a "no build" vercel.json so Vercel serves it as-is instead
+      # of running a leftover Build/Install Command from the project's
+      # dashboard settings against a directory with no package.json.
+      - name: Prepare deploy directory
         run: |
-          cat > build/web/vercel.json <<'EOF'
+          mkdir -p "$RUNNER_TEMP/deploy"
+          cp -r build/web/. "$RUNNER_TEMP/deploy/"
+          cat > "$RUNNER_TEMP/deploy/vercel.json" <<'EOF'
           {
             "buildCommand": null,
             "installCommand": null,
@@ -67,13 +75,13 @@ jobs:
           EOF
 
       - name: Link Vercel project
-        working-directory: build/web
+        working-directory: ${{ runner.temp }}/deploy
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: npx --yes vercel link --yes --project=hudhud-admin-vercel --token="$VERCEL_TOKEN"
 
       - name: Deploy to Vercel
-        working-directory: build/web
+        working-directory: ${{ runner.temp }}/deploy
         timeout-minutes: 3
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
