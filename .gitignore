@@ -46,3 +46,7 @@ app.*.map.json
 
 # Environment variables (Supabase keys) - never commit real values
 .env
+
+# Local Vercel CLI project link (contains org/project ids - see
+# .github/workflows/deploy-admin-vercel.yml for the real, CI-driven deploy)
+.vercel
