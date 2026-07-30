@@ -9,9 +9,14 @@ name: Deploy admin dashboard to Vercel
 #
 # Requires repository secrets (Settings -> Secrets and variables -> Actions):
 #   SUPABASE_URL / SUPABASE_ANON_KEY - same ones deploy-customer-web.yml uses
-#   VERCEL_TOKEN       - Vercel account -> Settings -> Tokens
-#   VERCEL_ORG_ID      - from .vercel/project.json after a one-time local
-#   VERCEL_PROJECT_ID  - `npx vercel link` (see that file's own doc comment)
+#   VERCEL_TOKEN - Vercel account -> Settings -> Tokens
+#
+# Deliberately does NOT rely on VERCEL_ORG_ID/VERCEL_PROJECT_ID secrets: on a
+# Hobby (personal, single-scope) account those are easy to copy from the
+# wrong settings page and the CLI then fails with "Project not found" with
+# no further detail. `vercel link --yes --project=...` resolves the org/
+# project pair itself from the token's own account, non-interactively, so
+# it can't get out of sync with reality the way a hand-copied ID can.
 on:
   push:
     branches:
@@ -45,10 +50,14 @@ jobs:
       - name: Build web (admin dashboard)
         run: flutter build web --release
 
+      - name: Link Vercel project
+        working-directory: build/web
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx --yes vercel link --yes --project=hudhud-admin-vercel --token="$VERCEL_TOKEN"
+
       - name: Deploy to Vercel
         working-directory: build/web
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: npx --yes vercel deploy --prod --token="$VERCEL_TOKEN" --yes
