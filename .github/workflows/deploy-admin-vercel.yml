@@ -60,8 +60,8 @@ jobs:
         run: |
           cat > build/web/vercel.json <<'EOF'
           {
-            "buildCommand": false,
-            "installCommand": false,
+            "buildCommand": null,
+            "installCommand": null,
             "framework": null
           }
           EOF
