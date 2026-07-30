@@ -22,9 +22,12 @@ begin
 
   v_user_id := gen_random_uuid();
 
+  -- confirmed_at is a generated column (derived from email_confirmed_at/
+  -- phone_confirmed_at) - it must not appear in this column list at all,
+  -- Postgres rejects any explicit value for it on both insert and update.
   insert into auth.users (
     instance_id, id, aud, role, email, encrypted_password,
-    email_confirmed_at, phone, phone_confirmed_at, confirmed_at,
+    email_confirmed_at, phone, phone_confirmed_at,
     created_at, updated_at, raw_app_meta_data, raw_user_meta_data,
     is_super_admin, is_sso_user, is_anonymous
   ) values (
@@ -36,7 +39,6 @@ begin
     extensions.crypt(v_password, extensions.gen_salt('bf')),
     now(),
     v_phone,
-    now(),
     now(),
     now(),
     now(),
