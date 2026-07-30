@@ -50,6 +50,22 @@ jobs:
       - name: Build web (admin dashboard)
         run: flutter build web --release
 
+      # build/web is already a finished static site - if the Vercel project's
+      # dashboard settings have a leftover Build/Install Command from however
+      # it was first created (e.g. a Node.js default), Vercel tries to run
+      # that server-side against a directory with no package.json and stalls
+      # instead of erroring. Ship an explicit "no build" vercel.json with the
+      # deployment so it always serves build/web as-is.
+      - name: Write vercel.json
+        run: |
+          cat > build/web/vercel.json <<'EOF'
+          {
+            "buildCommand": false,
+            "installCommand": false,
+            "framework": null
+          }
+          EOF
+
       - name: Link Vercel project
         working-directory: build/web
         env:
@@ -58,6 +74,7 @@ jobs:
 
       - name: Deploy to Vercel
         working-directory: build/web
+        timeout-minutes: 3
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: npx --yes vercel deploy --prod --token="$VERCEL_TOKEN" --yes
+        run: npx --yes vercel deploy --prod --token="$VERCEL_TOKEN" --yes --debug
