@@ -81,7 +81,7 @@ class RideRepository {
     required VehicleType vehicleType,
     required String paymentMethod,
     String? customerNote,
-    int timeoutSeconds = 45,
+    int timeoutSeconds = 300,
     int passengerCount = 1,
   }) async {
     final row = await _client.rpc(

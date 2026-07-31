@@ -46,7 +46,7 @@ class AdminDispatchRepository {
     int? estimatedDurationMinutes,
     double? distanceKm,
     String? customerNote,
-    int timeoutSeconds = 45,
+    int timeoutSeconds = 300,
   }) async {
     // Customer registration is optional (20260718000040_guest_dispatch_trip.sql):
     // if `customerPhone` doesn't match any registered account, the RPC still
