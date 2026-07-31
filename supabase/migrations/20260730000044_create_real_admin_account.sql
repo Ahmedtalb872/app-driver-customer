@@ -25,11 +25,21 @@ begin
   -- confirmed_at is a generated column (derived from email_confirmed_at/
   -- phone_confirmed_at) - it must not appear in this column list at all,
   -- Postgres rejects any explicit value for it on both insert and update.
+  --
+  -- confirmation_token/recovery_token/email_change*/phone_change*/
+  -- reauthentication_token have no database-level default on this project,
+  -- so leaving them out of the column list leaves them NULL - GoTrue's Go
+  -- client scans them into a plain string and errors with "converting NULL
+  -- to string is unsupported" on every login attempt for this user. They
+  -- must be explicit empty strings, matching what a normal signup writes.
   insert into auth.users (
     instance_id, id, aud, role, email, encrypted_password,
     email_confirmed_at, phone, phone_confirmed_at,
     created_at, updated_at, raw_app_meta_data, raw_user_meta_data,
-    is_super_admin, is_sso_user, is_anonymous
+    is_super_admin, is_sso_user, is_anonymous,
+    confirmation_token, recovery_token, email_change_token_new,
+    email_change, phone_change, phone_change_token,
+    email_change_token_current, reauthentication_token
   ) values (
     '00000000-0000-0000-0000-000000000000',
     v_user_id,
@@ -46,7 +56,8 @@ begin
     jsonb_build_object('role', 'admin', 'full_name', 'مدير الهدهد', 'phone', v_phone),
     false,
     false,
-    false
+    false,
+    '', '', '', '', '', '', '', ''
   );
 
   insert into auth.identities (
