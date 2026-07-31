@@ -56491,7 +56491,7 @@ o=t.z
 m=A
 l=t.f
 s=3
-return A.j(n.fw("admin_dispatch_trip",A.a1(["p_customer_phone",b,"p_pickup_address",j,"p_pickup_lat",k,"p_pickup_lng",a0,"p_trip_type",a1,"p_destination_address",c,"p_destination_lat",d,"p_destination_lng",e,"p_vehicle_type",a2,"p_payment_method",i,"p_estimated_price",h,"p_estimated_duration_minutes",g,"p_distance_km",f,"p_customer_note",a,"p_timeout_seconds",45],p,o),o),$async$IP)
+return A.j(n.fw("admin_dispatch_trip",A.a1(["p_customer_phone",b,"p_pickup_address",j,"p_pickup_lat",k,"p_pickup_lng",a0,"p_trip_type",a1,"p_destination_address",c,"p_destination_lat",d,"p_destination_lng",e,"p_vehicle_type",a2,"p_payment_method",i,"p_estimated_price",h,"p_estimated_duration_minutes",g,"p_distance_km",f,"p_customer_note",a,"p_timeout_seconds",300],p,o),o),$async$IP)
 case 3:q=m.hW(l.a(a4),p,o)
 s=1
 break
@@ -61252,7 +61252,7 @@ k=A
 j=J
 i=t.P
 s=3
-return A.j(l.fw("customer_request_trip",A.a1(["p_pickup_address",g,"p_pickup_lat",h,"p_pickup_lng",a0,"p_trip_type",o,"p_destination_address",b,"p_destination_lat",c,"p_destination_lng",d,"p_vehicle_type",a2.b,"p_payment_method",n,"p_customer_note",a,"p_timeout_seconds",45,"p_passenger_count",e],t.N,m),m),$async$LF)
+return A.j(l.fw("customer_request_trip",A.a1(["p_pickup_address",g,"p_pickup_lat",h,"p_pickup_lng",a0,"p_trip_type",o,"p_destination_address",b,"p_destination_lat",c,"p_destination_lng",d,"p_vehicle_type",a2.b,"p_payment_method",n,"p_customer_note",a,"p_timeout_seconds",300,"p_passenger_count",e],t.N,m),m),$async$LF)
 case 3:q=p.zg(k.ar(j.a5(i.a(a4),"id")))
 s=1
 break
