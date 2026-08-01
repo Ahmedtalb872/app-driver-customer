@@ -317,12 +317,14 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   Widget _buildTripTypeSelector() {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
           child: _buildTripTypeChip(
             type: TripType.normal,
             icon: Icons.route_rounded,
             label: 'عادي',
+            description: 'تحدد وجهتك',
             color: AppColors.primary,
           ),
         ),
@@ -332,6 +334,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             type: TripType.open,
             icon: Icons.timelapse_rounded,
             label: 'مفتوح',
+            description: 'بدون وجهة، السائق تحت تصرفك',
             color: AppColors.accent,
           ),
         ),
@@ -339,10 +342,15 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     );
   }
 
+  // "عادي"/"مفتوح" alone don't tell a first-time user what actually differs
+  // between the two (a fixed destination vs. none at all) - each chip now
+  // carries a one-line description under the label so the distinction is
+  // clear before tapping, not just after.
   Widget _buildTripTypeChip({
     required TripType type,
     required IconData icon,
     required String label,
+    required String description,
     required Color color,
   }) {
     final selected = _tripType == type;
@@ -350,24 +358,47 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       borderRadius: BorderRadius.circular(12),
       onTap: () => setState(() => _tripType = type),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
         decoration: BoxDecoration(
           color: selected ? color.withOpacity(0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: selected ? color : AppColors.border),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: selected ? color : AppColors.secondaryText),
-            const SizedBox(width: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 16,
+                  color: selected ? color : AppColors.secondaryText,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    color: selected ? color : AppColors.darkText,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 2),
             Text(
-              label,
+              description,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontFamily: 'Cairo',
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-                color: selected ? color : AppColors.darkText,
+                fontSize: 9.5,
+                color: selected
+                    ? color.withOpacity(0.85)
+                    : AppColors.secondaryText,
               ),
             ),
           ],
