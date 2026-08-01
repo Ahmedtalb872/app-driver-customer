@@ -75,6 +75,22 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
   bool _isNewRealSignup = false;
   String? _fullPhone;
 
+  // Shared across _buildSetPasswordStep/_buildPasswordStep/
+  // _buildDirectLoginStep - only one of those is ever on screen at once, so
+  // a single flag per field is enough.
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+
+  Widget _obscureToggle(bool obscured, VoidCallback onToggle) {
+    return IconButton(
+      icon: Icon(
+        obscured ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+        color: AppColors.secondaryText,
+      ),
+      onPressed: onToggle,
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -605,9 +621,15 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
           const SizedBox(height: 8),
           TextFormField(
             controller: _passwordController,
-            obscureText: true,
+            obscureText: _obscurePassword,
             textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(hintText: '••••••••'),
+            decoration: InputDecoration(
+              hintText: '••••••••',
+              suffixIcon: _obscureToggle(
+                _obscurePassword,
+                () => setState(() => _obscurePassword = !_obscurePassword),
+              ),
+            ),
             validator: (value) => (value == null || value.length < 6)
                 ? 'كلمة السر يجب أن تتكون من 6 أحرف على الأقل'
                 : null,
@@ -617,9 +639,17 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
           const SizedBox(height: 8),
           TextFormField(
             controller: _confirmPasswordController,
-            obscureText: true,
+            obscureText: _obscureConfirmPassword,
             textInputAction: TextInputAction.done,
-            decoration: const InputDecoration(hintText: '••••••••'),
+            decoration: InputDecoration(
+              hintText: '••••••••',
+              suffixIcon: _obscureToggle(
+                _obscureConfirmPassword,
+                () => setState(
+                  () => _obscureConfirmPassword = !_obscureConfirmPassword,
+                ),
+              ),
+            ),
             validator: (value) => value != _passwordController.text
                 ? 'كلمتا السر غير متطابقتين'
                 : null,
@@ -664,9 +694,15 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
           const SizedBox(height: 8),
           TextFormField(
             controller: _passwordController,
-            obscureText: true,
+            obscureText: _obscurePassword,
             textInputAction: TextInputAction.done,
-            decoration: const InputDecoration(hintText: '••••••••'),
+            decoration: InputDecoration(
+              hintText: '••••••••',
+              suffixIcon: _obscureToggle(
+                _obscurePassword,
+                () => setState(() => _obscurePassword = !_obscurePassword),
+              ),
+            ),
             validator: (value) => (value == null || value.length < 6)
                 ? 'كلمة السر يجب أن تتكون من 6 أحرف على الأقل'
                 : null,
@@ -789,9 +825,15 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
           const SizedBox(height: 8),
           TextFormField(
             controller: _passwordController,
-            obscureText: true,
+            obscureText: _obscurePassword,
             textInputAction: TextInputAction.done,
-            decoration: const InputDecoration(hintText: '••••••••'),
+            decoration: InputDecoration(
+              hintText: '••••••••',
+              suffixIcon: _obscureToggle(
+                _obscurePassword,
+                () => setState(() => _obscurePassword = !_obscurePassword),
+              ),
+            ),
             validator: (value) => (value == null || value.length < 6)
                 ? 'كلمة السر يجب أن تتكون من 6 أحرف على الأقل'
                 : null,
