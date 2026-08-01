@@ -57,13 +57,17 @@ class _DeliveryRequestScreenState extends State<DeliveryRequestScreen> {
   @override
   void initState() {
     super.initState();
+    // estimate() only ever returns null when destination is null (see
+    // HaversineRouteEstimator.estimate) - widget.destination is required and
+    // non-nullable here, unlike RequestRideScreen's optional one, so this is
+    // always non-null.
     _route = _routeEstimator.estimate(
       pickup: LatLng(widget.pickupLat, widget.pickupLng),
       destination: LatLng(
         widget.destination.latitude,
         widget.destination.longitude,
       ),
-    );
+    )!;
     _loadPrice();
   }
 
