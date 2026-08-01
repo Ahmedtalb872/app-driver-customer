@@ -124,9 +124,12 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
       });
     } on AuthException catch (e) {
       _showError(e.message);
-    } catch (_) {
+    } catch (e) {
+      // TODO(temporary): surfacing the raw exception to diagnose a
+      // persistent failure at this step - revert to the generic Arabic
+      // message once resolved.
       _showError(
-        'تعذر إتمام العملية الآن. تحقق من الاتصال بالإنترنت وحاول مرة أخرى.',
+        'تعذر إتمام العملية الآن. تحقق من الاتصال بالإنترنت وحاول مرة أخرى.\n$e',
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
