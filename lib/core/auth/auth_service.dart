@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:http/http.dart' show ClientException;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/demo_mode_config.dart';
@@ -48,9 +51,11 @@ class AuthService {
     required String phone,
     required String password,
   }) {
-    return _auth.signInWithPassword(
-      email: _phoneToEmail(phone),
-      password: password,
+    return _withRetry(
+      () => _auth.signInWithPassword(
+        email: _phoneToEmail(phone),
+        password: password,
+      ),
     );
   }
 
@@ -59,12 +64,14 @@ class AuthService {
   /// Whether [phone] already has an account - lets the login screen decide
   /// between the password step (existing account) and the OTP sign-up flow
   /// (new number), before any auth session exists.
-  Future<bool> isPhoneRegistered(String phone) async {
-    final result = await SupabaseConfig.client.rpc(
-      'check_phone_registered',
-      params: {'p_phone': phone},
-    );
-    return result as bool;
+  Future<bool> isPhoneRegistered(String phone) {
+    return _withRetry(() async {
+      final result = await SupabaseConfig.client.rpc(
+        'check_phone_registered',
+        params: {'p_phone': phone},
+      );
+      return result as bool;
+    });
   }
 
   /// Signs in an existing account with its phone number and password -
@@ -74,7 +81,9 @@ class AuthService {
     required String phone,
     required String password,
   }) {
-    return _auth.signInWithPassword(phone: phone, password: password);
+    return _withRetry(
+      () => _auth.signInWithPassword(phone: phone, password: password),
+    );
   }
 
   /// Sets a password credential on the already phone-OTP-verified current
@@ -105,7 +114,7 @@ class AuthService {
   /// already known, no real OTP is requested and this is a local no-op.
   Future<void> requestPhoneCode(String phone) async {
     if (DemoModeConfig.isDemoPhone(phone)) return;
-    await _auth.signInWithOtp(phone: phone);
+    await _withRetry(() => _auth.signInWithOtp(phone: phone));
   }
 
   /// Verifies [code] for [phone] and signs the user in.
@@ -133,7 +142,30 @@ class AuthService {
       );
     }
 
-    return _auth.verifyOTP(type: OtpType.sms, phone: phone, token: code);
+    return _withRetry(
+      () => _auth.verifyOTP(type: OtpType.sms, phone: phone, token: code),
+    );
+  }
+
+  /// Retries [action] on a transient network failure (DNS lookup/socket
+  /// errors) - this app has repeatedly seen brief "Failed host lookup"
+  /// blips on flaky mobile data that succeed a moment later, so a couple
+  /// of quick retries avoid surfacing a scary error for what's often a
+  /// one-off timeout. Never retries a real [AuthException] (wrong
+  /// password, invalid code, ...) since trying again can't change that.
+  Future<T> _withRetry<T>(Future<T> Function() action) async {
+    const maxAttempts = 3;
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await action();
+      } on SocketException {
+        if (attempt == maxAttempts) rethrow;
+      } on ClientException {
+        if (attempt == maxAttempts) rethrow;
+      }
+      await Future.delayed(Duration(milliseconds: 600 * attempt));
+    }
+    throw StateError('unreachable');
   }
 
   /// Reads the signed-in user's role from `public.profiles`. Returns null
