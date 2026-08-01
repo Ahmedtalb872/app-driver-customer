@@ -93,10 +93,10 @@ flutter_launcher_icons:
 
 flutter_native_splash:
   color: "#ffffff"
-  image: "assets/images/al-houdhoud-logo.png"
+  image: "assets/images/al-houdhoud-logo-mark.png"
   android_12:
     color: "#ffffff"
-    image: "assets/images/al-houdhoud-logo.png"
+    image: "assets/images/al-houdhoud-logo-mark.png"
   web: true
 
 # For information on the generic Dart part of this file, see the
