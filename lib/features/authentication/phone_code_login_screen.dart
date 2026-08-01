@@ -400,12 +400,15 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
         children: [
           const SizedBox(height: 12),
           Center(
-            child: ClipOval(
+            child: SizedBox(
+              width: 72,
+              height: 72,
+              // BoxFit.cover inside a circular clip cropped most of the
+              // logo's fanned feathers and car away - contain always shows
+              // the full artwork.
               child: Image.asset(
                 'assets/images/al-houdhoud-logo.png',
-                width: 72,
-                height: 72,
-                fit: BoxFit.cover,
+                fit: BoxFit.contain,
               ),
             ),
           ),
@@ -708,12 +711,15 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
         children: [
           const SizedBox(height: 12),
           Center(
-            child: ClipOval(
+            child: SizedBox(
+              width: 72,
+              height: 72,
+              // BoxFit.cover inside a circular clip cropped most of the
+              // logo's fanned feathers and car away - contain always shows
+              // the full artwork.
               child: Image.asset(
                 'assets/images/al-houdhoud-logo.png',
-                width: 72,
-                height: 72,
-                fit: BoxFit.cover,
+                fit: BoxFit.contain,
               ),
             ),
           ),

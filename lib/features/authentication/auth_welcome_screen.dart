@@ -64,8 +64,17 @@ class AuthWelcomeScreen extends StatelessWidget {
               child: Column(
                 children: [
                   const Spacer(),
-                  // Soft radial teal glow behind the logo.
+                  // Soft radial teal glow behind the logo. The logo artwork
+                  // itself is a wide composition (fanned feathers, the car,
+                  // the wordmark below it) rather than a centered circular
+                  // mark, so it must never be forced into a circle - a
+                  // ClipOval + BoxFit.cover here previously cropped off most
+                  // of the feathers and the car, leaving barely more than a
+                  // sliver of the artwork visible. BoxFit.contain in a plain
+                  // (unclipped) box always shows it in full.
                   Container(
+                    width: 150,
+                    height: 150,
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
@@ -76,13 +85,9 @@ class AuthWelcomeScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    child: ClipOval(
-                      child: Image.asset(
-                        'assets/images/al-houdhoud-logo.png',
-                        width: 110,
-                        height: 110,
-                        fit: BoxFit.cover,
-                      ),
+                    child: Image.asset(
+                      'assets/images/al-houdhoud-logo.png',
+                      fit: BoxFit.contain,
                     ),
                   ),
                   const SizedBox(height: 24),

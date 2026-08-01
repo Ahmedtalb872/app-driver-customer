@@ -61,11 +61,9 @@ class ProfileScreen extends StatelessWidget {
           ? AppBar(
               leading: Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: ClipOval(
-                  child: Image.asset(
-                    'assets/images/al-houdhoud-logo.png',
-                    fit: BoxFit.cover,
-                  ),
+                child: Image.asset(
+                  'assets/images/al-houdhoud-logo.png',
+                  fit: BoxFit.contain,
                 ),
               ),
               title: const Text('الملف الشخصي'),

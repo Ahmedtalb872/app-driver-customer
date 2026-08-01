@@ -80,11 +80,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       appBar: AppBar(
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
-          child: ClipOval(
-            child: Image.asset(
-              'assets/images/al-houdhoud-logo.png',
-              fit: BoxFit.cover,
-            ),
+          child: Image.asset(
+            'assets/images/al-houdhoud-logo.png',
+            fit: BoxFit.contain,
           ),
         ),
         title: const Text('الإعدادات العامة'),
@@ -261,12 +259,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // About Card
             Card(
               child: ListTile(
-                leading: ClipOval(
+                leading: SizedBox(
+                  width: 32,
+                  height: 32,
                   child: Image.asset(
                     'assets/images/al-houdhoud-logo.png',
-                    width: 32,
-                    height: 32,
-                    fit: BoxFit.cover,
+                    fit: BoxFit.contain,
                   ),
                 ),
                 title: const Text(

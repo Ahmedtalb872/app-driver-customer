@@ -27,12 +27,12 @@ class AboutScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              child: ClipOval(
+              child: SizedBox(
+                width: 120,
+                height: 120,
                 child: Image.asset(
                   'assets/images/al-houdhoud-logo.png',
-                  width: 120,
-                  height: 120,
-                  fit: BoxFit.cover,
+                  fit: BoxFit.contain,
                 ),
               ),
             ),
