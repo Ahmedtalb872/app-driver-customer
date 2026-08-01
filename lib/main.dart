@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
@@ -7,12 +9,20 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'admin/admin_app.dart';
 import 'core/config/supabase_config.dart';
 import 'core/navigation/app_navigator.dart';
+import 'core/network/doh_fallback_http_overrides.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/app_state_provider.dart';
 import 'features/onboarding/splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // dart:io's DNS resolution has been observed to fail unconditionally on
+  // at least one real device/network combination that the same device's
+  // browser has no trouble with at all - see DohFallbackHttpOverrides for
+  // the full reasoning. Web has no dart:io HttpClient to override.
+  if (!kIsWeb) {
+    HttpOverrides.global = DohFallbackHttpOverrides();
+  }
   await dotenv.load(fileName: '.env');
   await SupabaseConfig.initialize();
 
