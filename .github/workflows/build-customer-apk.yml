@@ -1,0 +1,62 @@
+name: Build customer app APK
+
+# Builds a real, installable Android APK of the customer app and publishes
+# it to a single rolling GitHub Release (tag customer-apk-latest) so it can
+# be downloaded and installed directly on a phone - no Android Studio, no
+# local git/Gradle state to get out of sync. Re-running this workflow
+# always replaces the previous release's APK in place, so the same link
+# keeps working: https://github.com/<owner>/<repo>/releases/tag/customer-apk-latest
+#
+# Requires the same two repository secrets as deploy-customer-web.yml
+# (Settings -> Secrets and variables -> Actions):
+#   SUPABASE_URL       - the Supabase project URL
+#   SUPABASE_ANON_KEY  - the Supabase project's public anon key
+on:
+  push:
+    branches:
+      - main
+      - claude/project-nature-3gwftj
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Write .env
+        run: |
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build release APK (customer app)
+        run: flutter build apk --release -t lib/main.dart
+
+      - name: Publish rolling release with the APK
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          mv "$APK" "hudhud-customer-${GITHUB_SHA::7}.apk"
+          gh release delete customer-apk-latest --yes --cleanup-tag || true
+          gh release create customer-apk-latest "hudhud-customer-${GITHUB_SHA::7}.apk" \
+            --title "تطبيق الزبون - أحدث نسخة" \
+            --notes "بُني تلقائياً من الالتزام ${GITHUB_SHA::7} على فرع ${GITHUB_REF_NAME}. حمّل ملف APK أدناه وثبّته مباشرة على الهاتف (فعّل \"تثبيت من مصادر غير معروفة\" إذا طُلب ذلك)."
