@@ -116,6 +116,7 @@ flutter:
   #   - images/a_dot_ham.jpeg
   assets:
     - assets/images/al-houdhoud-logo.png
+    - assets/images/al-houdhoud-logo-mark.png
     - assets/audio/hudhud_ride_request.wav
     - assets/geo/nouakchott_districts.geojson
     - .env

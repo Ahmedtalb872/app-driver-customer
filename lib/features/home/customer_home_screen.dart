@@ -532,7 +532,7 @@ class _LogoBadge extends StatelessWidget {
           BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 3)),
         ],
       ),
-      child: Image.asset('assets/images/al-houdhoud-logo.png', fit: BoxFit.contain),
+      child: Image.asset('assets/images/al-houdhoud-logo-mark.png', fit: BoxFit.contain),
     );
   }
 }

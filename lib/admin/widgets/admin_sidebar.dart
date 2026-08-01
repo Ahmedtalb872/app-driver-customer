@@ -141,7 +141,7 @@ class AdminSidebar extends StatelessWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
                   child: Image.asset(
-                    'assets/images/al-houdhoud-logo.png',
+                    'assets/images/al-houdhoud-logo-mark.png',
                     width: 40,
                     height: 40,
                     fit: BoxFit.cover,

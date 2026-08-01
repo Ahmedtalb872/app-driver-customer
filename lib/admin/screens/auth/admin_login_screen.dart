@@ -159,7 +159,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
                       child: Image.asset(
-                        'assets/images/al-houdhoud-logo.png',
+                        'assets/images/al-houdhoud-logo-mark.png',
                         height: 96,
                         fit: BoxFit.contain,
                       ),

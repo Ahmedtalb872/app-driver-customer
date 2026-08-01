@@ -426,7 +426,7 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
               // logo's fanned feathers and car away - contain always shows
               // the full artwork.
               child: Image.asset(
-                'assets/images/al-houdhoud-logo.png',
+                'assets/images/al-houdhoud-logo-mark.png',
                 fit: BoxFit.contain,
               ),
             ),
@@ -757,7 +757,7 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
               // logo's fanned feathers and car away - contain always shows
               // the full artwork.
               child: Image.asset(
-                'assets/images/al-houdhoud-logo.png',
+                'assets/images/al-houdhoud-logo-mark.png',
                 fit: BoxFit.contain,
               ),
             ),

@@ -62,7 +62,7 @@ class ProfileScreen extends StatelessWidget {
               leading: Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Image.asset(
-                  'assets/images/al-houdhoud-logo.png',
+                  'assets/images/al-houdhoud-logo-mark.png',
                   fit: BoxFit.contain,
                 ),
               ),

@@ -132,7 +132,7 @@ class _SplashScreenState extends State<SplashScreen>
                                               maxWidth: logoWidth,
                                             ),
                                             child: Image.asset(
-                                              'assets/images/al-houdhoud-logo.png',
+                                              'assets/images/al-houdhoud-logo-mark.png',
                                               width: logoWidth,
                                               fit: BoxFit.contain,
                                             ),

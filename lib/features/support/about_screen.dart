@@ -31,7 +31,7 @@ class AboutScreen extends StatelessWidget {
                 width: 120,
                 height: 120,
                 child: Image.asset(
-                  'assets/images/al-houdhoud-logo.png',
+                  'assets/images/al-houdhoud-logo-mark.png',
                   fit: BoxFit.contain,
                 ),
               ),

@@ -81,7 +81,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
           child: Image.asset(
-            'assets/images/al-houdhoud-logo.png',
+            'assets/images/al-houdhoud-logo-mark.png',
             fit: BoxFit.contain,
           ),
         ),
@@ -263,7 +263,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   width: 32,
                   height: 32,
                   child: Image.asset(
-                    'assets/images/al-houdhoud-logo.png',
+                    'assets/images/al-houdhoud-logo-mark.png',
                     fit: BoxFit.contain,
                   ),
                 ),
