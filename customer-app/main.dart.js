@@ -57369,7 +57369,7 @@ case 7:p.F(new A.aSp(p))
 case 5:case 1:return A.m(q,r)}})
 return A.n($async$vj,r)},
 H(a){var s,r=this,q=null,p=t.y,o=t.p
-p=A.b([A.vR(A.bI(16),A.pm("assets/images/al-houdhoud-logo.png",B.dx,96,q),B.cg),B.aH,B.awJ,B.eb,B.auX,B.b3,A.aKP(new A.aSP(r),B.acK,A.cP([r.d],p),p),B.aH],o)
+p=A.b([A.vR(A.bI(16),A.pm("assets/images/al-houdhoud-logo-mark.png",B.dx,96,q),B.cg),B.aH,B.awJ,B.eb,B.auX,B.b3,A.aKP(new A.aSP(r),B.acK,A.cP([r.d],p),p),B.aH],o)
 if(r.d)B.b.R(p,r.ap6())
 else B.b.R(p,r.apE())
 s=r.ay
@@ -60764,7 +60764,7 @@ $0(){return this.a.zO(this.b)},
 $S:0}
 A.fe.prototype={}
 A.GF.prototype={
-H(a){var s=null,r=this.d,q=r?76:260,p=t.p,o=A.b([A.vR(A.bI(10),A.pm("assets/images/al-houdhoud-logo.png",B.uC,40,40),B.cg)],p)
+H(a){var s=null,r=this.d,q=r?76:260,p=t.p,o=A.b([A.vR(A.bI(10),A.pm("assets/images/al-houdhoud-logo-mark.png",B.uC,40,40),B.cg)],p)
 if(!r)B.b.R(o,A.b([B.fP,B.Zc],p))
 return A.bl(s,A.aC(A.b([B.aH,new A.ay(B.fe,A.bZ(o,B.n,B.cx,B.k,0,s),s),B.aH,A.cj(A.bgE(new A.ao9(this),19,B.ws,!1),1)],p),B.n,B.i,B.k),B.o,B.b0,s,s,s,s,s,s,s,s,s,q)}}
 A.ao9.prototype={
@@ -61778,7 +61778,7 @@ this.fW()}}
 A.rc.prototype={
 a2x(a,b){A.bf(a,!1).ef(A.f5(new A.aoU(b),null,t.z))},
 H(a){var s=null,r=A.jT(0,A.jM(A.c8(A.hz(s,s,!1,s,new A.ale(s),B.S),140,1/0),!0,s),s,s,0,0,s,s),q=A.b([A.af(31,B.I.q()>>>16&255,B.I.q()>>>8&255,B.I.q()&255),A.af(0,B.I.q()>>>16&255,B.I.q()>>>8&255,B.I.q()&255)],t.t_),p=t.p
-return A.fJ(s,B.bT,A.fo(B.br,A.b([r,A.fI(!0,new A.ay(B.YW,A.aC(A.b([B.k3,A.bl(s,A.pm("assets/images/al-houdhoud-logo.png",B.dx,s,s),B.o,s,s,new A.bw(s,s,s,s,s,new A.xQ(B.a1,0.5,B.ef,s,0,q,s,s),B.bA),s,150,s,s,B.hv,s,s,150),B.b3,B.aue,B.V,B.atH,B.k3,A.ek(B.atL,new A.aoV(this,a),s),B.a3,A.xs(B.awv,new A.aoW(this,a),s),B.a3],p),B.n,B.i,B.k),s),B.a2,!0)],p),B.p,B.b8,s),s,s,s,s)}}
+return A.fJ(s,B.bT,A.fo(B.br,A.b([r,A.fI(!0,new A.ay(B.YW,A.aC(A.b([B.k3,A.bl(s,A.pm("assets/images/al-houdhoud-logo-mark.png",B.dx,s,s),B.o,s,s,new A.bw(s,s,s,s,s,new A.xQ(B.a1,0.5,B.ef,s,0,q,s,s),B.bA),s,150,s,s,B.hv,s,s,150),B.b3,B.aue,B.V,B.atH,B.k3,A.ek(B.atL,new A.aoV(this,a),s),B.a3,A.xs(B.awv,new A.aoW(this,a),s),B.a3],p),B.n,B.i,B.k),s),B.a2,!0)],p),B.p,B.b8,s),s,s,s,s)}}
 A.aoU.prototype={
 $1(a){return new A.ty("\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062f\u062e\u0648\u0644",u.I,new A.aoT(a),this.a,null)},
 $S:272}
@@ -62124,7 +62124,7 @@ break
 case 4:p=s.apa()
 break
 default:p=r}return A.fJ(q,B.bT,A.fI(!0,A.dC(p,r,B.t,B.wA,r,B.Z),B.a2,!0),r,r,r,r)},
-apG(){var s,r,q=this,p=null,o=A.b([B.a3,A.d2(A.c8(A.pm("assets/images/al-houdhoud-logo.png",B.dx,p,p),72,72),p,p),B.aH,A.V(q.a.d,p,p,p,p,B.fT,p,p),B.k1,B.PC,B.V,A.hK(!1,q.r,A.lm(p,p,p,p,p,p,p,p,!0,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,B.Pw,"36 00 00 00",p,p,p,p,p,p,p,p,p,!0,!0,!1,p,A.bl(p,B.PB,B.o,p,p,B.uy,p,p,p,B.wt,B.wv,p,p,p),p,p,p,p,p,p,p,p,p,p,p,p),p,B.fR,p,1,!1,p,p,B.Pv,B.dp,p,new A.b3n())],t.p)
+apG(){var s,r,q=this,p=null,o=A.b([B.a3,A.d2(A.c8(A.pm("assets/images/al-houdhoud-logo-mark.png",B.dx,p,p),72,72),p,p),B.aH,A.V(q.a.d,p,p,p,p,B.fT,p,p),B.k1,B.PC,B.V,A.hK(!1,q.r,A.lm(p,p,p,p,p,p,p,p,!0,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,B.Pw,"36 00 00 00",p,p,p,p,p,p,p,p,p,!0,!0,!1,p,A.bl(p,B.PB,B.o,p,p,B.uy,p,p,p,B.wt,B.wv,p,p,p),p,p,p,p,p,p,p,p,p,p,p,p),p,B.fR,p,1,!1,p,p,B.Pv,B.dp,p,new A.b3n())],t.p)
 o.push(B.b3)
 s=q.Q
 r=s?p:q.gaI8()
@@ -62145,7 +62145,7 @@ s=p.Q
 r=A.hq(B.tE,o,o,s?o:new A.b3m(p),o,o)
 q=s?o:p.gaI7()
 return A.mm(A.aC(A.b([B.a3,n,B.b3,B.tD,B.V,m,B.eb,new A.cG(B.cE,o,o,r,o),B.a3,A.ek(s?B.jY:B.tC,q,o)],t.p),B.C,B.i,B.k),p.f)},
-apa(){var s,r,q,p=this,o=null,n=A.d2(A.c8(A.pm("assets/images/al-houdhoud-logo.png",B.dx,o,o),72,72),o,o),m=A.hK(!1,p.r,A.lm(o,o,o,o,o,o,o,o,!0,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,B.Pw,"36 00 00 00",o,o,o,o,o,o,o,o,o,!0,!0,!1,o,A.bl(o,B.PB,B.o,o,o,B.uy,o,o,o,B.wt,B.wv,o,o,o),o,o,o,o,o,o,o,o,o,o,o,o),o,B.fR,o,1,!1,o,o,B.Pv,B.dp,o,new A.b3c()),l=p.ax
+apa(){var s,r,q,p=this,o=null,n=A.d2(A.c8(A.pm("assets/images/al-houdhoud-logo-mark.png",B.dx,o,o),72,72),o,o),m=A.hK(!1,p.r,A.lm(o,o,o,o,o,o,o,o,!0,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,B.Pw,"36 00 00 00",o,o,o,o,o,o,o,o,o,!0,!0,!1,o,A.bl(o,B.PB,B.o,o,o,B.uy,o,o,o,B.wt,B.wv,o,o,o),o,o,o,o,o,o,o,o,o,o,o,o),o,B.fR,o,1,!1,o,o,B.Pv,B.dp,o,new A.b3c()),l=p.ax
 l=A.hK(!1,p.x,A.lm(o,o,o,o,o,o,o,o,!0,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,"\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",o,o,o,o,o,o,o,o,o,!0,!0,!1,o,o,o,o,o,o,o,o,A.cK(o,o,o,A.de(l?B.lD:B.lE,B.aw,o,o),o,o,new A.b3d(p),o,o,o,o),o,o,o,o,o),o,o,o,1,l,o,new A.b3e(p),o,B.E,B.ih,new A.b3f())
 s=p.Q
 r=A.hq(B.atf,o,o,s?o:new A.b3g(p),o,o)
@@ -63231,7 +63231,7 @@ $0(){return this.a.d=this.b},
 $S:0}
 A.afl.prototype={
 H(a){var s=null
-return A.bl(s,A.pm("assets/images/al-houdhoud-logo.png",B.dx,s,s),B.o,s,s,B.S2,s,48,s,s,B.Z2,s,s,48)}}
+return A.bl(s,A.pm("assets/images/al-houdhoud-logo-mark.png",B.dx,s,s),B.o,s,s,B.S2,s,48,s,s,B.Z2,s,s,48)}}
 A.abQ.prototype={
 H(a){var s=null
 return A.f4(!1,B.P,!0,s,A.fA(!1,s,!0,new A.ay(B.fd,A.de(this.c,B.bk,s,22),s),B.hj,!0,s,s,s,s,s,s,s,s,s,this.d,s,s,s,s,s,s,s),B.o,B.j,3,s,B.hl,B.hj,s,s,B.cj)}}
@@ -63292,7 +63292,7 @@ m===$&&A.a()
 s=n.f
 s===$&&A.a()
 r=this.b
-s=A.aKk(new A.ei(new A.ao(0,r,0,1/0),A.pm("assets/images/al-houdhoud-logo.png",B.dx,o,r),o),s)
+s=A.aKk(new A.ei(new A.ao(0,r,0,1/0),A.pm("assets/images/al-houdhoud-logo-mark.png",B.dx,o,r),o),s)
 r=A.c8(o,r*0.12,o)
 n=n.r
 n===$&&A.a()
@@ -63408,7 +63408,7 @@ $2(a,b){return this.a[b]},
 $S:612}
 A.A2.prototype={
 H(a){var s=null,r=t.p
-return A.fJ(A.ne(s,s,B.awc),B.bT,A.dC(A.aC(A.b([B.a3,A.bl(s,A.c8(A.pm("assets/images/al-houdhoud-logo.png",B.dx,s,s),120,120),B.o,s,s,B.S1,s,s,s,s,B.pG,s,s,s),B.aH,B.avR,B.cA,B.atw,B.b3,A.dE(new A.ay(B.j7,A.aC(A.b([this.a_E("\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062f\u0627\u0631","1.0.0+1"),B.fb,this.a_E("\u0627\u0644\u0645\u0637\u0648\u0631","Al Hodhod")],r),B.n,B.i,B.k),s),s,s),B.aH,B.Uy,B.aB,B.atU,B.aH],r),B.n,B.i,B.k),s,B.t,B.bu,s,B.Z),s,s,s,s)},
+return A.fJ(A.ne(s,s,B.awc),B.bT,A.dC(A.aC(A.b([B.a3,A.bl(s,A.c8(A.pm("assets/images/al-houdhoud-logo-mark.png",B.dx,s,s),120,120),B.o,s,s,B.S1,s,s,s,s,B.pG,s,s,s),B.aH,B.avR,B.cA,B.atw,B.b3,A.dE(new A.ay(B.j7,A.aC(A.b([this.a_E("\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062f\u0627\u0631","1.0.0+1"),B.fb,this.a_E("\u0627\u0644\u0645\u0637\u0648\u0631","Al Hodhod")],r),B.n,B.i,B.k),s),s,s),B.aH,B.Uy,B.aB,B.atU,B.aH],r),B.n,B.i,B.k),s,B.t,B.bu,s,B.Z),s,s,s,s)},
 a_E(a,b){var s=null
 return new A.ay(B.Yo,A.bZ(A.b([A.V(a,s,s,s,s,B.ii,s,s),A.V(b,s,s,s,s,B.fV,s,s)],t.p),B.n,B.cW,B.k,0,s),s)}}
 A.yl.prototype={
@@ -63439,7 +63439,7 @@ o.toString
 A.bf(o,!1).uw(A.f5(new A.b7Z(),null,t.z),new A.b8_())
 case 1:return A.m(q,r)}})
 return A.n($async$zv,r)},
-H(a){var s,r=this,q="assets/images/al-houdhoud-logo.png",p=null,o=A.ne(p,new A.ay(B.ff,A.pm(q,B.dx,p,p),p),B.aw2),n=r.r,m=A.bl(p,p,B.o,p,p,p,p,p,p,p,p,p,p,p),l=t.fo
+H(a){var s,r=this,q="assets/images/al-houdhoud-logo-mark.png",p=null,o=A.ne(p,new A.ay(B.ff,A.pm(q,B.dx,p,p),p),B.aw2),n=r.r,m=A.bl(p,p,B.o,p,p,p,p,p,p,p,p,p,p,p),l=t.fo
 l=A.S(new A.a0(A.b(["\u0627\u0644\u0639\u0631\u0628\u064a\u0629","Fran\xe7ais","English"],t.s),new A.b88(),l),l.i("ad.E"))
 s=t.p
 return A.fJ(o,B.bT,A.dC(A.aC(A.b([A.dE(A.aC(A.b([A.j3(!1,p,p,p,!0,p,p,p,!0,p,p,p,p,p,p,p,!1,p,p,p,p,p,p,p,B.avk,p,new A.rC(l,n,p,p,new A.b89(r),p,p,8,B.arl,m,p,p,p,24,!1,!1,48,p,p,!1,p,p,p,p,B.bq,p,!0,p,p,p,!1,p,t.Af),p),B.j4,A.Nw(B.I,new A.b8a(r),B.atg,B.aua,r.d),B.j4,A.Nw(B.I,new A.b8b(r,a),B.aw_,B.atZ,r.e),B.j4,A.Nw(B.I,new A.b8c(r),B.auW,B.auJ,r.f)],s),B.n,B.i,B.k),p,p),B.aH,B.awb,B.V,A.dE(A.aC(A.b([A.j3(!1,p,p,p,!0,p,p,p,!0,p,B.a0h,p,p,p,p,r.gaHj(),!1,p,p,p,p,p,p,p,B.au9,p,B.a0P,p)],s),B.n,B.i,B.k),p,p),B.aH,A.dE(A.j3(!1,p,p,p,!0,p,p,p,!0,p,A.c8(A.pm(q,B.dx,p,p),32,32),p,p,p,p,new A.b8d(a),!1,p,p,p,p,p,p,p,B.awd,p,B.jh,p),p,p),B.k1,A.wh(B.a0N,B.PD,r.gawN(),A.p5(p,p,B.av,p,p,p,p,p,p,B.j,p,p,p,p,p,p,p,p,p,p))],s),B.C,B.i,B.k),p,B.t,B.bu,p,B.Z),p,p,p,p)}}
