@@ -40,8 +40,8 @@ class DohFallbackHttpOverrides extends HttpOverrides {
       final address = await _resolve(uri.host, context);
       final rawSocket = await Socket.connect(address, uri.port);
       if (uri.scheme != 'https') {
-        return ConnectionTask<Socket>.fromSocket(
-          rawSocket,
+        return ConnectionTask.fromSocket(
+          Future.value(rawSocket),
           () => rawSocket.destroy(),
         );
       }
@@ -50,8 +50,8 @@ class DohFallbackHttpOverrides extends HttpOverrides {
         host: uri.host,
         context: context,
       );
-      return ConnectionTask<Socket>.fromSocket(
-        secureSocket,
+      return ConnectionTask.fromSocket(
+        Future.value(secureSocket),
         () => secureSocket.destroy(),
       );
     };
