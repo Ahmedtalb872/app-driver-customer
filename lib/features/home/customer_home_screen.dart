@@ -280,6 +280,31 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             ),
           ),
         ),
+        // TODO(temporary): plain, non-elevated diagnostic marker to prove
+        // whether this exact build of _buildDashboardView() is what's
+        // running on a device that reports a missing where-to card despite
+        // every other screen showing the latest code - remove once resolved.
+        Positioned(
+          top: 90,
+          left: 0,
+          right: 0,
+          child: IgnorePointer(
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                color: const Color(0xFFFF0000),
+                child: const Text(
+                  'DEBUG BUILD - HOME v3',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
