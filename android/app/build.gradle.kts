@@ -19,7 +19,7 @@ if (localPropertiesFile.exists()) {
 val mapsApiKey: String = localProperties.getProperty("MAPS_API_KEY") ?: ""
 
 android {
-    namespace = "com.alhudhud.alhudhud"
+    namespace = "com.alhudhud.customer"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -30,8 +30,12 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.alhudhud.alhudhud"
+        // Distinct from the captain app's applicationId (both apps are
+        // forks of the same original codebase and, before this, shared
+        // "com.alhudhud.alhudhud" - installing both on one test device hit
+        // Android's "package conflicts with an existing package" refusal
+        // since the two APKs are signed with different debug keys.
+        applicationId = "com.alhudhud.customer"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
