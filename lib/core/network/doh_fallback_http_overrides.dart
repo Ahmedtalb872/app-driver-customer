@@ -22,10 +22,18 @@ import 'dart:io';
 /// majority), so this can't change behavior for anyone not already
 /// completely unable to connect.
 class DohFallbackHttpOverrides extends HttpOverrides {
-  /// Cloudflare's DoH endpoint, queried by IP so resolving *it* never hits
-  /// the same broken path - `1.1.1.1` needs no DNS lookup at all.
-  static const _dohIp = '1.1.1.1';
-  static const _dohHost = 'cloudflare-dns.com';
+  /// Well-known DoH providers, queried by fixed IP so resolving *them*
+  /// never hits the same broken path - none of these IPs need a DNS
+  /// lookup at all. Tried in order; some networks specifically block one
+  /// well-known resolver IP (1.1.1.1 is a common target, precisely
+  /// because it's so often used to bypass network-level restrictions) -
+  /// see `DohFallbackHttpOverrides._resolveViaDoh` for the observed
+  /// "Operation not permitted" on that IP that motivated adding more.
+  static const _dohProviders = [
+    (ip: '8.8.8.8', host: 'dns.google'),
+    (ip: '9.9.9.9', host: 'dns.quad9.net'),
+    (ip: '1.1.1.1', host: 'cloudflare-dns.com'),
+  ];
 
   final _cache = <String, InternetAddress>{};
 
@@ -81,17 +89,36 @@ class DohFallbackHttpOverrides extends HttpOverrides {
     String host,
     SecurityContext? context,
   ) async {
-    final rawSocket = await Socket.connect(_dohIp, 443);
+    Object? lastError;
+    for (final provider in _dohProviders) {
+      try {
+        return await _queryDoh(host, context, provider.ip, provider.host);
+      } catch (e) {
+        lastError = e;
+        // Try the next provider - a network that blocks one well-known
+        // resolver IP often doesn't block the others.
+      }
+    }
+    throw lastError ?? SocketException('DoH: no provider reachable for $host');
+  }
+
+  Future<InternetAddress> _queryDoh(
+    String host,
+    SecurityContext? context,
+    String providerIp,
+    String providerHost,
+  ) async {
+    final rawSocket = await Socket.connect(providerIp, 443);
     final secureSocket = await SecureSocket.secure(
       rawSocket,
-      host: _dohHost,
+      host: providerHost,
       context: context,
     );
     try {
       final path = '/dns-query?name=$host&type=A';
       secureSocket.write(
         'GET $path HTTP/1.1\r\n'
-        'Host: $_dohHost\r\n'
+        'Host: $providerHost\r\n'
         'Accept: application/dns-json\r\n'
         'Connection: close\r\n\r\n',
       );
@@ -115,7 +142,7 @@ class DohFallbackHttpOverrides extends HttpOverrides {
             orElse: () => const {},
           )['data'] as String?;
       if (ip == null || ip.isEmpty) {
-        throw SocketException('DoH: no A record for $host');
+        throw SocketException('DoH: no A record for $host via $providerHost');
       }
       return InternetAddress(ip);
     } finally {
