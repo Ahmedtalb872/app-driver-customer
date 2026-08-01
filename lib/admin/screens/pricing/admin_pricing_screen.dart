@@ -20,6 +20,7 @@ class _AdminPricingScreenState extends State<AdminPricingScreen> {
     'economy': 'إقتصادية',
     'comfort': 'مريحة',
     'family': 'عائلية',
+    'motorcycle': 'دراجة نارية (توصيل)',
   };
   static const _fields = [
     ('base_fare', 'الأجرة الأساسية'),

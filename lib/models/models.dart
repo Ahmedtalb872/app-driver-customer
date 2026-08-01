@@ -141,6 +141,16 @@ class Trip {
   /// for a request that has no backing `trips` row.
   final bool isDemoTrip;
 
+  /// 'ride' (default, passenger trip) or 'delivery' (parcel courier job -
+  /// see `20260801000046_delivery_service.sql`). For a delivery,
+  /// [recipientName]/[recipientPhone]/[packageDescription] are populated
+  /// instead of describing the passenger, and [carType] is meaningless
+  /// (always priced/broadcast as a motorcycle job server-side).
+  final String serviceType;
+  final String? recipientName;
+  final String? recipientPhone;
+  final String? packageDescription;
+
   Trip({
     required this.id,
     required this.customerName,
@@ -191,9 +201,15 @@ class Trip {
     this.isDemoTrip = false,
     this.captainLat,
     this.captainLng,
+    this.serviceType = 'ride',
+    this.recipientName,
+    this.recipientPhone,
+    this.packageDescription,
   });
 
   bool get isOpenTrip => tripType == TripType.open;
+
+  bool get isDelivery => serviceType == 'delivery';
 
   /// Builds a display [Trip] from a real `public.trips` row (optionally
   /// joined with `customers`/`profiles` passenger info), as returned by
@@ -281,6 +297,10 @@ class Trip {
       customerCompletedTrips:
           (customerProfile?['completed_trips_count'] as num?)?.toInt(),
       customerVerified: customerProfile?['is_verified'] as bool? ?? false,
+      serviceType: (row['service_type'] as String?) ?? 'ride',
+      recipientName: row['recipient_name'] as String?,
+      recipientPhone: row['recipient_phone'] as String?,
+      packageDescription: row['package_description'] as String?,
     );
   }
 

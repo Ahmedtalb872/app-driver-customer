@@ -11,6 +11,7 @@ import '../../providers/app_state_provider.dart';
 import '../destinations/data/models/destination_suggestion.dart';
 import '../destinations/presentation/destination_search_screen.dart';
 import '../profile/profile_screen.dart';
+import '../trips/delivery_request_screen.dart';
 import '../trips/my_trips_screen.dart';
 import '../trips/request_ride_screen.dart';
 import '../trips/trip_tracking_screen.dart';
@@ -135,6 +136,39 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           pickupAddress: _pickupAddress,
           destination: destination,
           tripType: TripType.normal,
+        ),
+      ),
+    );
+  }
+
+  /// Parcel delivery entry point, separate from the ride trip-type selector
+  /// above (a delivery isn't a third "trip type" - it always has a
+  /// destination and collects a recipient/package instead of a passenger
+  /// count, see [DeliveryRequestScreen]). Reuses the same destination search
+  /// screen as a normal ride.
+  Future<void> _startDeliveryRequest() async {
+    if (_pickupLat == null || _pickupLng == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'الرجاء تفعيل خدمة الموقع الجغرافي لتتمكن من طلب توصيل.',
+            style: TextStyle(fontFamily: 'Cairo'),
+          ),
+        ),
+      );
+      return;
+    }
+    final destination = await Navigator.of(context).push<DestinationSuggestion>(
+      MaterialPageRoute(builder: (context) => const DestinationSearchScreen()),
+    );
+    if (destination == null || !mounted) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => DeliveryRequestScreen(
+          pickupLat: _pickupLat!,
+          pickupLng: _pickupLng!,
+          pickupAddress: _pickupAddress,
+          destination: destination,
         ),
       ),
     );
@@ -309,6 +343,39 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
             child: _buildTripTypeSelector(),
+          ),
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          InkWell(
+            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(18)),
+            onTap: _startDeliveryRequest,
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.local_shipping_rounded,
+                    size: 18,
+                    color: AppColors.secondaryText,
+                  ),
+                  SizedBox(width: 10),
+                  Text(
+                    'أريد توصيل طرد بدل ركوب مشوار',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12.5,
+                      color: AppColors.darkText,
+                    ),
+                  ),
+                  Spacer(),
+                  Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 12,
+                    color: AppColors.secondaryText,
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),

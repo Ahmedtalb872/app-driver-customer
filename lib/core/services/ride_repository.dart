@@ -83,6 +83,10 @@ class RideRepository {
     String? customerNote,
     int timeoutSeconds = 300,
     int passengerCount = 1,
+    String serviceType = 'ride',
+    String? recipientName,
+    String? recipientPhone,
+    String? packageDescription,
   }) async {
     final row = await _client.rpc(
       'customer_request_trip',
@@ -99,6 +103,10 @@ class RideRepository {
         'p_customer_note': customerNote,
         'p_timeout_seconds': timeoutSeconds,
         'p_passenger_count': passengerCount,
+        'p_service_type': serviceType,
+        'p_recipient_name': recipientName,
+        'p_recipient_phone': recipientPhone,
+        'p_package_description': packageDescription,
       },
     );
     final tripId = (row as Map<String, dynamic>)['id'] as String;
