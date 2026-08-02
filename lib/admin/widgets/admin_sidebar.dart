@@ -128,8 +128,11 @@ class AdminSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AdminColors.sidebarBackground,
       width: collapsed ? 76 : 260,
+      decoration: const BoxDecoration(
+        color: AdminColors.sidebarBackground,
+        border: Border(left: BorderSide(color: AdminColors.border)),
+      ),
       child: Column(
         children: [
           const SizedBox(height: 20),
@@ -153,7 +156,7 @@ class AdminSidebar extends StatelessWidget {
                     child: Text(
                       'الهدهد',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AdminColors.textPrimary,
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
                         fontFamily: 'Cairo',
@@ -164,7 +167,9 @@ class AdminSidebar extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: AdminColors.border),
+          const SizedBox(height: 8),
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(vertical: 4),
@@ -218,7 +223,9 @@ class _SidebarTile extends StatelessWidget {
         dense: true,
         leading: Icon(
           item.icon,
-          color: selected ? AdminColors.accentLight : Colors.white70,
+          color: selected
+              ? AdminColors.sidebarSelectedText
+              : AdminColors.sidebarText,
           size: 20,
         ),
         title: collapsed
@@ -228,7 +235,9 @@ class _SidebarTile extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: selected ? Colors.white : Colors.white70,
+                  color: selected
+                      ? AdminColors.sidebarSelectedText
+                      : AdminColors.sidebarText,
                   fontWeight: selected ? FontWeight.bold : FontWeight.normal,
                   fontSize: 13,
                   fontFamily: 'Cairo',
