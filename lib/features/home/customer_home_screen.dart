@@ -280,57 +280,40 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             ),
           ),
         ),
-        // TODO(temporary): plain, non-elevated diagnostic marker to prove
-        // whether this exact build of _buildDashboardView() is what's
-        // running on a device that reports a missing where-to card despite
-        // every other screen showing the latest code - remove once resolved.
-        Positioned(
-          top: 90,
-          left: 0,
-          right: 0,
-          child: IgnorePointer(
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                color: const Color(0xFFFF0000),
-                child: const Text(
-                  'DEBUG BUILD - HOME v3',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
       ],
     );
   }
 
   Widget _buildWhereToBar() {
     final isOpen = _tripType == TripType.open;
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(18),
-      elevation: 6,
-      shadowColor: Colors.black26,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryDark.withOpacity(0.14),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           InkWell(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             onTap: _startRequest,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
               child: Row(
                 children: [
-                  Icon(
-                    isOpen ? Icons.timelapse_rounded : Icons.search_rounded,
+                  _IconBadge(
+                    icon: isOpen ? Icons.timelapse_rounded : Icons.search_rounded,
                     color: isOpen ? AppColors.accent : AppColors.primary,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -340,11 +323,11 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                           style: const TextStyle(
                             fontFamily: 'Cairo',
                             fontWeight: FontWeight.bold,
-                            fontSize: 14,
+                            fontSize: 15,
                             color: AppColors.darkText,
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 3),
                         Text(
                           isOpen
                               ? 'بدون وجهة محددة - الانطلاق من: $_pickupAddress'
@@ -353,12 +336,17 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontFamily: 'Cairo',
-                            fontSize: 11,
+                            fontSize: 11.5,
                             color: AppColors.secondaryText,
                           ),
                         ),
                       ],
                     ),
+                  ),
+                  const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 14,
+                    color: AppColors.secondaryText,
                   ),
                 ],
               ),
@@ -366,34 +354,36 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
             child: _buildTripTypeSelector(),
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
           InkWell(
-            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(18)),
+            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
             onTap: _startDeliveryRequest,
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.local_shipping_rounded,
-                    size: 18,
-                    color: AppColors.secondaryText,
+                  _IconBadge(
+                    icon: Icons.local_shipping_rounded,
+                    color: AppColors.secondary,
+                    size: 32,
+                    iconSize: 16,
                   ),
-                  SizedBox(width: 10),
-                  Text(
-                    'أريد توصيل طرد بدل ركوب مشوار',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12.5,
-                      color: AppColors.darkText,
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'أريد توصيل طرد بدل ركوب مشوار',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12.5,
+                        color: AppColors.darkText,
+                      ),
                     ),
                   ),
-                  Spacer(),
-                  Icon(
+                  const Icon(
                     Icons.arrow_forward_ios_rounded,
                     size: 12,
                     color: AppColors.secondaryText,
@@ -446,54 +436,52 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     required Color color,
   }) {
     final selected = _tripType == type;
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: () => setState(() => _tripType = type),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-        decoration: BoxDecoration(
-          color: selected ? color.withOpacity(0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: selected ? color : AppColors.border),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      decoration: BoxDecoration(
+        color: selected ? color.withOpacity(0.09) : AppColors.background,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: selected ? color : Colors.transparent, width: 1.4),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => setState(() => _tripType = type),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  icon,
-                  size: 16,
-                  color: selected ? color : AppColors.secondaryText,
-                ),
-                const SizedBox(width: 6),
+                _IconBadge(icon: icon, color: color, size: 30, iconSize: 15),
+                const SizedBox(height: 6),
                 Text(
                   label,
                   style: TextStyle(
                     fontFamily: 'Cairo',
                     fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                    fontSize: 12.5,
                     color: selected ? color : AppColors.darkText,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  description,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 9.5,
+                    color: selected
+                        ? color.withOpacity(0.85)
+                        : AppColors.secondaryText,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 2),
-            Text(
-              description,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontFamily: 'Cairo',
-                fontSize: 9.5,
-                color: selected
-                    ? color.withOpacity(0.85)
-                    : AppColors.secondaryText,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -550,11 +538,15 @@ class _LogoBadge extends StatelessWidget {
       width: 48,
       height: 48,
       padding: const EdgeInsets.all(9),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
         boxShadow: [
-          BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 3)),
+          BoxShadow(
+            color: AppColors.primaryDark.withOpacity(0.22),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Image.asset('assets/images/al-houdhoud-logo-mark.png', fit: BoxFit.contain),
@@ -569,19 +561,60 @@ class _CircleIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      shape: const CircleBorder(),
-      elevation: 3,
-      shadowColor: Colors.black26,
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Icon(icon, color: AppColors.darkText, size: 22),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryDark.withOpacity(0.22),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(11),
+            child: Icon(icon, color: AppColors.primary, size: 21),
+          ),
         ),
       ),
+    );
+  }
+}
+
+/// Small circular tinted icon badge used across the redesigned home
+/// dashboard (where-to bar, trip-type chips, delivery row) so every entry
+/// point reads as part of the same visual system instead of a bare Icon.
+class _IconBadge extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final double size;
+  final double iconSize;
+
+  const _IconBadge({
+    required this.icon,
+    required this.color,
+    this.size = 38,
+    this.iconSize = 18,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        shape: BoxShape.circle,
+      ),
+      child: Icon(icon, color: color, size: iconSize),
     );
   }
 }
