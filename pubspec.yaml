@@ -57,6 +57,14 @@ dependencies:
   url_launcher: ^6.3.1
   speech_to_text: ^7.0.0
   cronet_http: ^1.9.0
+  # Pinned as a direct dependency (would otherwise resolve transitively,
+  # e.g. via speech_to_text/geolocator_android): 12.4.0 generates an
+  # Android plugin registration referencing
+  # dev.fluttercommunity.plus.device_info.DeviceInfoPlusPlugin, a class
+  # that doesn't exist in that resolved version's actual Android sources -
+  # "error: cannot find symbol" on every build. 13.x's registration matches
+  # its real Android implementation.
+  device_info_plus: ^13.2.0
   flutter_web_plugins:
     sdk: flutter
 
