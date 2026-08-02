@@ -60,6 +60,19 @@ kotlin {
     }
 }
 
+configurations.all {
+    // cronet_http (via play-services-cronet) pulls in both
+    // org.chromium.net:cronet-api and org.chromium.net:cronet-shared, two
+    // separate artifacts that both declare the same "org.chromium.net"
+    // namespace in their embedded manifests - AGP 9's manifest merger
+    // rejects that as a duplicate-namespace error. The actual Cronet
+    // implementation is loaded at runtime through Google Play Services;
+    // cronet-shared's classes are only needed by the (unused, since
+    // cronetHttpNoPlay stays false) embedded/standalone Cronet variant, so
+    // dropping it here just removes the redundant, colliding manifest.
+    exclude(group = "org.chromium.net", module = "cronet-shared")
+}
+
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
