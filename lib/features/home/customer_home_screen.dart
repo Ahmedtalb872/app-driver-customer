@@ -634,7 +634,11 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? AppColors.primary : AppColors.secondaryText;
+    // Gold instead of the usual teal on the selected tab - a deliberate,
+    // easy-to-spot-in-a-screenshot marker to confirm a build actually
+    // reached the device/browser being tested, independent of whatever's
+    // going on with the home dashboard's where-to card.
+    final color = selected ? AppColors.accent : AppColors.secondaryText;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -648,8 +652,11 @@ class _NavItem extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
                 color: selected
-                    ? AppColors.primary.withOpacity(0.1)
+                    ? AppColors.accent.withOpacity(0.15)
                     : Colors.transparent,
+                border: selected
+                    ? Border.all(color: AppColors.accent, width: 1.5)
+                    : null,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Icon(data.icon, color: color, size: 22),
