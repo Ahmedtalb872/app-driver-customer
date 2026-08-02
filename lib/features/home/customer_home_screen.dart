@@ -215,79 +215,56 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   }
 
   Widget _buildDashboardView() {
-    // A diagnostic build with the map swapped for a plain color proved the
-    // map wasn't the problem: the where-to text/chips rendered fine, which
-    // meant the bug was the Spacer()-based layout silently overflowing and
-    // clipping the bottom of the where-to bar (the delivery row never
-    // painted) - fixed below by giving that bottom section an Expanded +
-    // scrollable region instead of relying on Spacer to always leave
-    // exactly enough room.
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: RealMapWidget(
-            interactive: true,
-            pickupLat: _pickupLat,
-            pickupLng: _pickupLng,
-            onMapTap: _handlePickupPointChanged,
-            pickupDraggable: true,
-            onPickupDragged: _handlePickupPointChanged,
-          ),
-        ),
-        Positioned.fill(
-          child: IgnorePointer(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: Container(
-                height: 130,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      AppColors.primary.withOpacity(0.18),
-                      AppColors.primary.withOpacity(0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        Positioned.fill(
-          child: SafeArea(
-            child: Column(
+    // NOT a Stack with the where-to bar floating over the map anymore.
+    // Two diagnostic builds nailed down why: with the map swapped for a
+    // solid color the overlay rendered fine, but with the real map back
+    // (flutter_map/web, tiles fetched cross-origin) it silently disappeared
+    // again with no exception anywhere - consistent with flutter_map's web
+    // tile images compositing as a browser-level layer that sits above
+    // Flutter's own canvas regardless of widget stack order, which no
+    // amount of Z-ordering inside Flutter can override. Laying the where-to
+    // bar out below the map instead of on top of it sidesteps that
+    // entirely, at the cost of the map no longer filling the full screen.
+    return SafeArea(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const _LogoBadge(),
-                      _CircleIconButton(
-                        icon: _isLocating
-                            ? Icons.hourglass_empty
-                            : Icons.my_location_rounded,
-                        onTap: _isLocating ? null : _determinePickup,
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.bottomCenter,
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      reverse: true,
-                      child: _buildWhereToBar(),
-                    ),
-                  ),
+                const _LogoBadge(),
+                _CircleIconButton(
+                  icon: _isLocating
+                      ? Icons.hourglass_empty
+                      : Icons.my_location_rounded,
+                  onTap: _isLocating ? null : _determinePickup,
                 ),
               ],
             ),
           ),
-        ),
-      ],
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: RealMapWidget(
+                  interactive: true,
+                  pickupLat: _pickupLat,
+                  pickupLng: _pickupLng,
+                  onMapTap: _handlePickupPointChanged,
+                  pickupDraggable: true,
+                  onPickupDragged: _handlePickupPointChanged,
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: _buildWhereToBar(),
+          ),
+        ],
+      ),
     );
   }
 
