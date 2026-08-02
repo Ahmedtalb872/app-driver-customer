@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
@@ -254,7 +255,13 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 // while tracking down why this exact area has repeatedly
                 // rendered in an order/size that didn't match the code.
                 height: 260,
-                child: RealMapWidget(
+                // The web preview build only: flutter_map's live tiles have
+                // been the one remaining suspect across every layout
+                // rewrite, so this swaps in a plain decorative placeholder
+                // there instead, isolating it completely. Android/iOS keep
+                // the real interactive map - this never touches the actual
+                // app.
+                child: kIsWeb ? const _MapPlaceholder() : RealMapWidget(
                   interactive: true,
                   pickupLat: _pickupLat,
                   pickupLng: _pickupLng,
@@ -540,6 +547,46 @@ class _LogoBadge extends StatelessWidget {
         ],
       ),
       child: Image.asset('assets/images/al-houdhoud-logo-mark.png', fit: BoxFit.contain),
+    );
+  }
+}
+
+/// Static stand-in for the live map, web preview only - see the call site
+/// in [_CustomerHomeScreenState._buildDashboardView].
+class _MapPlaceholder extends StatelessWidget {
+  const _MapPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.background, AppColors.primary.withOpacity(0.15)],
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.map_rounded,
+              size: 40,
+              color: AppColors.primary.withOpacity(0.5),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'الخريطة متاحة في التطبيق',
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 12,
+                color: AppColors.secondaryText,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
