@@ -30,7 +30,7 @@ const Map<String, String> _routeTitles = {
   '/admin/captains': 'الكباتن',
   '/admin/trips': 'الرحلات',
   '/admin/live-operations': 'العمليات المباشرة',
-  '/admin/dispatch': 'إرسال مشوار يدوي',
+  '/admin/dispatch': 'إرسال طلب يدوي',
   '/admin/finance/wallets': 'المحافظ والمالية',
   '/admin/finance/recharge': 'طلبات الشحن',
   '/admin/finance/withdrawal': 'طلبات السحب',

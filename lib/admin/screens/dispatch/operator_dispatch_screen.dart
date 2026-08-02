@@ -44,6 +44,9 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
   final _pickupAddressController = TextEditingController();
   final _destAddressController = TextEditingController();
   final _noteController = TextEditingController();
+  final _recipientNameController = TextEditingController();
+  final _recipientPhoneController = TextEditingController();
+  final _packageDescriptionController = TextEditingController();
   final _pickupFocusNode = FocusNode();
   final _destFocusNode = FocusNode();
 
@@ -54,8 +57,16 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
   Timer? _pickupGeocodeDebounce;
   Timer? _destGeocodeDebounce;
 
+  String _serviceType = 'ride'; // 'ride' | 'delivery'
   String _tripType = 'normal'; // 'normal' | 'open'
   _TapMode _tapMode = _TapMode.pickup;
+
+  /// A delivery always has a fixed drop-off point - there is no "open
+  /// delivery" concept - so the destination section/map pin behaves exactly
+  /// like a normal (non-open) ride whenever it's selected, regardless of
+  /// [_tripType] (which becomes irrelevant and is hidden entirely).
+  bool get _needsDestination =>
+      _serviceType == 'delivery' || _tripType == 'normal';
 
   double? _pickupLat;
   double? _pickupLng;
@@ -112,6 +123,9 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
     _pickupAddressController.dispose();
     _destAddressController.dispose();
     _noteController.dispose();
+    _recipientNameController.dispose();
+    _recipientPhoneController.dispose();
+    _packageDescriptionController.dispose();
     _pickupFocusNode.dispose();
     _destFocusNode.dispose();
     _pickupSearchDebounce?.cancel();
@@ -143,10 +157,20 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
   /// `+222` prefix is applied here, exactly like the rest of the app.
   String get _fullPhone => '+222${_phoneController.text.trim()}';
 
+  /// The RPC always forces 'motorcycle' server-side for a delivery (see
+  /// 20260802000048_admin_dispatch_delivery.sql) regardless of
+  /// [_vehicleType] - which stays whatever car tier was last picked, since
+  /// the vehicle-type chips are simply hidden in delivery mode rather than
+  /// reset. The fare estimate below must price against the same vehicle
+  /// type the server will actually use, or it would show a car fare for a
+  /// motorcycle job.
+  String get _effectiveVehicleType =>
+      _serviceType == 'delivery' ? 'motorcycle' : _vehicleType;
+
   Future<void> _loadPricing() async {
     setState(() => _loadingPricing = true);
     try {
-      _pricing = await _repository.fetchPricingConfig(_vehicleType);
+      _pricing = await _repository.fetchPricingConfig(_effectiveVehicleType);
     } catch (_) {
       _pricing = null;
     } finally {
@@ -180,7 +204,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
     final minimumFare = (pricing['minimum_fare'] as num?)?.toDouble() ?? 0;
     final surge = (pricing['surge_multiplier'] as num?)?.toDouble() ?? 1.0;
 
-    if (_tripType == 'open') {
+    if (!_needsDestination) {
       // No destination yet - the honest estimate is just the flat base
       // charge, exactly like the mobile Open Trip request flow shows.
       return minimumFare > baseFare ? minimumFare : baseFare;
@@ -387,8 +411,24 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
     if (_pickupLat == null || _pickupLng == null) {
       messages.add('حدد نقطة الانطلاق على الخريطة');
     }
-    if (_tripType == 'normal' && (_destLat == null || _destLng == null)) {
-      messages.add('حدد الوجهة على الخريطة (مطلوبة للمشوار المحدد)');
+    if (_needsDestination && (_destLat == null || _destLng == null)) {
+      messages.add(
+        _serviceType == 'delivery'
+            ? 'حدد نقطة تسليم الطرد على الخريطة'
+            : 'حدد الوجهة على الخريطة (مطلوبة للمشوار المحدد)',
+      );
+    }
+
+    if (_serviceType == 'delivery') {
+      if (_recipientNameController.text.trim().isEmpty) {
+        messages.add('أدخل اسم المستلم');
+      }
+      final recipientDigits = _recipientPhoneController.text.trim();
+      if (recipientDigits.isEmpty) {
+        messages.add('أدخل رقم هاتف المستلم');
+      } else if (recipientDigits.length != 8) {
+        messages.add('رقم هاتف المستلم يجب أن يتكون من 8 أرقام');
+      }
     }
 
     return messages;
@@ -400,6 +440,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
     if (!kDebugMode) return;
     debugPrint(
       '[OperatorDispatch] validation: '
+      'serviceType=$_serviceType '
       'phoneDigits=${_phoneController.text.trim().length} '
       'customerFound=${_foundCustomer != null} '
       'customerLookupFailed=$_customerLookupFailed '
@@ -425,14 +466,14 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
         pickupLat: _pickupLat!,
         pickupLng: _pickupLng!,
         tripType: _tripType,
-        destinationAddress: _tripType == 'open'
+        destinationAddress: !_needsDestination
             ? null
             : (_destAddressController.text.trim().isEmpty
                   ? 'الوجهة (محددة على الخريطة)'
                   : _destAddressController.text.trim()),
-        destinationLat: _tripType == 'open' ? null : _destLat,
-        destinationLng: _tripType == 'open' ? null : _destLng,
-        vehicleType: _vehicleType,
+        destinationLat: !_needsDestination ? null : _destLat,
+        destinationLng: !_needsDestination ? null : _destLng,
+        vehicleType: _effectiveVehicleType,
         paymentMethod: _paymentMethod,
         estimatedPrice: _estimatedFare,
         estimatedDurationMinutes: _estimatedDurationMinutes,
@@ -440,11 +481,27 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
         customerNote: _noteController.text.trim().isEmpty
             ? null
             : _noteController.text.trim(),
+        serviceType: _serviceType,
+        recipientName: _serviceType == 'delivery'
+            ? _recipientNameController.text.trim()
+            : null,
+        recipientPhone: _serviceType == 'delivery'
+            ? '+222${_recipientPhoneController.text.trim()}'
+            : null,
+        packageDescription: _serviceType == 'delivery'
+            ? (_packageDescriptionController.text.trim().isEmpty
+                  ? null
+                  : _packageDescriptionController.text.trim())
+            : null,
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تم إرسال المشوار وبثه للكباتن المتصلين بنجاح'),
+        SnackBar(
+          content: Text(
+            _serviceType == 'delivery'
+                ? 'تم إرسال طلب التوصيل وبثه للكباتن المتصلين بنجاح'
+                : 'تم إرسال المشوار وبثه للكباتن المتصلين بنجاح',
+          ),
           backgroundColor: AdminColors.success,
         ),
       );
@@ -461,7 +518,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('تعذر إرسال المشوار: ${e.message}'),
+            content: Text('تعذر إرسال الطلب: ${e.message}'),
             backgroundColor: AdminColors.error,
           ),
         );
@@ -472,7 +529,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('تعذر إرسال المشوار: $e'),
+            content: Text('تعذر إرسال الطلب: $e'),
             backgroundColor: AdminColors.error,
           ),
         );
@@ -488,6 +545,9 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
       _pickupAddressController.clear();
       _destAddressController.clear();
       _noteController.clear();
+      _recipientNameController.clear();
+      _recipientPhoneController.clear();
+      _packageDescriptionController.clear();
       _pickupLat = null;
       _pickupLng = null;
       _destLat = null;
@@ -556,10 +616,12 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                 ),
                 ButtonSegment(
                   value: _TapMode.destination,
-                  enabled: _tripType == 'normal',
-                  label: const Text(
-                    'نقرة = الوجهة',
-                    style: TextStyle(fontFamily: 'Cairo'),
+                  enabled: _needsDestination,
+                  label: Text(
+                    _serviceType == 'delivery'
+                        ? 'نقرة = نقطة التسليم'
+                        : 'نقرة = الوجهة',
+                    style: const TextStyle(fontFamily: 'Cairo'),
                   ),
                   icon: const Icon(
                     Icons.location_on_rounded,
@@ -579,14 +641,14 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                 child: RealMapWidget(
                   pickupLat: _pickupLat,
                   pickupLng: _pickupLng,
-                  destLat: _tripType == 'normal' ? _destLat : null,
-                  destLng: _tripType == 'normal' ? _destLng : null,
-                  showRoute: _tripType == 'normal',
+                  destLat: _needsDestination ? _destLat : null,
+                  destLng: _needsDestination ? _destLng : null,
+                  showRoute: _needsDestination,
                   onMapTap: _handleMapTap,
                   pickupDraggable: true,
-                  destDraggable: _tripType == 'normal',
+                  destDraggable: _needsDestination,
                   onPickupDragged: _setPickup,
-                  onDestDragged: _tripType == 'normal' ? _setDestination : null,
+                  onDestDragged: _needsDestination ? _setDestination : null,
                 ),
               ),
             ),
@@ -594,7 +656,9 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
             Text(
               _tapMode == _TapMode.pickup
                   ? 'انقر على الخريطة لتحديد نقطة الانطلاق (علامة خضراء)، أو اسحب العلامة لتعديل الموقع بدقة.'
-                  : 'انقر على الخريطة لتحديد الوجهة (علامة حمراء)، أو اسحب العلامة لتعديل الموقع بدقة.',
+                  : (_serviceType == 'delivery'
+                        ? 'انقر على الخريطة لتحديد نقطة تسليم الطرد (علامة حمراء)، أو اسحب العلامة لتعديل الموقع بدقة.'
+                        : 'انقر على الخريطة لتحديد الوجهة (علامة حمراء)، أو اسحب العلامة لتعديل الموقع بدقة.'),
               style: const TextStyle(
                 fontSize: 12,
                 color: AdminColors.textSecondary,
@@ -615,9 +679,9 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'بيانات المشوار',
-                style: TextStyle(
+              Text(
+                _serviceType == 'delivery' ? 'بيانات طلب التوصيل' : 'بيانات المشوار',
+                style: const TextStyle(
                   fontFamily: 'Cairo',
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -626,8 +690,50 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
               const SizedBox(height: 16),
 
               const Text(
-                'رقم هاتف الزبون',
+                'نوع الطلب',
                 style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 6),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(
+                    value: 'ride',
+                    label: Text('ركاب', style: TextStyle(fontFamily: 'Cairo')),
+                    icon: Icon(Icons.local_taxi_rounded),
+                  ),
+                  ButtonSegment(
+                    value: 'delivery',
+                    label: Text(
+                      'توصيل طرد',
+                      style: TextStyle(fontFamily: 'Cairo'),
+                    ),
+                    icon: Icon(Icons.two_wheeler_rounded),
+                  ),
+                ],
+                selected: {_serviceType},
+                onSelectionChanged: (selection) => setState(() {
+                  _serviceType = selection.first;
+                  // A delivery always needs a destination and is always a
+                  // motorcycle job - reset whatever car-trip-only state was
+                  // left over from ride mode so the map/fare/validation
+                  // logic above (all keyed off _needsDestination) sees a
+                  // clean slate rather than a stale 'open' trip type.
+                  if (_serviceType == 'delivery') {
+                    _tripType = 'normal';
+                    _tapMode = _TapMode.pickup;
+                  }
+                  _loadPricing();
+                }),
+              ),
+
+              const SizedBox(height: 18),
+              Text(
+                _serviceType == 'delivery' ? 'رقم هاتف المرسل' : 'رقم هاتف الزبون',
+                style: const TextStyle(
                   fontFamily: 'Cairo',
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
@@ -716,39 +822,41 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                 ),
               ],
 
-              const SizedBox(height: 18),
-              const Text(
-                'نوع المشوار',
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
+              if (_serviceType == 'ride') ...[
+                const SizedBox(height: 18),
+                const Text(
+                  'نوع المشوار',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(
-                    value: 'normal',
-                    label: Text(
-                      'مشوار محدد',
-                      style: TextStyle(fontFamily: 'Cairo'),
+                const SizedBox(height: 6),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(
+                      value: 'normal',
+                      label: Text(
+                        'مشوار محدد',
+                        style: TextStyle(fontFamily: 'Cairo'),
+                      ),
                     ),
-                  ),
-                  ButtonSegment(
-                    value: 'open',
-                    label: Text(
-                      'مشوار مفتوح',
-                      style: TextStyle(fontFamily: 'Cairo'),
+                    ButtonSegment(
+                      value: 'open',
+                      label: Text(
+                        'مشوار مفتوح',
+                        style: TextStyle(fontFamily: 'Cairo'),
+                      ),
                     ),
-                  ),
-                ],
-                selected: {_tripType},
-                onSelectionChanged: (selection) => setState(() {
-                  _tripType = selection.first;
-                  if (_tripType == 'open') _tapMode = _TapMode.pickup;
-                }),
-              ),
+                  ],
+                  selected: {_tripType},
+                  onSelectionChanged: (selection) => setState(() {
+                    _tripType = selection.first;
+                    if (_tripType == 'open') _tapMode = _TapMode.pickup;
+                  }),
+                ),
+              ],
 
               const SizedBox(height: 18),
               Row(
@@ -789,15 +897,17 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
               ),
               _buildCoordinatesLabel(_pickupLat, _pickupLng),
 
-              if (_tripType == 'normal') ...[
+              if (_needsDestination) ...[
                 const SizedBox(height: 14),
                 Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'عنوان الوجهة',
+                        _serviceType == 'delivery'
+                            ? 'عنوان نقطة التسليم'
+                            : 'عنوان الوجهة',
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontFamily: 'Cairo',
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
@@ -822,7 +932,9 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                 _buildAddressAutocomplete(
                   controller: _destAddressController,
                   focusNode: _destFocusNode,
-                  hintText: 'وصف نصي للوجهة (أو ابحث/اكتب اسم المكان)',
+                  hintText: _serviceType == 'delivery'
+                      ? 'وصف نصي لنقطة التسليم (أو ابحث/اكتب اسم المكان)'
+                      : 'وصف نصي للوجهة (أو ابحث/اكتب اسم المكان)',
                   options: _destOptions,
                   onChanged: _searchDestination,
                   onSelected: _selectDestSuggestion,
@@ -830,33 +942,100 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                 _buildCoordinatesLabel(_destLat, _destLng),
               ],
 
-              const SizedBox(height: 18),
-              const Text(
-                'نوع السيارة',
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
+              if (_serviceType == 'delivery') ...[
+                const SizedBox(height: 18),
+                const Text(
+                  'بيانات المستلم',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 8,
-                children: _vehicleLabels.entries.map((entry) {
-                  final selected = _vehicleType == entry.key;
-                  return ChoiceChip(
-                    label: Text(
-                      entry.value,
-                      style: const TextStyle(fontFamily: 'Cairo'),
-                    ),
-                    selected: selected,
-                    onSelected: (_) {
-                      setState(() => _vehicleType = entry.key);
-                      _loadPricing();
-                    },
-                  );
-                }).toList(),
-              ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _recipientNameController,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    hintText: 'اسم المستلم',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _recipientPhoneController,
+                  keyboardType: TextInputType.phone,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(8),
+                  ],
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    prefixText: '+222 ',
+                    hintText: 'هاتف المستلم (XXXXXXXX)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _packageDescriptionController,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    hintText: 'وصف الطرد (اختياري)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 18),
+              if (_serviceType == 'delivery') ...[
+                const Text(
+                  'نوع المركبة',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'كل طلبات التوصيل تُبَث للكباتن الذين يقودون دراجة نارية '
+                  'ويقبلون التوصيل، بغض النظر عن أي اختيار آخر.',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 11,
+                    color: AdminColors.textSecondary,
+                  ),
+                ),
+              ] else ...[
+                const Text(
+                  'نوع السيارة',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  children: _vehicleLabels.entries.map((entry) {
+                    final selected = _vehicleType == entry.key;
+                    return ChoiceChip(
+                      label: Text(
+                        entry.value,
+                        style: const TextStyle(fontFamily: 'Cairo'),
+                      ),
+                      selected: selected,
+                      onSelected: (_) {
+                        setState(() => _vehicleType = entry.key);
+                        _loadPricing();
+                      },
+                    );
+                  }).toList(),
+                ),
+              ],
 
               const SizedBox(height: 18),
               const Text(
@@ -936,9 +1115,11 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                           ),
                         )
                       : const Icon(Icons.send_rounded),
-                  label: const Text(
-                    'إرسال المشوار للكباتن',
-                    style: TextStyle(
+                  label: Text(
+                    _serviceType == 'delivery'
+                        ? 'إرسال طلب التوصيل للكباتن'
+                        : 'إرسال المشوار للكباتن',
+                    style: const TextStyle(
                       fontFamily: 'Cairo',
                       fontWeight: FontWeight.bold,
                     ),

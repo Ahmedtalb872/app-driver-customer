@@ -37,7 +37,7 @@ const List<AdminSidebarItem> adminSidebarItems = [
     route: '/admin/live-operations',
   ),
   AdminSidebarItem(
-    label: 'إرسال مشوار يدوي',
+    label: 'إرسال طلب يدوي',
     icon: Icons.add_location_alt_rounded,
     route: '/admin/dispatch',
   ),

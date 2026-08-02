@@ -312,6 +312,12 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
                 spacing: 24,
                 runSpacing: 12,
                 children: [
+                  _infoTile(
+                    'نوع الطلب',
+                    (trip['service_type'] as String?) == 'delivery'
+                        ? 'توصيل طرد'
+                        : 'مشوار ركاب',
+                  ),
                   _infoTile('الزبون', _customerLabel),
                   _infoTile('الحالة', trip['status'] as String? ?? '-'),
                   _infoTile(
@@ -339,6 +345,32 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
                   ),
                 ],
               ),
+              if ((trip['service_type'] as String?) == 'delivery') ...[
+                const SizedBox(height: 16),
+                const Text(
+                  'بيانات المستلم',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 24,
+                  runSpacing: 12,
+                  children: [
+                    _infoTile(
+                      'اسم المستلم',
+                      trip['recipient_name'] as String? ?? '-',
+                    ),
+                    _infoTile(
+                      'هاتف المستلم',
+                      trip['recipient_phone'] as String? ?? '-',
+                    ),
+                    _infoTile(
+                      'وصف الطرد',
+                      trip['package_description'] as String? ?? '-',
+                    ),
+                  ],
+                ),
+              ],
               if (trip['cancellation_reason'] != null) ...[
                 const SizedBox(height: 8),
                 _infoTile('سبب الإلغاء', trip['cancellation_reason'] as String),
