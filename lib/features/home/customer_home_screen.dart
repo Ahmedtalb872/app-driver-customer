@@ -1,12 +1,9 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/colors.dart';
 import '../../core/services/geocoding_service.dart';
-import '../../core/widgets/real_map_widget.dart';
 import '../../models/models.dart';
 import '../../providers/app_state_provider.dart';
 import '../destinations/data/models/destination_suggestion.dart';
@@ -73,26 +70,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     } finally {
       if (mounted) setState(() => _isLocating = false);
     }
-  }
-
-  /// Lets the customer fine-tune (or fully override the GPS-detected)
-  /// pickup point by tapping or dragging the pin on the home screen map -
-  /// mirrors how the admin dispatch/route-editing maps already let an
-  /// operator set a point (see `RealMapWidget.pickupDraggable`).
-  Future<void> _handlePickupPointChanged(LatLng point) async {
-    setState(() {
-      _pickupLat = point.latitude;
-      _pickupLng = point.longitude;
-      _pickupAddress = 'جارٍ تحديد العنوان...';
-    });
-    final address = await GeocodingService.instance.reverseGeocode(
-      point.latitude,
-      point.longitude,
-    );
-    if (!mounted) return;
-    setState(() {
-      _pickupAddress = address ?? 'الموقع المحدد على الخريطة';
-    });
   }
 
   Future<void> _startRequest() async {
@@ -216,16 +193,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   }
 
   Widget _buildDashboardView() {
-    // NOT a Stack with the where-to bar floating over the map anymore.
-    // Two diagnostic builds nailed down why: with the map swapped for a
-    // solid color the overlay rendered fine, but with the real map back
-    // (flutter_map/web, tiles fetched cross-origin) it silently disappeared
-    // again with no exception anywhere - consistent with flutter_map's web
-    // tile images compositing as a browser-level layer that sits above
-    // Flutter's own canvas regardless of widget stack order, which no
-    // amount of Z-ordering inside Flutter can override. Laying the where-to
-    // bar out below the map instead of on top of it sidesteps that
-    // entirely, at the cost of the map no longer filling the full screen.
     return SafeArea(
       child: SingleChildScrollView(
         child: Column(
@@ -247,30 +214,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: SizedBox(
-                // Fixed height instead of Expanded - deliberately removing
-                // flex layout from this section entirely as a variable
-                // while tracking down why this exact area has repeatedly
-                // rendered in an order/size that didn't match the code.
-                height: 260,
-                // The web preview build only: flutter_map's live tiles have
-                // been the one remaining suspect across every layout
-                // rewrite, so this swaps in a plain decorative placeholder
-                // there instead, isolating it completely. Android/iOS keep
-                // the real interactive map - this never touches the actual
-                // app.
-                child: kIsWeb ? const _MapPlaceholder() : RealMapWidget(
-                  interactive: true,
-                  pickupLat: _pickupLat,
-                  pickupLng: _pickupLng,
-                  onMapTap: _handlePickupPointChanged,
-                  pickupDraggable: true,
-                  onPickupDragged: _handlePickupPointChanged,
-                ),
-              ),
-            ),
+            child: _buildPickupLocationCard(),
           ),
           const SizedBox(height: 12),
           Padding(
@@ -278,6 +222,59 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             child: _buildWhereToBar(),
           ),
         ],
+        ),
+      ),
+    );
+  }
+
+  /// Replaces the map that used to sit here. Pickup is now GPS-only (see
+  /// [_determinePickup], re-triggered by the locate button above) with no
+  /// on-map drag-to-adjust - this card just reports the detected address.
+  Widget _buildPickupLocationCard() {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      elevation: 4,
+      shadowColor: AppColors.primaryDark.withOpacity(0.2),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        child: Row(
+          children: [
+            _IconBadge(
+              icon: _isLocating
+                  ? Icons.hourglass_empty_rounded
+                  : Icons.my_location_rounded,
+              color: AppColors.primary,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'موقع الانطلاق',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 11.5,
+                      color: AppColors.secondaryText,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    _isLocating ? 'جارٍ تحديد موقعك...' : _pickupAddress,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontFamily: 'Cairo',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: AppColors.darkText,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -547,46 +544,6 @@ class _LogoBadge extends StatelessWidget {
         ],
       ),
       child: Image.asset('assets/images/al-houdhoud-logo-mark.png', fit: BoxFit.contain),
-    );
-  }
-}
-
-/// Static stand-in for the live map, web preview only - see the call site
-/// in [_CustomerHomeScreenState._buildDashboardView].
-class _MapPlaceholder extends StatelessWidget {
-  const _MapPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.background, AppColors.primary.withOpacity(0.15)],
-        ),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.map_rounded,
-              size: 40,
-              color: AppColors.primary.withOpacity(0.5),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'الخريطة متاحة في التطبيق',
-              style: TextStyle(
-                fontFamily: 'Cairo',
-                fontSize: 12,
-                color: AppColors.secondaryText,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../core/services/route_estimator.dart';
 import '../../core/services/ride_repository.dart';
-import '../../core/widgets/real_map_widget.dart';
 import '../../models/models.dart';
 import '../../providers/app_state_provider.dart';
 import '../destinations/data/models/destination_suggestion.dart';
@@ -151,21 +150,7 @@ class _DeliveryRequestScreenState extends State<DeliveryRequestScreen> {
       appBar: AppBar(title: const Text('تأكيد طلب التوصيل')),
       body: Form(
         key: _formKey,
-        child: Column(
-          children: [
-            SizedBox(
-              height: 200,
-              child: RealMapWidget(
-                interactive: false,
-                showRoute: true,
-                pickupLat: widget.pickupLat,
-                pickupLng: widget.pickupLng,
-                destLat: widget.destination.latitude,
-                destLng: widget.destination.longitude,
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
+        child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -239,9 +224,6 @@ class _DeliveryRequestScreenState extends State<DeliveryRequestScreen> {
                     const SizedBox(height: 100),
                   ],
                 ),
-              ),
-            ),
-          ],
         ),
       ),
       bottomSheet: _buildBottomBar(),

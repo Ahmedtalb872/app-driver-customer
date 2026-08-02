@@ -6,7 +6,6 @@ import 'package:speech_to_text/speech_to_text.dart';
 import '../../../core/constants/colors.dart';
 import '../data/models/destination_suggestion.dart';
 import '../data/repositories/destination_search_repository.dart';
-import 'destination_map_picker_screen.dart';
 
 /// Full-screen "where to?" search, pushed from [CustomerHomeScreen]. Pops
 /// with the chosen [DestinationSuggestion], or null if the user backs out.
@@ -116,17 +115,6 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
     }
   }
 
-  Future<void> _pickFromMap() async {
-    final result = await Navigator.of(context).push<DestinationSuggestion>(
-      MaterialPageRoute(
-        builder: (context) => const DestinationMapPickerScreen(),
-      ),
-    );
-    if (result != null && mounted) {
-      Navigator.of(context).pop(result);
-    }
-  }
-
   IconData _iconFor(DestinationResultType type) {
     switch (type) {
       case DestinationResultType.place:
@@ -203,20 +191,6 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
                 ),
               ),
             ),
-          ListTile(
-            leading: const Icon(Icons.map_rounded, color: AppColors.primary),
-            title: const Text(
-              'اختر الوجهة من الخريطة',
-              style: TextStyle(
-                fontFamily: 'Cairo',
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-                color: AppColors.darkText,
-              ),
-            ),
-            onTap: _pickFromMap,
-          ),
-          const Divider(height: 1),
           if (_isLoading) const LinearProgressIndicator(minHeight: 2),
           Expanded(child: _buildBody()),
         ],

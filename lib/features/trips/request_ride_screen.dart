@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../core/services/route_estimator.dart';
 import '../../core/services/ride_repository.dart';
-import '../../core/widgets/real_map_widget.dart';
 import '../../models/models.dart';
 import '../../providers/app_state_provider.dart';
 import '../destinations/data/models/destination_suggestion.dart';
@@ -155,76 +154,59 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('تأكيد طلب المشوار')),
-      body: Column(
-        children: [
-          SizedBox(
-            height: 220,
-            child: RealMapWidget(
-              interactive: false,
-              showRoute: true,
-              pickupLat: widget.pickupLat,
-              pickupLng: widget.pickupLng,
-              destLat: widget.destination?.latitude,
-              destLng: widget.destination?.longitude,
-            ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildRouteSummary(),
-                  if (widget.destination != null) ...[
-                    const SizedBox(height: 20),
-                    const Text(
-                      'نوع المشوار',
-                      style: TextStyle(
-                        fontFamily: 'Cairo',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    _buildTripTypeSelector(),
-                  ],
-                  const SizedBox(height: 20),
-                  const Text(
-                    'عدد الركاب',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  _buildPassengerStepper(),
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: _noteController,
-                    maxLines: 2,
-                    decoration: const InputDecoration(
-                      labelText: 'ملاحظة للكابتن (اختياري)',
-                      hintText: 'مثال: أنا أمام البوابة الرئيسية',
-                    ),
-                  ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      _error!,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
-                        color: AppColors.error,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 100),
-                ],
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildRouteSummary(),
+            if (widget.destination != null) ...[
+              const SizedBox(height: 20),
+              const Text(
+                'نوع المشوار',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 10),
+              _buildTripTypeSelector(),
+            ],
+            const SizedBox(height: 20),
+            const Text(
+              'عدد الركاب',
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 10),
+            _buildPassengerStepper(),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _noteController,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                labelText: 'ملاحظة للكابتن (اختياري)',
+                hintText: 'مثال: أنا أمام البوابة الرئيسية',
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                _error!,
+                style: const TextStyle(
+                  fontFamily: 'Cairo',
+                  color: AppColors.error,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+            const SizedBox(height: 100),
+          ],
+        ),
       ),
       bottomSheet: _buildBottomBar(),
     );

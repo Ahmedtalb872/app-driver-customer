@@ -6,7 +6,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/colors.dart';
 import '../../core/services/ride_repository.dart';
-import '../../core/widgets/real_map_widget.dart';
 import '../../models/models.dart';
 import '../../providers/app_state_provider.dart';
 import 'trip_summary_screen.dart';
@@ -117,19 +116,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
           ? _buildSearchingView()
           : Stack(
               children: [
-                Positioned.fill(
-                  child: RealMapWidget(
-                    status: trip.status,
-                    showRoute: trip.status == TripStatus.started,
-                    interactive: true,
-                    pickupLat: trip.pickupLat,
-                    pickupLng: trip.pickupLng,
-                    destLat: trip.isOpenTrip ? null : trip.destLat,
-                    destLng: trip.isOpenTrip ? null : trip.destLng,
-                    carLat: trip.captainLat,
-                    carLng: trip.captainLng,
-                  ),
-                ),
+                Positioned.fill(child: _buildStatusBackground(trip)),
                 Positioned(
                   top: 0,
                   left: 0,
@@ -211,6 +198,29 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Decorative full-screen backdrop behind the status banner/bottom card,
+  /// standing in for the live map for the rest of the trip (same spirit as
+  /// [_buildSearchingView]'s pulse for the "searching" status).
+  Widget _buildStatusBackground(Trip trip) {
+    final (icon, color) = switch (trip.status) {
+      TripStatus.accepted => (Icons.two_wheeler_rounded, AppColors.primary),
+      TripStatus.enRoute => (Icons.two_wheeler_rounded, AppColors.primary),
+      TripStatus.arrived => (Icons.flag_rounded, AppColors.success),
+      TripStatus.started => (Icons.alt_route_rounded, AppColors.primary),
+      _ => (Icons.directions_car_rounded, AppColors.secondaryText),
+    };
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [AppColors.background, color.withOpacity(0.12)],
+        ),
+      ),
+      child: Center(child: Icon(icon, size: 96, color: color.withOpacity(0.35))),
     );
   }
 
