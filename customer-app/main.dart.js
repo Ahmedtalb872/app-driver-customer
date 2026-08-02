@@ -37403,8 +37403,8 @@ azC:function azC(){},
 aMV:function aMV(a){this.b=a},
 aMU:function aMU(a){this.a=a
 this.b=$},
-aOE(a5,a6){var s=0,r=A.o(t._k),q,p,o,n,m,l,k,j,i,h,g,f,e,d,c,b,a,a0,a1,a2,a3,a4
-var $async$aOE=A.p(function(a7,a8){if(a7===1)return A.l(a8,r)
+aOE(a5,a6,a7){var s=0,r=A.o(t._k),q,p,o,n,m,l,k,j,i,h,g,f,e,d,c,b,a,a0,a1,a2,a3,a4
+var $async$aOE=A.p(function(a8,a9){if(a8===1)return A.l(a9,r)
 for(;;)switch(s){case 0:a4=$.bb()
 if(a4.a){$.bkd().bT(B.fn,"Supabase is already initialized. Skipping reinitialization.",null,null)
 q=a4
@@ -37415,35 +37415,35 @@ p.bT(B.fm,"Initialize Supabase v2.16.0",null,null)
 o=new A.aMU(new A.aY(new A.ai($.at,t.U),t.R))
 o.FY()
 n=B.Zx.aNL(o)
-if(n.d==null){o=A.dh(a6,0,null)
+if(n.d==null){o=A.dh(a7,0,null)
 n=n.aNI(new A.aMV("sb-"+B.b.gZ(o.gl1(o).split("."))+"-auth-token"))}o=t.N
 m=A.cL($.bts(),o,o)
 l=A.fT("supabase.supabase")
-k=a6+"/rest/v1"
-j=A.ee(a6+"/realtime/v1","http","ws")
-i=a6+"/auth/v1"
-h=a6+"/storage/v1"
-g=a6+"/functions/v1"
+k=a7+"/rest/v1"
+j=A.ee(a7+"/realtime/v1","http","ws")
+i=a7+"/auth/v1"
+h=a7+"/storage/v1"
+g=a7+"/functions/v1"
 f=A.cL($.btt(),o,o)
 f.R(0,m)
 m=new A.aRM()
 m.h4(0)
-e=new A.a7w(a5,B.TW,k,j,i,h,g,f,null,m,!1,null,new A.ar3(),l)
+e=new A.a7w(a6,B.TW,k,j,i,h,g,f,a5,m,!1,null,new A.ar3(),l)
 d=n.c
 c=A.cL(A.mb(f,o,o),o,o)
-c.m(0,"apikey",a5)
-c.m(0,"Authorization","Bearer "+a5)
+c.m(0,"apikey",a6)
+c.m(0,"Authorization","Bearer "+a6)
 b=t.FB
 a=A.bfs(null,null,!1,b)
 b=A.bfs(null,null,!0,b)
 a0=A.fT("supabase.auth")
 a1=A.cL(B.aeI,o,o)
 a1.R(0,c)
-c=new A.awH(new A.b82(),i,a1,null,A.v(o,t.QK),a,b,n.b,d,a0)
+c=new A.awH(new A.b82(),i,a1,a5,A.v(o,t.QK),a,b,n.b,d,a0)
 c.y=!0
 a0.bT(B.fm,"Initialize GoTrueClient v2.26.0 with url: "+i+", autoRefreshToken: true, flowType: "+d.b+", tickDuration: "+B.pB.k(0)+", tickThreshold: 3",null,null)
 a0.bT(B.c5,"Initialize with headers: "+a1.k(0),null,null)
-d=new A.awC(i,a1,null)
+d=new A.awC(i,a1,a5)
 d.ga1y()
 d.e!==$&&A.aK()
 d.e=new A.awE()
@@ -37466,7 +37466,7 @@ c.aAW()
 e.Q=c
 A.bjm()
 d=new A.vH(A.b([],t.O))
-d=e.z=new A.VO(d,a5,e.gauc())
+d=e.z=new A.VO(d,a6,e.gauc())
 c=A.cL(A.mb(f,o,o),o,o)
 b=A.fT("supabase.postgrest")
 a=A.cL(B.aeH,o,o)
@@ -37492,9 +37492,9 @@ k.bT(B.fm,"Initialize SupabaseStorageClient v2.6.0 with url: "+h+", retryAttempt
 k.bT(B.c5,"Initialize with headers: "+m.k(0),null,null)
 e.at!==$&&A.aK()
 e.at=g
-g=A.a_(["apikey",a5],o,t.z)
+g=A.a_(["apikey",a6],o,t.z)
 m=A.v(o,o)
-m.m(0,"apikey",a5)
+m.m(0,"apikey",a6)
 m.R(0,A.mb(f,o,o))
 o=A.bDa(j,null,m,d,null,g,B.pB,null)
 e.ax!==$&&A.aK()
@@ -37690,7 +37690,7 @@ break}p=$.bf3().gabb().h(0,"SUPABASE_URL")
 o=$.bf3().gabb().h(0,"SUPABASE_ANON_KEY")
 if(p==null||p.length===0||o==null||o.length===0)throw A.f(A.ac("Missing SUPABASE_URL / SUPABASE_ANON_KEY. Copy .env.example to .env and fill in your Supabase project values."))
 s=3
-return A.i(A.aOE(o,p),$async$aOs)
+return A.i(A.aOE(null,o,p),$async$aOs)
 case 3:$.bpc=!0
 case 1:return A.m(q,r)}})
 return A.n($async$aOs,r)},
