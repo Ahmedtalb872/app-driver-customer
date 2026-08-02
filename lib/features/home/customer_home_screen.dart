@@ -226,7 +226,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     // bar out below the map instead of on top of it sidesteps that
     // entirely, at the cost of the map no longer filling the full screen.
     return SafeArea(
-      child: Column(
+      child: SingleChildScrollView(
+        child: Column(
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
@@ -243,11 +244,16 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               ],
             ),
           ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: SizedBox(
+                // Fixed height instead of Expanded - deliberately removing
+                // flex layout from this section entirely as a variable
+                // while tracking down why this exact area has repeatedly
+                // rendered in an order/size that didn't match the code.
+                height: 260,
                 child: RealMapWidget(
                   interactive: true,
                   pickupLat: _pickupLat,
@@ -259,11 +265,13 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               ),
             ),
           ),
+          const SizedBox(height: 12),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: _buildWhereToBar(),
           ),
         ],
+        ),
       ),
     );
   }
