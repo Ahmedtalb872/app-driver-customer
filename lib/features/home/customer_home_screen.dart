@@ -225,15 +225,13 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     // that would otherwise have surfaced it as visible text).
     return Stack(
       children: [
-        Positioned.fill(
-          child: RealMapWidget(
-            interactive: true,
-            pickupLat: _pickupLat,
-            pickupLng: _pickupLng,
-            onMapTap: _handlePickupPointChanged,
-            pickupDraggable: true,
-            onPickupDragged: _handlePickupPointChanged,
-          ),
+        // TEMPORARY diagnostic swap: RealMapWidget replaced with a plain
+        // Container to isolate whether the map itself is the reason the
+        // where-to card/top bar below never appear on real devices/
+        // browsers despite no build exception - restore RealMapWidget once
+        // this is answered either way.
+        const Positioned.fill(
+          child: ColoredBox(color: Color(0xFFCFE8E4)),
         ),
         Positioned.fill(
           child: IgnorePointer(
