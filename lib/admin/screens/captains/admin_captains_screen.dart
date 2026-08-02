@@ -132,6 +132,28 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
     _load();
   }
 
+  /// Only refuses server-side when the captain has trip history (see
+  /// admin_delete_captain / [CaptainHasTripHistoryException]) - a captain
+  /// with none, regardless of status, can be deleted from here.
+  Future<void> _delete(CaptainAdminView captain) async {
+    final reason = await showReasonDialog(
+      context,
+      title: 'حذف ملف ${captain.fullName} نهائياً - سبب الحذف (إلزامي)',
+      hint: 'هذا الإجراء لا يمكن التراجع عنه',
+    );
+    if (reason == null) return;
+    try {
+      await _repository.delete(captain.id, reason);
+      _load();
+    } on CaptainHasTripHistoryException {
+      _showError(
+        'لا يمكن حذف كابتن له سجل رحلات سابقة - استخدم إيقاف الحساب بدلاً من ذلك.',
+      );
+    } catch (_) {
+      _showError();
+    }
+  }
+
   void _showError([String? message]) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -342,6 +364,15 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
                         tooltip: 'التفاصيل',
                         icon: const Icon(Icons.visibility_outlined, size: 20),
                         onPressed: () => _openDetails(captain),
+                      ),
+                      IconButton(
+                        tooltip: 'حذف الملف',
+                        icon: const Icon(
+                          Icons.delete_outline_rounded,
+                          size: 20,
+                          color: AdminColors.error,
+                        ),
+                        onPressed: () => _delete(captain),
                       ),
                     ],
                   ),

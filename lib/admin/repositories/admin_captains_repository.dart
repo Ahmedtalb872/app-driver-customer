@@ -164,6 +164,28 @@ class AdminCaptainsRepository {
     );
   }
 
+  /// Deletes the captain's profile (see
+  /// 20260802000050_admin_delete_captain.sql) - the uploaded document
+  /// *rows* cascade-delete with it, but the underlying files stay in
+  /// Storage (no admin DELETE policy exists on that bucket, and it's the
+  /// captain's own account either way - see the migration's comment for why
+  /// a full account/file wipe isn't in scope here). Throws
+  /// [CaptainHasTripHistoryException] when the captain was ever assigned a
+  /// trip - the database itself refuses the delete in that case.
+  Future<void> delete(String captainId, String reason) async {
+    try {
+      await _client.rpc(
+        'admin_delete_captain',
+        params: {'p_captain_id': captainId, 'p_reason': reason},
+      );
+    } on PostgrestException catch (e) {
+      if (e.message.contains('CAPTAIN_HAS_TRIP_HISTORY')) {
+        throw CaptainHasTripHistoryException();
+      }
+      rethrow;
+    }
+  }
+
   /// Live version of [loadCaptains](onlineFilter: true): emits the online
   /// captains list immediately, then again on every `captains` row change
   /// (debounced), so Live Operations reflects online/offline toggles
@@ -203,3 +225,7 @@ class CaptainDocumentsIncompleteException implements Exception {
 
   const CaptainDocumentsIncompleteException(this.rawMessage);
 }
+
+/// Thrown when `admin_delete_captain` refuses because the captain has trip
+/// history - suspend the account instead of deleting it.
+class CaptainHasTripHistoryException implements Exception {}

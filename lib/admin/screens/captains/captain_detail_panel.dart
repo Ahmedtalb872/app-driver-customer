@@ -81,6 +81,44 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
     if (mounted) Navigator.of(context).pop();
   }
 
+  /// Only refuses server-side when the captain has trip history (see
+  /// admin_delete_captain / [CaptainHasTripHistoryException]).
+  Future<void> _deleteCaptain() async {
+    final reason = await showReasonDialog(
+      context,
+      title: 'حذف ملف ${widget.captain.fullName} نهائياً - سبب الحذف (إلزامي)',
+      hint: 'هذا الإجراء لا يمكن التراجع عنه',
+    );
+    if (reason == null) return;
+    try {
+      await _repository.delete(widget.captain.id, reason);
+      widget.onChanged();
+      if (mounted) Navigator.of(context).pop();
+    } on CaptainHasTripHistoryException {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'لا يمكن حذف كابتن له سجل رحلات سابقة - استخدم إيقاف الحساب بدلاً من ذلك.',
+              style: TextStyle(fontFamily: 'Cairo'),
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'تعذر حذف الملف، تحقق من صلاحياتك وحاول مجدداً.',
+              style: TextStyle(fontFamily: 'Cairo'),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _approveDocument(CaptainDocument doc) async {
     final ok = await showConfirmDialog(
       context,
@@ -337,6 +375,19 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
                     trailing: Text('${trip['captain_net_earnings'] ?? '-'}'),
                   ),
                 ),
+              const Divider(height: 32),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  onPressed: _deleteCaptain,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AdminColors.error,
+                    side: const BorderSide(color: AdminColors.error),
+                  ),
+                  icon: const Icon(Icons.delete_outline_rounded),
+                  label: const Text('حذف ملف الكابتن نهائياً'),
+                ),
+              ),
             ],
           ),
         );
