@@ -215,23 +215,24 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   }
 
   Widget _buildDashboardView() {
-    // Single Positioned.fill + single SafeArea + a Column with a Spacer
-    // pushing the where-to bar to the bottom - deliberately flatter than
-    // the previous two-separate-SafeArea-instances-in-one-Stack structure,
-    // which multiple independent testers on different devices/browsers
-    // reported as rendering the map and bottom nav bar fine while the top
-    // bar and where-to card silently never appeared, with no exception
-    // caught anywhere (confirmed via a global ErrorWidget.builder override
-    // that would otherwise have surfaced it as visible text).
+    // A diagnostic build with the map swapped for a plain color proved the
+    // map wasn't the problem: the where-to text/chips rendered fine, which
+    // meant the bug was the Spacer()-based layout silently overflowing and
+    // clipping the bottom of the where-to bar (the delivery row never
+    // painted) - fixed below by giving that bottom section an Expanded +
+    // scrollable region instead of relying on Spacer to always leave
+    // exactly enough room.
     return Stack(
       children: [
-        // TEMPORARY diagnostic swap: RealMapWidget replaced with a plain
-        // Container to isolate whether the map itself is the reason the
-        // where-to card/top bar below never appear on real devices/
-        // browsers despite no build exception - restore RealMapWidget once
-        // this is answered either way.
-        const Positioned.fill(
-          child: ColoredBox(color: Color(0xFFCFE8E4)),
+        Positioned.fill(
+          child: RealMapWidget(
+            interactive: true,
+            pickupLat: _pickupLat,
+            pickupLng: _pickupLng,
+            onMapTap: _handlePickupPointChanged,
+            pickupDraggable: true,
+            onPickupDragged: _handlePickupPointChanged,
+          ),
         ),
         Positioned.fill(
           child: IgnorePointer(
@@ -272,10 +273,15 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     ],
                   ),
                 ),
-                const Spacer(),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  child: _buildWhereToBar(),
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      reverse: true,
+                      child: _buildWhereToBar(),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -287,19 +293,17 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   Widget _buildWhereToBar() {
     final isOpen = _tripType == TripType.open;
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primaryDark.withOpacity(0.14),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
+    // Material + elevation instead of a Container/BoxDecoration with a
+    // manual boxShadow - a diagnostic build proved this card's background,
+    // border and shadow simply never painted (only its child content did)
+    // while everything else on the same screen rendered fine; Material's
+    // elevation system is the standard, better-tested way to get a white
+    // elevated surface and doesn't have that failure mode.
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(24),
+      elevation: 10,
+      shadowColor: AppColors.primaryDark.withOpacity(0.35),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
