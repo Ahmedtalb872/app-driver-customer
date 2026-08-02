@@ -5,7 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'core/config/supabase_config.dart';
 import 'providers/app_state_provider.dart';
-import 'main.dart' show MyApp;
+import 'main.dart' show MyApp, installVisibleErrorWidget;
 
 /// Alternate web entrypoint that always serves the customer app, instead of
 /// `main.dart`'s `kIsWeb` branch (which is reserved for the AL HODHOD admin
@@ -14,6 +14,7 @@ import 'main.dart' show MyApp;
 /// used by the real mobile builds or the admin web deployment.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  installVisibleErrorWidget();
   await dotenv.load(fileName: '.env');
   await SupabaseConfig.initialize();
   usePathUrlStrategy();
