@@ -11,7 +11,7 @@ import '../destinations/presentation/destination_search_screen.dart';
 import '../profile/profile_screen.dart';
 import '../trips/delivery_request_screen.dart';
 import '../trips/my_trips_screen.dart';
-import '../trips/request_ride_screen.dart';
+import '../trips/trip_planner_screen.dart';
 import '../trips/trip_tracking_screen.dart';
 import '../wallet/wallet_screen.dart';
 
@@ -30,7 +30,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   double? _pickupLng;
   String _pickupAddress = 'موقعي الحالي';
   bool _isLocating = false;
-  TripType _tripType = TripType.normal;
 
   @override
   void initState() {
@@ -72,58 +71,25 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     }
   }
 
-  Future<void> _startRequest() async {
-    if (_pickupLat == null || _pickupLng == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'الرجاء تفعيل خدمة الموقع الجغرافي لتتمكن من طلب مشوار.',
-            style: TextStyle(fontFamily: 'Cairo'),
-          ),
-        ),
-      );
-      return;
-    }
-
-    // An open trip has no destination to search for - its whole point is
-    // that one is picked as the ride happens - so it skips straight to the
-    // confirm screen with none.
-    if (_tripType == TripType.open) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => RequestRideScreen(
-            pickupLat: _pickupLat!,
-            pickupLng: _pickupLng!,
-            pickupAddress: _pickupAddress,
-            tripType: TripType.open,
-          ),
-        ),
-      );
-      return;
-    }
-
-    final destination = await Navigator.of(context).push<DestinationSuggestion>(
-      MaterialPageRoute(builder: (context) => const DestinationSearchScreen()),
-    );
-    if (destination == null || !mounted) return;
+  /// Opens [TripPlannerScreen], which owns the pickup/destination pickers
+  /// and the normal-vs-open choice for both - pre-filled with the
+  /// GPS-detected pickup point above, freely changeable there.
+  void _openTripPlanner() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => RequestRideScreen(
-          pickupLat: _pickupLat!,
-          pickupLng: _pickupLng!,
-          pickupAddress: _pickupAddress,
-          destination: destination,
-          tripType: TripType.normal,
+        builder: (context) => TripPlannerScreen(
+          initialPickupLat: _pickupLat,
+          initialPickupLng: _pickupLng,
+          initialPickupAddress: _pickupAddress,
         ),
       ),
     );
   }
 
-  /// Parcel delivery entry point, separate from the ride trip-type selector
-  /// above (a delivery isn't a third "trip type" - it always has a
-  /// destination and collects a recipient/package instead of a passenger
-  /// count, see [DeliveryRequestScreen]). Reuses the same destination search
-  /// screen as a normal ride.
+  /// Parcel delivery entry point, separate from [TripPlannerScreen] (a
+  /// delivery isn't a "trip type" - it always has a destination and
+  /// collects a recipient/package instead of a passenger count, see
+  /// [DeliveryRequestScreen]). Reuses the same destination search screen.
   Future<void> _startDeliveryRequest() async {
     if (_pickupLat == null || _pickupLng == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -281,7 +247,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   }
 
   Widget _buildWhereToBar() {
-    final isOpen = _tripType == TripType.open;
     // Material + elevation instead of a Container/BoxDecoration with a
     // manual boxShadow - a diagnostic build proved this card's background,
     // border and shadow simply never painted (only its child content did)
@@ -298,23 +263,23 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         children: [
           InkWell(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            onTap: _startRequest,
+            onTap: _openTripPlanner,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
               child: Row(
                 children: [
-                  _IconBadge(
-                    icon: isOpen ? Icons.timelapse_rounded : Icons.search_rounded,
-                    color: isOpen ? AppColors.accent : AppColors.primary,
+                  const _IconBadge(
+                    icon: Icons.search_rounded,
+                    color: AppColors.primary,
                   ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          isOpen ? 'اطلب مشوار مفتوح الآن' : 'إلى أين تريد الذهاب؟',
-                          style: const TextStyle(
+                        const Text(
+                          'إلى أين تريد الذهاب؟',
+                          style: TextStyle(
                             fontFamily: 'Cairo',
                             fontWeight: FontWeight.bold,
                             fontSize: 15,
@@ -323,9 +288,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          isOpen
-                              ? 'بدون وجهة محددة - الانطلاق من: $_pickupAddress'
-                              : 'الانطلاق من: $_pickupAddress',
+                          'مشوار عادي أو مفتوح - الانطلاق من: $_pickupAddress',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -345,11 +308,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 ],
               ),
             ),
-          ),
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-            child: _buildTripTypeSelector(),
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
           InkWell(
@@ -391,95 +349,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     );
   }
 
-  Widget _buildTripTypeSelector() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(
-          child: _buildTripTypeChip(
-            type: TripType.normal,
-            icon: Icons.route_rounded,
-            label: 'عادي',
-            description: 'تحدد وجهتك',
-            color: AppColors.primary,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _buildTripTypeChip(
-            type: TripType.open,
-            icon: Icons.timelapse_rounded,
-            label: 'مفتوح',
-            description: 'بدون وجهة، السائق تحت تصرفك',
-            color: AppColors.accent,
-          ),
-        ),
-      ],
-    );
-  }
-
-  // "عادي"/"مفتوح" alone don't tell a first-time user what actually differs
-  // between the two (a fixed destination vs. none at all) - each chip now
-  // carries a one-line description under the label so the distinction is
-  // clear before tapping, not just after.
-  Widget _buildTripTypeChip({
-    required TripType type,
-    required IconData icon,
-    required String label,
-    required String description,
-    required Color color,
-  }) {
-    final selected = _tripType == type;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOut,
-      decoration: BoxDecoration(
-        color: selected ? color.withOpacity(0.09) : AppColors.background,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: selected ? color : Colors.transparent, width: 1.4),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () => setState(() => _tripType = type),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _IconBadge(icon: icon, color: color, size: 30, iconSize: 15),
-                const SizedBox(height: 6),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12.5,
-                    color: selected ? color : AppColors.darkText,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  description,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 9.5,
-                    color: selected
-                        ? color.withOpacity(0.85)
-                        : AppColors.secondaryText,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   static const List<_NavItemData> _navItems = [
     _NavItemData(Icons.home_rounded, 'الرئيسية'),

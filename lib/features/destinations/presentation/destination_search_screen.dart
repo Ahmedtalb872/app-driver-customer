@@ -6,11 +6,21 @@ import 'package:speech_to_text/speech_to_text.dart';
 import '../../../core/constants/colors.dart';
 import '../data/models/destination_suggestion.dart';
 import '../data/repositories/destination_search_repository.dart';
+import 'destination_map_picker_screen.dart';
 
-/// Full-screen "where to?" search, pushed from [CustomerHomeScreen]. Pops
-/// with the chosen [DestinationSuggestion], or null if the user backs out.
+/// Full-screen "where to?" search, pushed from [TripPlannerScreen] for
+/// either a pickup or a destination point (see [title]/[mapPickerTitle]).
+/// Pops with the chosen [DestinationSuggestion], or null if the user backs
+/// out.
 class DestinationSearchScreen extends StatefulWidget {
-  const DestinationSearchScreen({super.key});
+  const DestinationSearchScreen({
+    super.key,
+    this.title = 'إلى أين تريد الذهاب؟',
+    this.mapPickerTitle = 'اختر الموقع من الخريطة',
+  });
+
+  final String title;
+  final String mapPickerTitle;
 
   @override
   State<DestinationSearchScreen> createState() =>
@@ -115,6 +125,18 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
     }
   }
 
+  Future<void> _pickFromMap() async {
+    final result = await Navigator.of(context).push<DestinationSuggestion>(
+      MaterialPageRoute(
+        builder: (context) =>
+            DestinationMapPickerScreen(title: widget.mapPickerTitle),
+      ),
+    );
+    if (result != null && mounted) {
+      Navigator.of(context).pop(result);
+    }
+  }
+
   IconData _iconFor(DestinationResultType type) {
     switch (type) {
       case DestinationResultType.place:
@@ -131,7 +153,7 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('إلى أين تريد الذهاب؟'),
+        title: Text(widget.title),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.of(context).pop(),
@@ -191,6 +213,20 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
                 ),
               ),
             ),
+          ListTile(
+            leading: const Icon(Icons.map_rounded, color: AppColors.primary),
+            title: const Text(
+              'اختر من الخريطة',
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: AppColors.darkText,
+              ),
+            ),
+            onTap: _pickFromMap,
+          ),
+          const Divider(height: 1),
           if (_isLoading) const LinearProgressIndicator(minHeight: 2),
           Expanded(child: _buildBody()),
         ],
