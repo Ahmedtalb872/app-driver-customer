@@ -215,6 +215,14 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   }
 
   Widget _buildDashboardView() {
+    // Single Positioned.fill + single SafeArea + a Column with a Spacer
+    // pushing the where-to bar to the bottom - deliberately flatter than
+    // the previous two-separate-SafeArea-instances-in-one-Stack structure,
+    // which multiple independent testers on different devices/browsers
+    // reported as rendering the map and bottom nav bar fine while the top
+    // bar and where-to card silently never appeared, with no exception
+    // caught anywhere (confirmed via a global ErrorWidget.builder override
+    // that would otherwise have surfaced it as visible text).
     return Stack(
       children: [
         Positioned.fill(
@@ -227,56 +235,51 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             onPickupDragged: _handlePickupPointChanged,
           ),
         ),
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 130,
+        Positioned.fill(
           child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    AppColors.primary.withOpacity(0.18),
-                    AppColors.primary.withOpacity(0.0),
-                  ],
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: Container(
+                height: 130,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      AppColors.primary.withOpacity(0.18),
+                      AppColors.primary.withOpacity(0.0),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
         ),
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
+        Positioned.fill(
           child: SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const _LogoBadge(),
-                  _CircleIconButton(
-                    icon: _isLocating ? Icons.hourglass_empty : Icons.my_location_rounded,
-                    onTap: _isLocating ? null : _determinePickup,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const _LogoBadge(),
+                      _CircleIconButton(
+                        icon: _isLocating
+                            ? Icons.hourglass_empty
+                            : Icons.my_location_rounded,
+                        onTap: _isLocating ? null : _determinePickup,
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: _buildWhereToBar(),
+                ),
+                const Spacer(),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: _buildWhereToBar(),
+                ),
+              ],
             ),
           ),
         ),
