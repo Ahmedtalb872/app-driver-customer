@@ -10,6 +10,9 @@ name: Deploy customer web preview
 # (Settings -> Secrets and variables -> Actions):
 #   SUPABASE_URL       - the Supabase project URL
 #   SUPABASE_ANON_KEY  - the Supabase project's public anon key
+# Optional third secret - MAPTILER_API_KEY - switches every map from free
+# OpenStreetMap tiles to MapTiler; the build still works fine without it
+# (see lib/core/services/map_tile_provider.dart).
 on:
   push:
     branches:
@@ -36,6 +39,7 @@ jobs:
         run: |
           echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
           echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+          echo "MAPTILER_API_KEY=${{ secrets.MAPTILER_API_KEY }}" >> .env
 
       - name: Install dependencies
         run: flutter pub get

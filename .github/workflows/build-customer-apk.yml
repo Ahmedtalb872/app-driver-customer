@@ -7,10 +7,12 @@ name: Build customer app APK
 # always replaces the previous release's APK in place, so the same link
 # keeps working: https://github.com/<owner>/<repo>/releases/tag/customer-apk-latest
 #
-# Requires the same two repository secrets as deploy-customer-web.yml
+# Requires the same repository secrets as deploy-customer-web.yml
 # (Settings -> Secrets and variables -> Actions):
 #   SUPABASE_URL       - the Supabase project URL
 #   SUPABASE_ANON_KEY  - the Supabase project's public anon key
+#   MAPTILER_API_KEY   - optional; falls back to free OpenStreetMap tiles
+#                        when unset (see lib/core/services/map_tile_provider.dart)
 on:
   push:
     branches:
@@ -43,6 +45,7 @@ jobs:
         run: |
           echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
           echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+          echo "MAPTILER_API_KEY=${{ secrets.MAPTILER_API_KEY }}" >> .env
 
       - name: Install dependencies
         run: flutter pub get

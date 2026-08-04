@@ -25,10 +25,11 @@ class RealMapWidget extends StatefulWidget {
   final Function(LatLng)? onMapTap;
   final bool interactive;
 
-  /// Tile source for this map instance. Defaults to free OpenStreetMap
-  /// tiles - see [MapTileProvider] for how to swap providers later without
-  /// touching call sites.
-  final MapTileProvider tileProvider;
+  /// Tile source for this map instance. Null (the default for every call
+  /// site today) resolves to [defaultMapTileProvider] at build time - see
+  /// [MapTileProvider] for how to swap providers later without touching
+  /// call sites.
+  final MapTileProvider? tileProvider;
 
   /// Whether the pickup marker can be dragged to fine-tune its position
   /// after an initial tap. Off by default so existing read-only map views
@@ -61,7 +62,7 @@ class RealMapWidget extends StatefulWidget {
     this.tracePolyline,
     this.onMapTap,
     this.interactive = true,
-    this.tileProvider = const OpenStreetMapTileProvider(),
+    this.tileProvider,
     this.pickupDraggable = false,
     this.destDraggable = false,
     this.onPickupDragged,
@@ -191,6 +192,8 @@ class _RealMapWidgetState extends State<RealMapWidget>
 
   @override
   Widget build(BuildContext context) {
+    final tileProvider = widget.tileProvider ?? defaultMapTileProvider();
+
     // If no route provided but we have pickup/destination and want to show route
     List<LatLng> polylinePoints = widget.routePolyline ?? [];
     if (polylinePoints.isEmpty &&
@@ -222,8 +225,8 @@ class _RealMapWidgetState extends State<RealMapWidget>
           ),
           children: [
             TileLayer(
-              urlTemplate: widget.tileProvider.urlTemplate,
-              userAgentPackageName: widget.tileProvider.userAgentPackageName,
+              urlTemplate: tileProvider.urlTemplate,
+              userAgentPackageName: tileProvider.userAgentPackageName,
             ),
 
             if (polylinePoints.isNotEmpty)
@@ -252,7 +255,7 @@ class _RealMapWidgetState extends State<RealMapWidget>
             MarkerLayer(markers: _buildMarkers()),
 
             SimpleAttributionWidget(
-              source: Text(widget.tileProvider.attribution),
+              source: Text(tileProvider.attribution),
             ),
           ],
         ),
