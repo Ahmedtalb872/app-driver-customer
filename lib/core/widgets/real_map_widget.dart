@@ -161,17 +161,22 @@ class _RealMapWidgetState extends State<RealMapWidget>
     super.dispose();
   }
 
-  /// True only for a real Android/iOS build - the only two platforms
-  /// `google_maps_flutter` actually supports (see the class doc). Checking
-  /// [defaultTargetPlatform] rather than just `!kIsWeb` matters: a plain
-  /// `flutter test` run reports the host OS (e.g. `TargetPlatform.linux` on
-  /// a GitHub Actions runner), not android/iOS, so tests and any future
-  /// desktop target correctly keep using flutter_map instead of trying to
-  /// stand up a native Google Maps platform view that isn't there.
+  /// True for a real web/Android/iOS build - the platforms
+  /// `google_maps_flutter` actually supports, via `google_maps_flutter_web`
+  /// on web specifically (see the class doc and web/index.html's Maps JS
+  /// API script tag). Checking [defaultTargetPlatform] rather than just
+  /// `!kIsWeb` matters for the non-web half of this: a plain `flutter test`
+  /// run reports the host OS (e.g. `TargetPlatform.linux` on a GitHub
+  /// Actions runner), not android/iOS, so tests and any future desktop
+  /// target correctly keep using flutter_map instead of trying to stand up
+  /// a native Google Maps platform view that isn't there. [kIsWeb] itself
+  /// is reliably false in that same `flutter test` run (it's a real "am I
+  /// compiled for web" constant, not host-OS-dependent), so it doesn't need
+  /// the same guard.
   bool get _useGoogleMaps =>
-      !kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.android ||
-          defaultTargetPlatform == TargetPlatform.iOS);
+      kIsWeb ||
+      defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS;
 
   /// Pans/zooms whichever map engine is actually active - see [_useGoogleMaps]
   /// for how that's picked; both controllers need this same call from
