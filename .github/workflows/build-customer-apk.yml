@@ -7,12 +7,17 @@ name: Build customer app APK
 # always replaces the previous release's APK in place, so the same link
 # keeps working: https://github.com/<owner>/<repo>/releases/tag/customer-apk-latest
 #
-# Requires the same repository secrets as deploy-customer-web.yml
-# (Settings -> Secrets and variables -> Actions):
-#   SUPABASE_URL       - the Supabase project URL
-#   SUPABASE_ANON_KEY  - the Supabase project's public anon key
-#   MAPTILER_API_KEY   - optional; falls back to free OpenStreetMap tiles
-#                        when unset (see lib/core/services/map_tile_provider.dart)
+# Requires the same repository secrets as deploy-customer-web.yml, plus one
+# more for the real Google Maps SDK this APK renders (see
+# lib/core/widgets/real_map_widget.dart):
+#   SUPABASE_URL         - the Supabase project URL
+#   SUPABASE_ANON_KEY    - the Supabase project's public anon key
+#   MAPTILER_API_KEY     - optional; only affects the web preview build,
+#                          falls back to free OpenStreetMap tiles when unset
+#   GOOGLE_MAPS_API_KEY  - a Maps SDK for Android key from a Google Cloud
+#                          project with billing enabled. Without it the map
+#                          view still renders but tiles come back blank/grey
+#                          (Google's own behavior, not a build failure).
 on:
   push:
     branches:
@@ -49,6 +54,13 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Write android/local.properties (Google Maps API key)
+        # Appended, not overwritten - `flutter pub get` above already wrote
+        # this file's flutter.sdk/flutter.buildMode lines; see
+        # android/app/build.gradle.kts for how MAPS_API_KEY flows from here
+        # into the manifest.
+        run: echo "MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" >> android/local.properties
 
       - name: Build release APK (customer app)
         run: flutter build apk --release -t lib/main.dart

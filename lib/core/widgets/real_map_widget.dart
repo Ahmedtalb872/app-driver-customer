@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../models/models.dart';
@@ -7,6 +9,14 @@ import '../constants/colors.dart';
 import '../services/map_tile_provider.dart';
 import 'dart:async';
 
+/// Renders the app's map with one of two engines, picked automatically by
+/// platform: the real Google Maps SDK (`google_maps_flutter`) on Android/
+/// iOS, or flutter_map (free OpenStreetMap tiles, or MapTiler - see
+/// [MapTileProvider]) on web. Every call site uses the same constructor
+/// params regardless of which engine ends up rendering - see
+/// [_buildGoogleMap]/[_buildFlutterMap] for the platform-specific pieces
+/// (marker icons in particular differ: native Google Maps markers can't
+/// embed an arbitrary widget the way flutter_map's can).
 class RealMapWidget extends StatefulWidget {
   final TripStatus? status;
   final bool showRoute;
@@ -25,10 +35,10 @@ class RealMapWidget extends StatefulWidget {
   final Function(LatLng)? onMapTap;
   final bool interactive;
 
-  /// Tile source for this map instance. Null (the default for every call
-  /// site today) resolves to [defaultMapTileProvider] at build time - see
-  /// [MapTileProvider] for how to swap providers later without touching
-  /// call sites.
+  /// Tile source for [FlutterMap] rendering only (web - see the class doc).
+  /// Null (the default for every call site today) resolves to
+  /// [defaultMapTileProvider] at build time - see [MapTileProvider] for how
+  /// to swap providers later without touching call sites.
   final MapTileProvider? tileProvider;
 
   /// Whether the pickup marker can be dragged to fine-tune its position
@@ -75,8 +85,15 @@ class RealMapWidget extends StatefulWidget {
 
 class _RealMapWidgetState extends State<RealMapWidget>
     with SingleTickerProviderStateMixin {
+  // flutter_map (web only - see class doc).
   final MapController _mapController = MapController();
   final GlobalKey _mapAreaKey = GlobalKey();
+
+  // Real Google Maps SDK (Android/iOS - see class doc). Only set once the
+  // native map view has finished initializing, via GoogleMap's
+  // onMapCreated callback in _buildGoogleMap().
+  gmaps.GoogleMapController? _googleMapController;
+
   LatLng _currentCenter = const LatLng(18.0858, -15.9785); // Nouakchott center
   bool _isLoadingLocation = false;
 
@@ -119,7 +136,7 @@ class _RealMapWidgetState extends State<RealMapWidget>
       LatLng newLoc = LatLng(widget.pickupLat!, widget.pickupLng!);
       if (oldWidget.pickupLat != widget.pickupLat ||
           oldWidget.pickupLng != widget.pickupLng) {
-        _mapController.move(newLoc, 14.0);
+        _moveCamera(newLoc, 14.0);
       }
     }
 
@@ -131,7 +148,7 @@ class _RealMapWidgetState extends State<RealMapWidget>
       LatLng newDest = LatLng(widget.destLat!, widget.destLng!);
       if (oldWidget.destLat != widget.destLat ||
           oldWidget.destLng != widget.destLng) {
-        _mapController.move(newDest, 14.0);
+        _moveCamera(newDest, 14.0);
       }
     }
   }
@@ -139,7 +156,49 @@ class _RealMapWidgetState extends State<RealMapWidget>
   @override
   void dispose() {
     _carController.dispose();
+    _googleMapController?.dispose();
     super.dispose();
+  }
+
+  /// True only for a real Android/iOS build - the only two platforms
+  /// `google_maps_flutter` actually supports (see the class doc). Checking
+  /// [defaultTargetPlatform] rather than just `!kIsWeb` matters: a plain
+  /// `flutter test` run reports the host OS (e.g. `TargetPlatform.linux` on
+  /// a GitHub Actions runner), not android/iOS, so tests and any future
+  /// desktop target correctly keep using flutter_map instead of trying to
+  /// stand up a native Google Maps platform view that isn't there.
+  bool get _useGoogleMaps =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
+
+  /// Pans/zooms whichever map engine is actually active - see [_useGoogleMaps]
+  /// for how that's picked; both controllers need this same call from
+  /// [didUpdateWidget]/[_determinePosition], which run regardless of engine.
+  void _moveCamera(LatLng point, double zoom) {
+    if (!_useGoogleMaps) {
+      _mapController.move(point, zoom);
+    } else {
+      _googleMapController?.animateCamera(
+        gmaps.CameraUpdate.newLatLngZoom(
+          gmaps.LatLng(point.latitude, point.longitude),
+          zoom,
+        ),
+      );
+    }
+  }
+
+  void _zoomBy(double delta) {
+    if (!_useGoogleMaps) {
+      _mapController.move(
+        _mapController.camera.center,
+        _mapController.camera.zoom + delta,
+      );
+    } else if (delta > 0) {
+      _googleMapController?.animateCamera(gmaps.CameraUpdate.zoomIn());
+    } else {
+      _googleMapController?.animateCamera(gmaps.CameraUpdate.zoomOut());
+    }
   }
 
   Future<void> _determinePosition() async {
@@ -172,7 +231,7 @@ class _RealMapWidgetState extends State<RealMapWidget>
           _currentCenter = LatLng(position.latitude, position.longitude);
           _isLoadingLocation = false;
         });
-        _mapController.move(_currentCenter, 14.0);
+        _moveCamera(_currentCenter, 14.0);
       }
     } catch (e) {
       if (mounted) setState(() => _isLoadingLocation = false);
@@ -182,7 +241,9 @@ class _RealMapWidgetState extends State<RealMapWidget>
   /// Converts a global pointer position (as reported by a marker's drag
   /// gesture) into map coordinates, using the same conversion flutter_map's
   /// own tap handling uses internally (`MapCamera.offsetToCrs` on an offset
-  /// relative to the map viewport's top-left corner).
+  /// relative to the map viewport's top-left corner). flutter_map (web)
+  /// only - the Google Maps path uses each [gmaps.Marker]'s own
+  /// `draggable`/`onDragEnd`, which needs no manual gesture handling.
   LatLng? _globalToLatLng(Offset globalPosition) {
     final box = _mapAreaKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null) return null;
@@ -192,6 +253,38 @@ class _RealMapWidgetState extends State<RealMapWidget>
 
   @override
   Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        _useGoogleMaps ? _buildGoogleMap() : _buildFlutterMap(),
+
+        // Map controls (Compass, location) - shared by both map engines.
+        Positioned(
+          left: 16,
+          bottom: 150, // Keep above bottom sheets
+          child: Column(
+            children: [
+              _buildMapButton(Icons.add, () => _zoomBy(1)),
+              const SizedBox(height: 8),
+              _buildMapButton(Icons.remove, () => _zoomBy(-1)),
+              const SizedBox(height: 8),
+              _buildMapButton(
+                _isLoadingLocation ? Icons.hourglass_empty : Icons.my_location,
+                _determinePosition,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Web rendering: flutter_map with a swappable [MapTileProvider] (free
+  /// OpenStreetMap tiles by default, or MapTiler - see
+  /// `defaultMapTileProvider`). google_maps_flutter's web support is
+  /// comparatively immature and this project's web build is a preview
+  /// target rather than the distributed app, so web deliberately never
+  /// touches the real Google Maps SDK.
+  Widget _buildFlutterMap() {
     final tileProvider = widget.tileProvider ?? defaultMapTileProvider();
 
     // If no route provided but we have pickup/destination and want to show route
@@ -206,90 +299,138 @@ class _RealMapWidgetState extends State<RealMapWidget>
       ];
     }
 
-    return Stack(
+    return FlutterMap(
+      key: _mapAreaKey,
+      mapController: _mapController,
+      options: MapOptions(
+        initialCenter: _currentCenter,
+        initialZoom: 13.0,
+        onTap: widget.interactive && widget.onMapTap != null
+            ? (tapPosition, latLng) => widget.onMapTap!(latLng)
+            : null,
+        interactionOptions: InteractionOptions(
+          flags: widget.interactive ? InteractiveFlag.all : InteractiveFlag.none,
+        ),
+      ),
       children: [
-        FlutterMap(
-          key: _mapAreaKey,
-          mapController: _mapController,
-          options: MapOptions(
-            initialCenter: _currentCenter,
-            initialZoom: 13.0,
-            onTap: widget.interactive && widget.onMapTap != null
-                ? (tapPosition, latLng) => widget.onMapTap!(latLng)
-                : null,
-            interactionOptions: InteractionOptions(
-              flags: widget.interactive
-                  ? InteractiveFlag.all
-                  : InteractiveFlag.none,
-            ),
-          ),
-          children: [
-            TileLayer(
-              urlTemplate: tileProvider.urlTemplate,
-              userAgentPackageName: tileProvider.userAgentPackageName,
-            ),
-
-            if (polylinePoints.isNotEmpty)
-              PolylineLayer(
-                polylines: [
-                  Polyline(
-                    points: polylinePoints,
-                    strokeWidth: 4.0,
-                    color: AppColors.primary,
-                  ),
-                ],
-              ),
-
-            if (widget.tracePolyline != null &&
-                widget.tracePolyline!.length > 1)
-              PolylineLayer(
-                polylines: [
-                  Polyline(
-                    points: widget.tracePolyline!,
-                    strokeWidth: 6.0,
-                    color: AppColors.accent,
-                  ),
-                ],
-              ),
-
-            MarkerLayer(markers: _buildMarkers()),
-
-            SimpleAttributionWidget(
-              source: Text(tileProvider.attribution),
-            ),
-          ],
+        TileLayer(
+          urlTemplate: tileProvider.urlTemplate,
+          userAgentPackageName: tileProvider.userAgentPackageName,
         ),
 
-        // Map controls (Compass, location)
-        Positioned(
-          left: 16,
-          bottom: 150, // Keep above bottom sheets
-          child: Column(
-            children: [
-              _buildMapButton(Icons.add, () {
-                _mapController.move(
-                  _mapController.camera.center,
-                  _mapController.camera.zoom + 1,
-                );
-              }),
-              const SizedBox(height: 8),
-              _buildMapButton(Icons.remove, () {
-                _mapController.move(
-                  _mapController.camera.center,
-                  _mapController.camera.zoom - 1,
-                );
-              }),
-              const SizedBox(height: 8),
-              _buildMapButton(
-                _isLoadingLocation ? Icons.hourglass_empty : Icons.my_location,
-                _determinePosition,
+        if (polylinePoints.isNotEmpty)
+          PolylineLayer(
+            polylines: [
+              Polyline(
+                points: polylinePoints,
+                strokeWidth: 4.0,
+                color: AppColors.primary,
               ),
             ],
           ),
-        ),
+
+        if (widget.tracePolyline != null && widget.tracePolyline!.length > 1)
+          PolylineLayer(
+            polylines: [
+              Polyline(
+                points: widget.tracePolyline!,
+                strokeWidth: 6.0,
+                color: AppColors.accent,
+              ),
+            ],
+          ),
+
+        MarkerLayer(markers: _buildMarkers()),
+
+        SimpleAttributionWidget(source: Text(tileProvider.attribution)),
       ],
     );
   }
+
+  /// Mobile rendering (Android/iOS): the real Google Maps SDK via
+  /// `google_maps_flutter`. Requires a Maps SDK API key configured natively
+  /// per platform (Android: `android/local.properties` → `MAPS_API_KEY`,
+  /// already wired into `AndroidManifest.xml`; iOS:
+  /// `GMSServices.provideAPIKey(...)` in `AppDelegate.swift`) - with no key
+  /// configured, the map view still renders but tiles come back blank/grey,
+  /// which is Google's own behavior, not a bug in this widget.
+  Widget _buildGoogleMap() {
+    List<LatLng> polylinePoints = widget.routePolyline ?? [];
+    if (polylinePoints.isEmpty &&
+        widget.showRoute &&
+        widget.pickupLat != null &&
+        widget.destLat != null) {
+      polylinePoints = [
+        LatLng(widget.pickupLat!, widget.pickupLng!),
+        LatLng(widget.destLat!, widget.destLng!),
+      ];
+    }
+
+    final polylines = <gmaps.Polyline>{};
+    if (polylinePoints.isNotEmpty) {
+      polylines.add(
+        gmaps.Polyline(
+          polylineId: const gmaps.PolylineId('route'),
+          points: polylinePoints
+              .map((p) => gmaps.LatLng(p.latitude, p.longitude))
+              .toList(),
+          width: 4,
+          color: AppColors.primary,
+        ),
+      );
+    }
+    if (widget.tracePolyline != null && widget.tracePolyline!.length > 1) {
+      polylines.add(
+        gmaps.Polyline(
+          polylineId: const gmaps.PolylineId('trace'),
+          points: widget.tracePolyline!
+              .map((p) => gmaps.LatLng(p.latitude, p.longitude))
+              .toList(),
+          width: 6,
+          color: AppColors.accent,
+        ),
+      );
+    }
+
+    return gmaps.GoogleMap(
+      initialCameraPosition: gmaps.CameraPosition(
+        target: gmaps.LatLng(_currentCenter.latitude, _currentCenter.longitude),
+        zoom: 13.0,
+      ),
+      onMapCreated: (controller) => _googleMapController = controller,
+      onTap: widget.interactive && widget.onMapTap != null
+          ? (point) => widget.onMapTap!(LatLng(point.latitude, point.longitude))
+          : null,
+      zoomGesturesEnabled: widget.interactive,
+      scrollGesturesEnabled: widget.interactive,
+      rotateGesturesEnabled: widget.interactive,
+      tiltGesturesEnabled: widget.interactive,
+      zoomControlsEnabled: false, // Custom +/- buttons in build() instead.
+      myLocationButtonEnabled: false, // Custom location button instead.
+      markers: _buildGoogleMarkers(),
+      polylines: polylines,
+    );
+  }
+
+  Widget _buildMapButton(IconData icon, VoidCallback onTap) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+        ],
+      ),
+      child: IconButton(
+        icon: Icon(icon, color: AppColors.darkText, size: 20),
+        onPressed: onTap,
+      ),
+    );
+  }
+
+  // -------------------------------------------------------------------
+  // flutter_map (web) markers.
+  // -------------------------------------------------------------------
 
   /// A location pin, optionally draggable. When [draggable], dragging the
   /// pin re-converts the pointer's position into map coordinates on every
@@ -373,6 +514,103 @@ class _RealMapWidgetState extends State<RealMapWidget>
     return markers;
   }
 
+  Widget _buildCarIcon() {
+    return Container(
+      padding: const EdgeInsets.all(5),
+      decoration: const BoxDecoration(
+        color: AppColors.accent,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2)),
+        ],
+      ),
+      child: const Icon(
+        Icons.local_taxi_rounded,
+        color: AppColors.darkText,
+        size: 16,
+      ),
+    );
+  }
+
+  // -------------------------------------------------------------------
+  // Google Maps (Android/iOS) markers. Native markers can't embed an
+  // arbitrary Flutter widget the way flutter_map's [Marker.child] does, so
+  // these use the SDK's built-in colored pins instead of [_buildPinMarker]/
+  // [_buildCarIcon] - same colors (green pickup, red destination), and a
+  // simplified orange pin for the car instead of the custom taxi icon.
+  // -------------------------------------------------------------------
+
+  Set<gmaps.Marker> _buildGoogleMarkers() {
+    final markers = <gmaps.Marker>{};
+
+    if (widget.pickupLat != null && widget.pickupLng != null) {
+      markers.add(
+        gmaps.Marker(
+          markerId: const gmaps.MarkerId('pickup'),
+          position: gmaps.LatLng(widget.pickupLat!, widget.pickupLng!),
+          icon: gmaps.BitmapDescriptor.defaultMarkerWithHue(
+            gmaps.BitmapDescriptor.hueGreen,
+          ),
+          draggable: widget.pickupDraggable,
+          onDragEnd: widget.onPickupDragged == null
+              ? null
+              : (point) => widget.onPickupDragged!(
+                  LatLng(point.latitude, point.longitude),
+                ),
+        ),
+      );
+    }
+
+    if (widget.destLat != null && widget.destLng != null) {
+      markers.add(
+        gmaps.Marker(
+          markerId: const gmaps.MarkerId('destination'),
+          position: gmaps.LatLng(widget.destLat!, widget.destLng!),
+          icon: gmaps.BitmapDescriptor.defaultMarkerWithHue(
+            gmaps.BitmapDescriptor.hueRed,
+          ),
+          draggable: widget.destDraggable,
+          onDragEnd: widget.onDestDragged == null
+              ? null
+              : (point) => widget.onDestDragged!(
+                  LatLng(point.latitude, point.longitude),
+                ),
+        ),
+      );
+    }
+
+    if (widget.carLat != null && widget.carLng != null) {
+      markers.add(
+        gmaps.Marker(
+          markerId: const gmaps.MarkerId('car'),
+          position: gmaps.LatLng(widget.carLat!, widget.carLng!),
+          icon: gmaps.BitmapDescriptor.defaultMarkerWithHue(
+            gmaps.BitmapDescriptor.hueOrange,
+          ),
+          anchor: const Offset(0.5, 0.5),
+          flat: true,
+        ),
+      );
+    } else if (widget.showRoute &&
+        widget.pickupLat != null &&
+        widget.destLat != null) {
+      final simulated = _getSimulatedCarLocation();
+      markers.add(
+        gmaps.Marker(
+          markerId: const gmaps.MarkerId('car'),
+          position: gmaps.LatLng(simulated.latitude, simulated.longitude),
+          icon: gmaps.BitmapDescriptor.defaultMarkerWithHue(
+            gmaps.BitmapDescriptor.hueOrange,
+          ),
+          anchor: const Offset(0.5, 0.5),
+          flat: true,
+        ),
+      );
+    }
+
+    return markers;
+  }
+
   LatLng _getSimulatedCarLocation() {
     if (widget.pickupLat == null || widget.destLat == null) {
       return _currentCenter;
@@ -398,39 +636,5 @@ class _RealMapWidgetState extends State<RealMapWidget>
     }
 
     return LatLng(widget.pickupLat!, widget.pickupLng!);
-  }
-
-  Widget _buildCarIcon() {
-    return Container(
-      padding: const EdgeInsets.all(5),
-      decoration: const BoxDecoration(
-        color: AppColors.accent,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2)),
-        ],
-      ),
-      child: const Icon(
-        Icons.local_taxi_rounded,
-        color: AppColors.darkText,
-        size: 16,
-      ),
-    );
-  }
-
-  Widget _buildMapButton(IconData icon, VoidCallback onTap) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-        ],
-      ),
-      child: IconButton(
-        icon: Icon(icon, color: AppColors.darkText, size: 20),
-        onPressed: onTap,
-      ),
-    );
   }
 }

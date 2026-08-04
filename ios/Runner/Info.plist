@@ -10,6 +10,12 @@
 		<string>يستخدم الهدهد الميكروفون للبحث الصوتي عن مكان أو مقاطعة.</string>
 		<key>NSSpeechRecognitionUsageDescription</key>
 		<string>يستخدم الهدهد التعرف على الصوت لتحويل بحثك الصوتي إلى نص.</string>
+		<!-- Google Maps SDK API key, read by AppDelegate.swift at launch.
+		     Sourced from ios/Flutter/ApiKeys.xcconfig (gitignored) - see
+		     that file and android/app/build.gradle.kts for the Android
+		     equivalent. Empty by default. -->
+		<key>GoogleMapsApiKey</key>
+		<string>$(GOOGLE_MAPS_API_KEY)</string>
 		<key>CFBundleDevelopmentRegion</key>
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
 		<key>CFBundleDisplayName</key>
