@@ -37,6 +37,14 @@ class DohFallbackHttpOverrides extends HttpOverrides {
 
   final _cache = <String, InternetAddress>{};
 
+  /// Every network call below is wrapped in this. Without it, a network
+  /// that silently drops packets instead of actively refusing them (no
+  /// RST, no ICMP unreachable) leaves Socket.connect/SecureSocket.secure
+  /// pending forever - which, called from main() before runApp(), means
+  /// the native splash screen never gets dismissed and the app looks
+  /// completely frozen with no error, ever.
+  static const _networkTimeout = Duration(seconds: 6);
+
   @override
   HttpClient createHttpClient(SecurityContext? context) {
     final client = super.createHttpClient(context);
@@ -46,7 +54,10 @@ class DohFallbackHttpOverrides extends HttpOverrides {
       int? proxyPort,
     ) async {
       final address = await _resolve(uri.host, context);
-      final rawSocket = await Socket.connect(address, uri.port);
+      final rawSocket = await Socket.connect(
+        address,
+        uri.port,
+      ).timeout(_networkTimeout);
       if (uri.scheme != 'https') {
         return ConnectionTask.fromSocket(
           Future.value(rawSocket),
@@ -57,7 +68,7 @@ class DohFallbackHttpOverrides extends HttpOverrides {
         rawSocket,
         host: uri.host,
         context: context,
-      );
+      ).timeout(_networkTimeout);
       return ConnectionTask.fromSocket(
         Future.value(secureSocket),
         () => secureSocket.destroy(),
@@ -71,12 +82,16 @@ class DohFallbackHttpOverrides extends HttpOverrides {
     if (cached != null) return cached;
 
     try {
-      final results = await InternetAddress.lookup(host);
+      final results = await InternetAddress.lookup(
+        host,
+      ).timeout(_networkTimeout);
       if (results.isNotEmpty) {
         _cache[host] = results.first;
         return results.first;
       }
     } on SocketException {
+      // Fall through to the DoH fallback below.
+    } on TimeoutException {
       // Fall through to the DoH fallback below.
     }
 
@@ -108,12 +123,15 @@ class DohFallbackHttpOverrides extends HttpOverrides {
     String providerIp,
     String providerHost,
   ) async {
-    final rawSocket = await Socket.connect(providerIp, 443);
+    final rawSocket = await Socket.connect(
+      providerIp,
+      443,
+    ).timeout(_networkTimeout);
     final secureSocket = await SecureSocket.secure(
       rawSocket,
       host: providerHost,
       context: context,
-    );
+    ).timeout(_networkTimeout);
     try {
       final path = '/dns-query?name=$host&type=A';
       secureSocket.write(
@@ -127,7 +145,8 @@ class DohFallbackHttpOverrides extends HttpOverrides {
       final response = await secureSocket
           .cast<List<int>>()
           .transform(utf8.decoder)
-          .join();
+          .join()
+          .timeout(_networkTimeout);
       final bodyStart = response.indexOf('\r\n\r\n');
       if (bodyStart == -1) {
         throw const SocketException('DoH: malformed HTTP response');

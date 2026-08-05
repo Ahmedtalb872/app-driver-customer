@@ -48,8 +48,17 @@ Future<void> main() async {
   if (!kIsWeb) {
     HttpOverrides.global = DohFallbackHttpOverrides();
   }
-  await dotenv.load(fileName: '.env');
-  await SupabaseConfig.initialize();
+  try {
+    await dotenv.load(fileName: '.env');
+    await SupabaseConfig.initialize();
+  } catch (e, stackTrace) {
+    // Never let a startup failure leave the native splash screen frozen
+    // forever with zero feedback - runApp() below must still happen so
+    // Flutter draws a first frame. Anything that actually needs Supabase
+    // will now fail loudly and visibly (installVisibleErrorWidget above)
+    // instead of hanging silently before the app ever appears.
+    debugPrint('Startup initialization failed: $e\n$stackTrace');
+  }
 
   // Web only ever serves the AL HODHOD admin dashboard - the customer
   // mobile flow below is completely untouched on every other platform.
