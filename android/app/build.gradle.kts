@@ -19,7 +19,7 @@ if (localPropertiesFile.exists()) {
 val mapsApiKey: String = localProperties.getProperty("MAPS_API_KEY") ?: ""
 
 android {
-    namespace = "com.alhudhud.customer"
+    namespace = "com.alhudhud.customerapp"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -34,8 +34,12 @@ android {
         // forks of the same original codebase and, before this, shared
         // "com.alhudhud.alhudhud" - installing both on one test device hit
         // Android's "package conflicts with an existing package" refusal
-        // since the two APKs are signed with different debug keys.
-        applicationId = "com.alhudhud.customer"
+        // since the two APKs are signed with different debug keys. Renamed
+        // again from com.alhudhud.customer for the same reason: a fresh
+        // GitHub Actions runner has no ~/.android/debug.keystore, so every
+        // CI build was self-signing with a brand new, different key, and
+        // installing over a previous download hit the same conflict.
+        applicationId = "com.alhudhud.customerapp"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -43,6 +47,20 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         manifestPlaceholders["mapsApiKey"] = mapsApiKey
+    }
+
+    signingConfigs {
+        getByName("debug") {
+            // Pinned to a keystore checked into the repo (debug-only key,
+            // not used for Play Store signing) so every CI run - and every
+            // local machine - signs with the same key. Without this, each
+            // fresh GitHub Actions runner generates its own throwaway
+            // debug.keystore and every release conflicts with the last.
+            storeFile = file("$rootDir/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {

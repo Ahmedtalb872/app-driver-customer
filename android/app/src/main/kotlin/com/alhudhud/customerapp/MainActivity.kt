@@ -1,4 +1,4 @@
-package com.alhudhud.customer
+package com.alhudhud.customerapp
 
 import io.flutter.embedding.android.FlutterActivity
 
