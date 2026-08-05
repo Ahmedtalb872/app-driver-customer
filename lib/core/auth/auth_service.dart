@@ -8,12 +8,15 @@ import '../config/supabase_config.dart';
 import 'app_role.dart';
 
 /// Authentication foundation shared by the customer, captain and admin
-/// flows. Supabase's default email/password provider is used underneath;
-/// since Hudhud accounts are identified by phone number (no SMS provider is
-/// configured yet), each phone number is mapped to a deterministic
-/// synthetic email so the standard email/password APIs can be reused as-is.
-/// This can be swapped for real phone/OTP auth later without touching
-/// callers, since they only ever pass phone numbers in and out.
+/// flows. Two identity kinds coexist here, both keyed by phone number from
+/// every caller's point of view:
+///  - Real customer accounts sign up through Supabase's own phone/SMS OTP
+///    provider ([requestPhoneCode]/[verifyPhoneCode]), so they're
+///    phone-identified in Supabase - [signInWithPhonePassword] matches that.
+///  - Admin accounts (and the debug/profile-only [DemoModeConfig] demo
+///    accounts) never go through OTP, so [signIn]/[signUp] map the phone
+///    number to a deterministic synthetic email instead and use Supabase's
+///    standard email/password APIs.
 class AuthService {
   AuthService._();
 
@@ -76,19 +79,18 @@ class AuthService {
 
   /// Signs in an existing account with its phone number and password -
   /// the normal path once a customer has set a password (see
-  /// [setPasswordForCurrentUser]), no OTP needed. Goes through the same
-  /// phone -> synthetic-email mapping as [signIn]/[signUp] (every account
-  /// in this app is created that way - see the class doc), not Supabase's
-  /// own phone/SMS auth provider, which was never configured.
+  /// [setPasswordForCurrentUser]), no OTP needed. A real customer account
+  /// is always created via the phone-OTP path (Supabase's own phone/SMS
+  /// auth provider - see [requestPhoneCode]/[verifyPhoneCode]), so it's
+  /// phone-identified in Supabase, not the synthetic-email identity
+  /// [signIn]/[signUp] use for admin/demo accounts - this must match that
+  /// and sign in by phone directly.
   Future<AuthResponse> signInWithPhonePassword({
     required String phone,
     required String password,
   }) {
     return _withRetry(
-      () => _auth.signInWithPassword(
-        email: _phoneToEmail(phone),
-        password: password,
-      ),
+      () => _auth.signInWithPassword(phone: phone, password: password),
     );
   }
 
