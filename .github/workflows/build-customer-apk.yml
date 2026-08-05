@@ -62,18 +62,22 @@ jobs:
         # into the manifest.
         #
         # Uses env: rather than inline ${{ }} interpolation into the shell
-        # command string, and printf instead of echo, since a previous
-        # version of this exact line (`echo "MAPS_API_KEY=${{ secrets... }}"
-        # >> android/local.properties`) reported success while silently
-        # producing a file with no MAPS_API_KEY line at all - caught by
-        # decoding the compiled APK's actual manifest, where
-        # com.google.android.geo.API_KEY came out as "". The verification
-        # below turns any repeat of that into a hard build failure instead
-        # of a silently blank map in a shipped APK.
+        # command string, and printf instead of echo. The real bug, found
+        # by decoding the compiled APK's actual manifest
+        # (com.google.android.geo.API_KEY came out as ""): flutter pub get's
+        # own local.properties has no trailing newline, so a plain `>>`
+        # append here landed on the end of its last existing line
+        # (flutter.sdk=...) instead of starting a new one - Properties
+        # parsing then never saw a MAPS_API_KEY key at all, while the append
+        # command itself still reported success. The leading \n below
+        # guarantees a fresh line no matter what the file already ends
+        # with; the verification turns any future repeat of this into a
+        # hard build failure instead of a silently blank map in a shipped
+        # APK.
         env:
           MAPS_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
         run: |
-          printf 'MAPS_API_KEY=%s\n' "$MAPS_KEY" >> android/local.properties
+          printf '\nMAPS_API_KEY=%s\n' "$MAPS_KEY" >> android/local.properties
           if ! grep -q '^MAPS_API_KEY=.' android/local.properties; then
             echo "::error::MAPS_API_KEY line missing or empty in android/local.properties after write - check the GOOGLE_MAPS_API_KEY repository secret"
             exit 1
