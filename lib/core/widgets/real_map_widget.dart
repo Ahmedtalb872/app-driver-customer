@@ -161,27 +161,22 @@ class _RealMapWidgetState extends State<RealMapWidget>
     super.dispose();
   }
 
-  /// True on Android/iOS only. `google_maps_flutter_web` was tried for the
-  /// web preview build too (see git history), but it depends on the Maps
-  /// JavaScript API loading and authorizing successfully in the browser
-  /// first - which repeatedly failed in practice (referrer-restriction
-  /// errors, then a `Null check operator used on a null value` crash deep
-  /// inside the plugin itself) for a target that's explicitly a preview,
-  /// not one of the two apps this project actually ships. flutter_map/
-  /// OpenStreetMap needs no API key or browser-side authorization step at
-  /// all, and is what every other map in this project already used
-  /// reliably before `google_maps_flutter_web` was tried here.
-  ///
-  /// Checking [defaultTargetPlatform] rather than just `!kIsWeb` matters:
-  /// a plain `flutter test` run reports the host OS (e.g.
-  /// `TargetPlatform.linux` on a GitHub Actions runner), not android/iOS,
-  /// so tests and any future desktop target correctly keep using
-  /// flutter_map instead of trying to stand up a native Google Maps
-  /// platform view that isn't there.
+  /// True for a real web/Android/iOS build - the platforms
+  /// `google_maps_flutter` actually supports, via `google_maps_flutter_web`
+  /// on web specifically (see the class doc and web/index.html's Maps JS
+  /// API script tag). Checking [defaultTargetPlatform] rather than just
+  /// `!kIsWeb` matters for the non-web half of this: a plain `flutter test`
+  /// run reports the host OS (e.g. `TargetPlatform.linux` on a GitHub
+  /// Actions runner), not android/iOS, so tests and any future desktop
+  /// target correctly keep using flutter_map instead of trying to stand up
+  /// a native Google Maps platform view that isn't there. [kIsWeb] itself
+  /// is reliably false in that same `flutter test` run (it's a real "am I
+  /// compiled for web" constant, not host-OS-dependent), so it doesn't need
+  /// the same guard.
   bool get _useGoogleMaps =>
-      !kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.android ||
-          defaultTargetPlatform == TargetPlatform.iOS);
+      kIsWeb ||
+      defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS;
 
   /// Pans/zooms whichever map engine is actually active - see [_useGoogleMaps]
   /// for how that's picked; both controllers need this same call from
