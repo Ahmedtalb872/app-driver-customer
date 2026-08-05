@@ -17,7 +17,7 @@
     <!-- Voice search on the district/place map picker (speech_to_text). -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <application
-        android:label="alhudhud"
+        android:label="الهدهد Customer"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <!-- Google Maps SDK API key for the destination map picker (Phase 2).
