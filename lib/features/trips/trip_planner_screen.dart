@@ -5,13 +5,18 @@ import '../../models/models.dart';
 import '../destinations/data/models/destination_suggestion.dart';
 import '../destinations/presentation/destination_search_screen.dart';
 import 'request_ride_screen.dart';
+import 'voice_ride_request_sheet.dart';
 
 /// Shown after tapping "إلى أين تريد الذهاب؟" on the home screen - two
 /// independent sections, one per [TripType]: a normal ride needs both a
 /// pickup and a destination point, an open ride only a pickup. Each point
 /// is picked via [DestinationSearchScreen] (which itself offers a text/
 /// voice search or a full-screen map picker), pre-filled with the GPS
-/// location detected on the home screen but freely changeable here.
+/// location detected on the home screen but freely changeable here. A
+/// normal ride can also fill both points at once by speaking them together
+/// - see [VoiceRideRequestSheet] - since there's a well-formed "من X إلى Y"
+/// sentence to parse; an open ride only ever has one point, so it keeps the
+/// per-field voice search inside [DestinationSearchScreen] instead.
 class TripPlannerScreen extends StatefulWidget {
   const TripPlannerScreen({
     super.key,
@@ -69,6 +74,29 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
     );
     if (result == null || !mounted) return;
     setState(() => _normalDestination = result);
+  }
+
+  /// Lets the customer say pickup and destination in one sentence instead
+  /// of picking each separately - see [VoiceRideRequestSheet]. Only offered
+  /// for a normal ride (it needs both points; an open ride only ever has a
+  /// pickup, so the two-part "من X إلى Y" phrasing wouldn't fit).
+  Future<void> _requestNormalByVoice() async {
+    final result = await showModalBottomSheet<
+        ({DestinationSuggestion pickup, DestinationSuggestion destination})?>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => const VoiceRideRequestSheet(),
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      _normalPickupLat = result.pickup.latitude;
+      _normalPickupLng = result.pickup.longitude;
+      _normalPickupAddress = result.pickup.title;
+      _normalDestination = result.destination;
+    });
   }
 
   Future<void> _pickOpenPickup() async {
@@ -142,6 +170,17 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
             title: 'مشوار عادي',
             subtitle: 'تحدد نقطة الانطلاق والوجهة',
             children: [
+              OutlinedButton.icon(
+                onPressed: _requestNormalByVoice,
+                icon: const Icon(Icons.mic_rounded, size: 18),
+                label: const Text('اطلب بالصوت'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 44),
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary),
+                ),
+              ),
+              const SizedBox(height: 14),
               _buildLocationRow(
                 icon: Icons.radio_button_checked_rounded,
                 iconColor: AppColors.success,
