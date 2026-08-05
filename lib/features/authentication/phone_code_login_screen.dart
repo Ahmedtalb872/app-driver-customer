@@ -209,8 +209,13 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
       await _routeAfterAuth();
     } on AuthException catch (_) {
       _showError('كلمة السر غير صحيحة.');
-    } catch (_) {
-      _showError('تعذر تسجيل الدخول الآن. تحقق من الاتصال وحاول مرة أخرى.');
+    } catch (e) {
+      // TODO(temporary): surfacing the raw exception to diagnose a
+      // persistent failure at this step - revert to the generic Arabic
+      // message once resolved.
+      _showError(
+        'تعذر تسجيل الدخول الآن. تحقق من الاتصال وحاول مرة أخرى.\n$e',
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -236,8 +241,13 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
       await _routeAfterAuth();
     } on AuthException catch (_) {
       _showError('رقم الهاتف أو كلمة السر غير صحيحة.');
-    } catch (_) {
-      _showError('تعذر تسجيل الدخول الآن. تحقق من الاتصال وحاول مرة أخرى.');
+    } catch (e) {
+      // TODO(temporary): surfacing the raw exception to diagnose a
+      // persistent failure at this step - revert to the generic Arabic
+      // message once resolved.
+      _showError(
+        'تعذر تسجيل الدخول الآن. تحقق من الاتصال وحاول مرة أخرى.\n$e',
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

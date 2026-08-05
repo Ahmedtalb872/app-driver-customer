@@ -76,13 +76,19 @@ class AuthService {
 
   /// Signs in an existing account with its phone number and password -
   /// the normal path once a customer has set a password (see
-  /// [setPasswordForCurrentUser]), no OTP needed.
+  /// [setPasswordForCurrentUser]), no OTP needed. Goes through the same
+  /// phone -> synthetic-email mapping as [signIn]/[signUp] (every account
+  /// in this app is created that way - see the class doc), not Supabase's
+  /// own phone/SMS auth provider, which was never configured.
   Future<AuthResponse> signInWithPhonePassword({
     required String phone,
     required String password,
   }) {
     return _withRetry(
-      () => _auth.signInWithPassword(phone: phone, password: password),
+      () => _auth.signInWithPassword(
+        email: _phoneToEmail(phone),
+        password: password,
+      ),
     );
   }
 
