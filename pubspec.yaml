@@ -42,10 +42,9 @@ dependencies:
     sdk: flutter
   flutter_map: ^6.1.0
   latlong2: ^0.9.0
-  # Real Google Maps SDK for Android/iOS (see real_map_widget.dart) - web
-  # keeps rendering via flutter_map above, since google_maps_flutter's web
-  # support is comparatively immature and this project's web build is a
-  # preview target, not the distributed app.
+  # Real Google Maps SDK - see real_map_widget.dart. Android/iOS via the
+  # native platform channels, web via google_maps_flutter_web (requires
+  # the Maps JS API script tag in web/index.html).
   google_maps_flutter: ^2.10.0
   geolocator: ^11.0.0
   http: ^1.2.1

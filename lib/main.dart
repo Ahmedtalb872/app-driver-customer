@@ -28,9 +28,11 @@ void installVisibleErrorWidget() {
         padding: const EdgeInsets.all(12),
         child: Align(
           alignment: Alignment.topLeft,
-          child: Text(
-            'Widget build error:\n${details.exception}',
-            style: const TextStyle(color: Color(0xFFB71C1C), fontSize: 11),
+          child: SingleChildScrollView(
+            child: Text(
+              'Widget build error:\n${details.exception}\n\n${details.stack}',
+              style: const TextStyle(color: Color(0xFFB71C1C), fontSize: 11),
+            ),
           ),
         ),
       ),
