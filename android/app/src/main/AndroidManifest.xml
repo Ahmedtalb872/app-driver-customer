@@ -1,4 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required for every network call the app makes (Supabase, Google
+         Maps tiles, ...). The debug/profile manifests get this for free
+         from Flutter's own debug.xml, but a release build only merges
+         this main manifest - without it, release builds silently freeze
+         on the native splash screen forever since the unhandled network
+         failure during main() happens before runApp() ever draws a frame. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!-- Captain incoming-ride-request alerts: local notification (Android
