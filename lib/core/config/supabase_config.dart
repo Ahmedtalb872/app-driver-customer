@@ -23,6 +23,16 @@ class SupabaseConfig {
   /// see DohFallbackHttpOverrides) would leave [client] permanently
   /// throwing `LateInitializationError` for the rest of that app session,
   /// even once connectivity recovers a second later.
+  ///
+  /// The first attempt uses Cronet (Android's own network stack, routed
+  /// through Google Play Services' Cronet module - see
+  /// cronet_http_client_io.dart for why). That module is one more moving
+  /// part that can itself fail to load independently of the actual
+  /// network, and unlike a plain connectivity blip that isn't something a
+  /// same-path retry can recover from - so every attempt after the first
+  /// falls back to Supabase's own default client instead, which is still
+  /// covered by [DohFallbackHttpOverrides] for the exact DNS failures
+  /// Cronet was originally added to work around.
   static Future<void> initialize() async {
     if (_initialized) return;
 
@@ -42,7 +52,7 @@ class SupabaseConfig {
         await Supabase.initialize(
           url: url,
           publishableKey: anonKey,
-          httpClient: buildAndroidCronetHttpClient(),
+          httpClient: attempt == 1 ? buildAndroidCronetHttpClient() : null,
         ).timeout(const Duration(seconds: 8));
         _initialized = true;
         return;
