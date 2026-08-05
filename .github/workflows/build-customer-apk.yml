@@ -62,6 +62,22 @@ jobs:
         # into the manifest.
         run: echo "MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" >> android/local.properties
 
+      # TEMPORARY - the compiled manifest's com.google.android.geo.API_KEY
+      # meta-data has come out empty even though this step's own log shows
+      # the secret as a non-empty masked value, so something between here
+      # and the manifest merge is dropping it. Never prints the key itself,
+      # only its length, to narrow down where it's lost. Remove once
+      # resolved.
+      - name: Diagnose Google Maps key (temporary)
+        env:
+          MAPS_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: |
+          echo "Secret length as seen by this step: ${#MAPS_KEY}"
+          echo "--- android/local.properties (values redacted) ---"
+          sed 's/=.*/=<redacted>/' android/local.properties
+          echo "--- MAPS_API_KEY line length after '=' ---"
+          grep '^MAPS_API_KEY=' android/local.properties | awk -F= '{print length($2)}'
+
       - name: Build release APK (customer app)
         run: flutter build apk --release -t lib/main.dart
 
