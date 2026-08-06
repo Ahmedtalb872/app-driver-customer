@@ -53,7 +53,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
   static const _paymentMethod = 'نقداً';
 
   late final RouteEstimate? _route;
-  late TripType _tripType;
+  late final TripType _tripType;
   int _passengerCount = 1;
   final _noteController = TextEditingController();
 
@@ -160,19 +160,6 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildRouteSummary(),
-            if (widget.destination != null) ...[
-              const SizedBox(height: 20),
-              const Text(
-                'نوع المشوار',
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                ),
-              ),
-              const SizedBox(height: 10),
-              _buildTripTypeSelector(),
-            ],
             const SizedBox(height: 20),
             const Text(
               'عدد الركاب',
@@ -301,81 +288,6 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildTripTypeSelector() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildTripTypeChip(
-            type: TripType.normal,
-            icon: Icons.route_rounded,
-            label: 'عادي',
-            subtitle: 'وجهة محددة وسعر ثابت',
-            color: AppColors.primary,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _buildTripTypeChip(
-            type: TripType.open,
-            icon: Icons.timelapse_rounded,
-            label: 'مفتوح',
-            subtitle: 'السعر يُحسب حسب المسافة والوقت الفعلي',
-            color: AppColors.accent,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTripTypeChip({
-    required TripType type,
-    required IconData icon,
-    required String label,
-    required String subtitle,
-    required Color color,
-  }) {
-    final selected = _tripType == type;
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: () => setState(() => _tripType = type),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-        decoration: BoxDecoration(
-          color: selected ? color.withOpacity(0.1) : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected ? color : AppColors.border,
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: selected ? color : AppColors.secondaryText),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'Cairo',
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-                color: selected ? color : AppColors.darkText,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontFamily: 'Cairo',
-                fontSize: 9.5,
-                color: AppColors.secondaryText,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
