@@ -17,7 +17,11 @@ name: Build customer app APK
 #   GOOGLE_MAPS_API_KEY  - a Maps SDK for Android key from a Google Cloud
 #                          project with billing enabled. Without it the map
 #                          view still renders but tiles come back blank/grey
-#                          (Google's own behavior, not a build failure).
+#                          (Google's own behavior, not a build failure). Also
+#                          used for real road-based routing via the
+#                          Directions API (needs that API added to the same
+#                          key's restrictions) - falls back to a
+#                          straight-line estimate without it.
 on:
   push:
     branches:
@@ -51,6 +55,7 @@ jobs:
           echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
           echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
           echo "MAPTILER_API_KEY=${{ secrets.MAPTILER_API_KEY }}" >> .env
+          echo "GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" >> .env
 
       - name: Install dependencies
         run: flutter pub get

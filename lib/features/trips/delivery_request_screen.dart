@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/colors.dart';
+import '../../core/services/google_directions_route_estimator.dart';
 import '../../core/services/route_estimator.dart';
 import '../../core/services/ride_repository.dart';
 import '../../models/models.dart';
@@ -40,13 +42,16 @@ class _DeliveryRequestScreenState extends State<DeliveryRequestScreen> {
   static const _vehicleType = VehicleType.economy; // ignored server-side
   static const _paymentMethod = 'نقداً';
   static const _routeEstimator = HaversineRouteEstimator();
+  static final _directionsEstimator = GoogleDirectionsRouteEstimator(
+    apiKey: dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '',
+  );
 
   final _formKey = GlobalKey<FormState>();
   final _recipientNameController = TextEditingController();
   final _recipientPhoneController = TextEditingController();
   final _packageController = TextEditingController();
 
-  late final RouteEstimate _route;
+  late RouteEstimate _route;
 
   bool _loadingPrice = true;
   double? _estimatedPrice;
@@ -67,6 +72,20 @@ class _DeliveryRequestScreenState extends State<DeliveryRequestScreen> {
         widget.destination.longitude,
       ),
     )!;
+    _loadPrice();
+    _loadRoute();
+  }
+
+  Future<void> _loadRoute() async {
+    final roadRoute = await _directionsEstimator.estimate(
+      pickup: LatLng(widget.pickupLat, widget.pickupLng),
+      destination: LatLng(
+        widget.destination.latitude,
+        widget.destination.longitude,
+      ),
+    );
+    if (roadRoute == null || !mounted) return;
+    setState(() => _route = roadRoute);
     _loadPrice();
   }
 

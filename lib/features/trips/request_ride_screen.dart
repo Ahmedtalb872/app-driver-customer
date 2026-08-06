@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/colors.dart';
+import '../../core/services/google_directions_route_estimator.dart';
 import '../../core/services/route_estimator.dart';
 import '../../core/services/ride_repository.dart';
 import '../../models/models.dart';
@@ -48,11 +50,14 @@ class RequestRideScreen extends StatefulWidget {
 
 class _RequestRideScreenState extends State<RequestRideScreen> {
   static const _routeEstimator = HaversineRouteEstimator();
+  static final _directionsEstimator = GoogleDirectionsRouteEstimator(
+    apiKey: dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '',
+  );
   static const _vehicleType = VehicleType.economy;
 
   static const _paymentMethod = 'نقداً';
 
-  late final RouteEstimate? _route;
+  RouteEstimate? _route;
   late final TripType _tripType;
   int _passengerCount = 1;
   final _noteController = TextEditingController();
@@ -68,12 +73,27 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
     super.initState();
     final destination = widget.destination;
     _tripType = destination == null ? TripType.open : widget.tripType;
-    _route = destination == null
-        ? null
-        : _routeEstimator.estimate(
-            pickup: LatLng(widget.pickupLat, widget.pickupLng),
-            destination: LatLng(destination.latitude, destination.longitude),
-          );
+    if (destination != null) {
+      // Straight-line estimate first so the screen has a distance/price to
+      // show immediately, then upgraded in place to real road distance/
+      // duration once the Directions API responds (see _loadRoute) - never
+      // block the initial render on a network round trip.
+      _route = _routeEstimator.estimate(
+        pickup: LatLng(widget.pickupLat, widget.pickupLng),
+        destination: LatLng(destination.latitude, destination.longitude),
+      );
+      _loadRoute(destination);
+    }
+    _loadPrice();
+  }
+
+  Future<void> _loadRoute(DestinationSuggestion destination) async {
+    final roadRoute = await _directionsEstimator.estimate(
+      pickup: LatLng(widget.pickupLat, widget.pickupLng),
+      destination: LatLng(destination.latitude, destination.longitude),
+    );
+    if (roadRoute == null || !mounted) return;
+    setState(() => _route = roadRoute);
     _loadPrice();
   }
 
