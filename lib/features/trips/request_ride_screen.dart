@@ -109,7 +109,8 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
         _vehicleType.name,
       );
       _pricingConfig = config;
-      if (config != null && _route != null) {
+      final route = _route;
+      if (config != null && route != null) {
         final baseFare = (config['base_fare'] as num).toDouble();
         final pricePerKm = (config['price_per_km'] as num).toDouble();
         final pricePerMinute = (config['price_per_minute'] as num).toDouble();
@@ -117,8 +118,8 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
         final surge = (config['surge_multiplier'] as num?)?.toDouble() ?? 1.0;
         final raw =
             (baseFare +
-                _route.distanceKm * pricePerKm +
-                _route.durationMinutes * pricePerMinute) *
+                route.distanceKm * pricePerKm +
+                route.durationMinutes * pricePerMinute) *
             surge;
         _estimatedPrice = raw < minimumFare ? minimumFare : raw;
       }
@@ -221,6 +222,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
 
   Widget _buildRouteSummary() {
     final destination = widget.destination;
+    final route = _route;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -249,11 +251,11 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
               AppColors.error,
               destination.displayLabel,
             ),
-            if (_route != null) ...[
+            if (route != null) ...[
               const Divider(height: 24),
               Text(
-                'المسافة التقريبية ${_route.distanceKm.toStringAsFixed(1)} كم - '
-                'حوالي ${_route.durationMinutes} دقيقة',
+                'المسافة التقريبية ${route.distanceKm.toStringAsFixed(1)} كم - '
+                'حوالي ${route.durationMinutes} دقيقة',
                 style: const TextStyle(
                   fontFamily: 'Cairo',
                   fontSize: 12,
