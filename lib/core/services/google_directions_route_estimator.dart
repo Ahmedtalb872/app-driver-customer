@@ -1,10 +1,10 @@
 import 'dart:convert';
-import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
+import 'google_api_android_headers.dart';
 import 'route_estimator.dart';
 
 /// Real road-based routing via the Google Directions API - actual distance,
@@ -31,13 +31,6 @@ class GoogleDirectionsRouteEstimator {
 
   final String apiKey;
 
-  // Must match android/app/build.gradle.kts's applicationId and the SHA-1
-  // of android/debug.keystore's androiddebugkey (hex, no colons) - both
-  // pinned there for the same reason this needs to match them exactly.
-  static const _androidPackageName = 'com.alhudhud.customerapp';
-  static const _androidCertFingerprint =
-      '51506D306A370A799C20DBF26C78D17F291CB7BA';
-
   Future<RouteEstimate?> estimate({
     required LatLng pickup,
     required LatLng destination,
@@ -55,14 +48,8 @@ class GoogleDirectionsRouteEstimator {
           'key': apiKey,
         },
       );
-      final headers = <String, String>{};
-      if (Platform.isAndroid) {
-        headers['X-Android-Package'] = _androidPackageName;
-        headers['X-Android-Cert'] = _androidCertFingerprint;
-      }
-
       final response = await http
-          .get(uri, headers: headers)
+          .get(uri, headers: googleApiAndroidHeaders())
           .timeout(const Duration(seconds: 8));
       if (response.statusCode != 200) return null;
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../core/constants/nouakchott_bounds.dart';
 import '../../../core/services/geocoding_service.dart';
 import '../../../core/widgets/real_map_widget.dart';
 import '../../../features/destinations/data/models/district.dart';
@@ -12,22 +13,6 @@ import '../../../features/destinations/data/repositories/places_repository.dart'
 import '../../../features/destinations/presentation/widgets/category_icon.dart';
 import '../../core/admin_colors.dart';
 import '../../widgets/status_badge.dart';
-
-/// Nouakchott bounding box - must match the box `search_destinations` and
-/// the `*_within_nouakchott` check constraints enforce server-side (see
-/// supabase/migrations/20260809000052_nouakchott_bounds_search.sql), so a
-/// pin dropped here never gets rejected as an out-of-bounds insert/update
-/// only after the admin has already filled out the whole form.
-const _nouakchottMinLat = 17.90;
-const _nouakchottMaxLat = 18.30;
-const _nouakchottMinLng = -16.20;
-const _nouakchottMaxLng = -15.75;
-
-bool _isWithinNouakchott(double lat, double lng) =>
-    lat >= _nouakchottMinLat &&
-    lat <= _nouakchottMaxLat &&
-    lng >= _nouakchottMinLng &&
-    lng <= _nouakchottMaxLng;
 
 /// Reuses the Phase 2 [PlacesRepository]/[CategoriesRepository] admin*
 /// methods directly - same rule as districts/neighborhoods.
@@ -125,7 +110,7 @@ class _PlacesCategoriesScreenState extends State<PlacesCategoriesScreen>
               pickedPoint = point;
               latController.text = point.latitude.toStringAsFixed(6);
               lngController.text = point.longitude.toStringAsFixed(6);
-              boundsError = _isWithinNouakchott(point.latitude, point.longitude)
+              boundsError = isWithinNouakchott(point.latitude, point.longitude)
                   ? null
                   : 'هذه النقطة خارج نطاق أنواكشوط - اختر نقطة داخل المدينة.';
             });
@@ -269,7 +254,7 @@ class _PlacesCategoriesScreenState extends State<PlacesCategoriesScreen>
                     );
                     return;
                   }
-                  if (!_isWithinNouakchott(lat, lng)) {
+                  if (!isWithinNouakchott(lat, lng)) {
                     setDialogState(
                       () => boundsError =
                           'هذه النقطة خارج نطاق أنواكشوط - اختر نقطة داخل المدينة.',

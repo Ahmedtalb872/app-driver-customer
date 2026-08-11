@@ -21,7 +21,11 @@ name: Build customer app APK
 #                          used for real road-based routing via the
 #                          Directions API (needs that API added to the same
 #                          key's restrictions) - falls back to a
-#                          straight-line estimate without it.
+#                          straight-line estimate without it - and for
+#                          destination search also finding real Google Maps
+#                          places via the Places API (needs that API added
+#                          too) - falls back to only this app's own places
+#                          registry without it.
 on:
   push:
     branches:
