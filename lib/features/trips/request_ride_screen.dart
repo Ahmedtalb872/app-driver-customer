@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:latlong2/latlong.dart';
@@ -10,6 +12,7 @@ import '../../core/services/ride_repository.dart';
 import '../../models/models.dart';
 import '../../providers/app_state_provider.dart';
 import '../destinations/data/models/destination_suggestion.dart';
+import '../destinations/data/repositories/recent_places_repository.dart';
 import 'trip_tracking_screen.dart';
 
 /// Confirm-and-request screen: shown either after the customer picks a
@@ -56,6 +59,8 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
   static const _vehicleType = VehicleType.economy;
 
   static const _paymentMethod = 'نقداً';
+
+  final _recentPlacesRepository = RecentPlacesRepository();
 
   RouteEstimate? _route;
   late final TripType _tripType;
@@ -151,6 +156,12 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
         passengerCount: _passengerCount,
       );
       if (!mounted) return;
+      // Fire-and-forget - never blocks the trip flow over this bookkeeping
+      // call (see RecentPlacesRepository.recordVisit's own doc comment).
+      final destination = widget.destination;
+      if (destination != null) {
+        unawaited(_recentPlacesRepository.recordVisit(destination));
+      }
       context.read<AppStateProvider>().setActiveTripFromBackend(trip);
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(

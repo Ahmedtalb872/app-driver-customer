@@ -13,7 +13,13 @@ enum _VoiceStep { idle, listening, searching, error, confirm }
 /// Pops with a (pickup, destination) record on success, or null if the
 /// customer backs out.
 class VoiceRideRequestSheet extends StatefulWidget {
-  const VoiceRideRequestSheet({super.key});
+  const VoiceRideRequestSheet({super.key, this.nearLat, this.nearLng});
+
+  /// The customer's current/pickup location, when known - biases both the
+  /// pickup and destination search toward it, same as
+  /// [DestinationSearchScreen.nearLat]/[nearLng].
+  final double? nearLat;
+  final double? nearLng;
 
   @override
   State<VoiceRideRequestSheet> createState() => _VoiceRideRequestSheetState();
@@ -114,8 +120,18 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
 
     try {
       final results = await Future.wait([
-        _repository.search(query: pickupQuery, limit: 1),
-        _repository.search(query: destinationQuery, limit: 1),
+        _repository.search(
+          query: pickupQuery,
+          limit: 1,
+          nearLat: widget.nearLat,
+          nearLng: widget.nearLng,
+        ),
+        _repository.search(
+          query: destinationQuery,
+          limit: 1,
+          nearLat: widget.nearLat,
+          nearLng: widget.nearLng,
+        ),
       ]);
       if (!mounted) return;
 

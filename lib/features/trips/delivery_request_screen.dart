@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -11,6 +13,7 @@ import '../../core/services/ride_repository.dart';
 import '../../models/models.dart';
 import '../../providers/app_state_provider.dart';
 import '../destinations/data/models/destination_suggestion.dart';
+import '../destinations/data/repositories/recent_places_repository.dart';
 import 'trip_tracking_screen.dart';
 
 /// Confirm-and-request screen for a parcel delivery - the same broadcast/
@@ -45,6 +48,8 @@ class _DeliveryRequestScreenState extends State<DeliveryRequestScreen> {
   static final _directionsEstimator = GoogleDirectionsRouteEstimator(
     apiKey: dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '',
   );
+
+  final _recentPlacesRepository = RecentPlacesRepository();
 
   final _formKey = GlobalKey<FormState>();
   final _recipientNameController = TextEditingController();
@@ -146,6 +151,9 @@ class _DeliveryRequestScreenState extends State<DeliveryRequestScreen> {
             : _packageController.text.trim(),
       );
       if (!mounted) return;
+      // Fire-and-forget - never blocks the trip flow over this bookkeeping
+      // call (see RecentPlacesRepository.recordVisit's own doc comment).
+      unawaited(_recentPlacesRepository.recordVisit(widget.destination));
       context.read<AppStateProvider>().setActiveTripFromBackend(trip);
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(

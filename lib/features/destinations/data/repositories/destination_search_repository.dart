@@ -38,9 +38,16 @@ class DestinationSearchRepository {
   /// shown twice.
   static const _duplicateRadiusMeters = 150.0;
 
+  /// [nearLat]/[nearLng], when both given (typically the customer's current
+  /// location), rank results closest-first ahead of popularity, once text
+  /// relevance is already accounted for - passed straight through to
+  /// search_destinations for the DB half, and used here to order the
+  /// Google half the same way before it's merged in.
   Future<List<DestinationSuggestion>> search({
     required String query,
     int limit = 15,
+    double? nearLat,
+    double? nearLng,
   }) async {
     // Both started here, before either is awaited, so the two network
     // calls run concurrently rather than one after the other. If the local
@@ -50,6 +57,8 @@ class DestinationSearchRepository {
     final localFuture = _dataSource.searchDestinations(
       query: query,
       limit: limit,
+      nearLat: nearLat,
+      nearLng: nearLng,
     );
     final googleFuture = _placesSearch.search(query: query, limit: limit);
 
@@ -59,24 +68,50 @@ class DestinationSearchRepository {
     final google = await googleFuture;
     if (google.isEmpty) return local;
 
+    final sortedGoogle = [...google];
+    if (nearLat != null && nearLng != null) {
+      sortedGoogle.sort(
+        (a, b) => _metersBetweenCoords(
+          nearLat,
+          nearLng,
+          a.latitude,
+          a.longitude,
+        ).compareTo(
+          _metersBetweenCoords(nearLat, nearLng, b.latitude, b.longitude),
+        ),
+      );
+    }
+
     final merged = [...local];
-    for (final candidate in google) {
+    for (final candidate in sortedGoogle) {
       final isDuplicate = local.any(
-        (existing) => _metersBetween(existing, candidate) < _duplicateRadiusMeters,
+        (existing) =>
+            _metersBetweenCoords(
+              existing.latitude,
+              existing.longitude,
+              candidate.latitude,
+              candidate.longitude,
+            ) <
+            _duplicateRadiusMeters,
       );
       if (!isDuplicate) merged.add(candidate);
     }
     return merged.take(limit).toList();
   }
 
-  double _metersBetween(DestinationSuggestion a, DestinationSuggestion b) {
+  double _metersBetweenCoords(
+    double lat1,
+    double lng1,
+    double lat2,
+    double lng2,
+  ) {
     const earthRadiusM = 6371000.0;
-    final dLat = _degToRad(b.latitude - a.latitude);
-    final dLng = _degToRad(b.longitude - a.longitude);
+    final dLat = _degToRad(lat2 - lat1);
+    final dLng = _degToRad(lng2 - lng1);
     final h =
         math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(_degToRad(a.latitude)) *
-            math.cos(_degToRad(b.latitude)) *
+        math.cos(_degToRad(lat1)) *
+            math.cos(_degToRad(lat2)) *
             math.sin(dLng / 2) *
             math.sin(dLng / 2);
     final c = 2 * math.atan2(math.sqrt(h), math.sqrt(1 - h));

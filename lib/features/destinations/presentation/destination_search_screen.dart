@@ -5,22 +5,42 @@ import 'package:speech_to_text/speech_to_text.dart';
 
 import '../../../core/constants/colors.dart';
 import '../data/models/destination_suggestion.dart';
+import '../data/models/place_category.dart';
+import '../data/repositories/categories_repository.dart';
 import '../data/repositories/destination_search_repository.dart';
+import '../data/repositories/places_repository.dart';
+import '../data/repositories/recent_places_repository.dart';
 import 'destination_map_picker_screen.dart';
+import 'widgets/category_icon.dart';
 
 /// Full-screen "where to?" search, pushed from [TripPlannerScreen] for
 /// either a pickup or a destination point (see [title]/[mapPickerTitle]).
 /// Pops with the chosen [DestinationSuggestion], or null if the user backs
 /// out.
+///
+/// Before anything is typed, shows the customer's own recently-requested
+/// destinations (see [RecentPlacesRepository]) and a "browse by category"
+/// chip row - both also offered as a fallback when a search comes back
+/// empty, so a search that fails isn't a dead end.
 class DestinationSearchScreen extends StatefulWidget {
   const DestinationSearchScreen({
     super.key,
     this.title = 'إلى أين تريد الذهاب؟',
     this.mapPickerTitle = 'اختر الموقع من الخريطة',
+    this.nearLat,
+    this.nearLng,
   });
 
   final String title;
   final String mapPickerTitle;
+
+  /// The customer's current/pickup location, when known - passed straight
+  /// through to [DestinationSearchRepository.search] so results are ranked
+  /// closest-first once text relevance is already accounted for. Optional;
+  /// omit when no location is known yet and ranking simply falls back to
+  /// relevance/popularity alone.
+  final double? nearLat;
+  final double? nearLng;
 
   @override
   State<DestinationSearchScreen> createState() =>
@@ -29,6 +49,9 @@ class DestinationSearchScreen extends StatefulWidget {
 
 class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
   final _repository = DestinationSearchRepository();
+  final _recentPlacesRepository = RecentPlacesRepository();
+  final _categoriesRepository = CategoriesRepository();
+  final _placesRepository = PlacesRepository();
   final _controller = TextEditingController();
   final _speech = SpeechToText();
   Timer? _debounce;
@@ -38,6 +61,16 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
   String? _error;
   bool _speechAvailable = false;
   bool _isListening = false;
+
+  List<DestinationSuggestion> _recentPlaces = [];
+  List<PlaceCategory> _categories = [];
+  bool _loadingExtras = true;
+
+  /// True while [_results] holds a category's places rather than a text
+  /// search's results - kept separate from the query text so browsing a
+  /// category doesn't fight with the "type at least 2 characters" empty
+  /// state below.
+  bool _isBrowsingCategory = false;
 
   @override
   void initState() {
@@ -59,6 +92,7 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
         .then((available) {
           if (mounted) setState(() => _speechAvailable = available);
         });
+    _loadExtras();
   }
 
   @override
@@ -67,6 +101,26 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
     _controller.dispose();
     _speech.stop();
     super.dispose();
+  }
+
+  /// Recent places and categories for the empty/no-results states - both
+  /// best-effort: a failure here just means those sections stay empty,
+  /// never an error blocking the search screen itself.
+  Future<void> _loadExtras() async {
+    try {
+      final results = await Future.wait([
+        _recentPlacesRepository.loadRecent(),
+        _categoriesRepository.loadActiveCategories(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _recentPlaces = results[0] as List<DestinationSuggestion>;
+        _categories = results[1] as List<PlaceCategory>;
+        _loadingExtras = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loadingExtras = false);
+    }
   }
 
   /// Transcribed speech only ever fills the same text field typed search
@@ -95,6 +149,7 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
 
   void _onQueryChanged(String query) {
     _debounce?.cancel();
+    _isBrowsingCategory = false;
     if (query.trim().length < 2) {
       setState(() {
         _results = [];
@@ -109,7 +164,11 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
 
   Future<void> _search(String query) async {
     try {
-      final results = await _repository.search(query: query);
+      final results = await _repository.search(
+        query: query,
+        nearLat: widget.nearLat,
+        nearLng: widget.nearLng,
+      );
       if (!mounted) return;
       setState(() {
         _results = results;
@@ -121,6 +180,35 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
       setState(() {
         _isLoading = false;
         _error = 'تعذر البحث الآن، تحقق من الاتصال بالإنترنت وحاول مرة أخرى.';
+      });
+    }
+  }
+
+  /// Fallback for when a text/voice search misses (or before anything's
+  /// typed): browse a category's places directly instead of retrying the
+  /// search with a different word.
+  Future<void> _pickCategory(PlaceCategory category) async {
+    setState(() {
+      _isBrowsingCategory = true;
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final places = await _placesRepository.search(
+        query: '',
+        categoryId: category.id,
+        limit: 30,
+      );
+      if (!mounted) return;
+      setState(() {
+        _results = places.map(DestinationSuggestion.fromPlace).toList();
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _error = 'تعذر تحميل الأماكن الآن، تحقق من الاتصال وحاول مرة أخرى.';
       });
     }
   }
@@ -236,89 +324,165 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
 
   Widget _buildBody() {
     if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            _error!,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontFamily: 'Cairo',
-              color: AppColors.secondaryText,
-            ),
-          ),
-        ),
-      );
+      return _buildMessage(_error!);
+    }
+
+    if (_isBrowsingCategory) {
+      if (!_isLoading && _results.isEmpty) {
+        return _buildMessage('لا توجد أماكن في هذه الفئة حالياً.');
+      }
+      return _buildResultsList(_results);
     }
 
     if (_controller.text.trim().length < 2) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'اكتب اسم الحي أو المكان الذي تريد الذهاب إليه.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'Cairo',
-              color: AppColors.secondaryText,
-            ),
-          ),
-        ),
-      );
+      return _buildEmptyQueryState();
     }
 
     if (!_isLoading && _results.isEmpty) {
-      return const Center(
-        child: Padding(
+      return _buildNoResultsState();
+    }
+
+    return _buildResultsList(_results);
+  }
+
+  Widget _buildMessage(String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontFamily: 'Cairo',
+            color: AppColors.secondaryText,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyQueryState() {
+    if (_loadingExtras) {
+      return const SizedBox.shrink();
+    }
+    if (_recentPlaces.isEmpty && _categories.isEmpty) {
+      return _buildMessage('اكتب اسم الحي أو المكان الذي تريد الذهاب إليه.');
+    }
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 16),
+      children: [
+        if (_recentPlaces.isNotEmpty) ...[
+          _buildSectionLabel('أماكن استخدمتها مؤخراً'),
+          ..._recentPlaces.map(_buildResultTile),
+          const Divider(height: 24),
+        ],
+        if (_categories.isNotEmpty) ...[
+          _buildSectionLabel('تصفح حسب الفئة'),
+          const SizedBox(height: 10),
+          _buildCategoryChips(),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildNoResultsState() {
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 16),
+      children: [
+        const Padding(
           padding: EdgeInsets.all(24),
           child: Text(
             'لا توجد نتائج مطابقة لبحثك.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'Cairo',
-              color: AppColors.secondaryText,
-            ),
+            style: TextStyle(fontFamily: 'Cairo', color: AppColors.secondaryText),
           ),
         ),
-      );
-    }
+        if (_categories.isNotEmpty) ...[
+          _buildSectionLabel('أو تصفح حسب الفئة'),
+          const SizedBox(height: 10),
+          _buildCategoryChips(),
+        ],
+      ],
+    );
+  }
 
+  Widget _buildSectionLabel(String label) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontFamily: 'Cairo',
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+          color: AppColors.secondaryText,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryChips() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: _categories.map((category) {
+          return ActionChip(
+            avatar: Icon(
+              iconForCategory(category.iconName),
+              size: 16,
+              color: AppColors.primary,
+            ),
+            label: Text(
+              category.nameAr,
+              style: const TextStyle(fontFamily: 'Cairo', fontSize: 12),
+            ),
+            onPressed: () => _pickCategory(category),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildResultsList(List<DestinationSuggestion> results) {
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      itemCount: _results.length,
+      itemCount: results.length,
       separatorBuilder: (_, __) => const Divider(height: 1, indent: 60),
-      itemBuilder: (context, index) {
-        final suggestion = _results[index];
-        return ListTile(
-          leading: CircleAvatar(
-            backgroundColor: AppColors.primary.withOpacity(0.1),
-            child: Icon(
-              _iconFor(suggestion.resultType),
-              color: AppColors.primary,
-              size: 20,
-            ),
-          ),
-          title: Text(
-            suggestion.title,
-            style: const TextStyle(
-              fontFamily: 'Cairo',
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-          subtitle: suggestion.subtitle != null
-              ? Text(
-                  suggestion.subtitle!,
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 12,
-                    color: AppColors.secondaryText,
-                  ),
-                )
-              : null,
-          onTap: () => Navigator.of(context).pop(suggestion),
-        );
-      },
+      itemBuilder: (context, index) => _buildResultTile(results[index]),
+    );
+  }
+
+  Widget _buildResultTile(DestinationSuggestion suggestion) {
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: AppColors.primary.withOpacity(0.1),
+        child: Icon(
+          _iconFor(suggestion.resultType),
+          color: AppColors.primary,
+          size: 20,
+        ),
+      ),
+      title: Text(
+        suggestion.title,
+        style: const TextStyle(
+          fontFamily: 'Cairo',
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
+        ),
+      ),
+      subtitle: suggestion.subtitle != null
+          ? Text(
+              suggestion.subtitle!,
+              style: const TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 12,
+                color: AppColors.secondaryText,
+              ),
+            )
+          : null,
+      onTap: () => Navigator.of(context).pop(suggestion),
     );
   }
 }

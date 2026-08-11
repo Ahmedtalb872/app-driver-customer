@@ -50,9 +50,11 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
   Future<void> _pickNormalPickup() async {
     final result = await Navigator.of(context).push<DestinationSuggestion>(
       MaterialPageRoute(
-        builder: (context) => const DestinationSearchScreen(
+        builder: (context) => DestinationSearchScreen(
           title: 'نقطة الانطلاق',
           mapPickerTitle: 'اختر نقطة الانطلاق من الخريطة',
+          nearLat: _normalPickupLat,
+          nearLng: _normalPickupLng,
         ),
       ),
     );
@@ -67,8 +69,12 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
   Future<void> _pickNormalDestination() async {
     final result = await Navigator.of(context).push<DestinationSuggestion>(
       MaterialPageRoute(
-        builder: (context) => const DestinationSearchScreen(
+        builder: (context) => DestinationSearchScreen(
           mapPickerTitle: 'اختر الوجهة من الخريطة',
+          // Biased toward the pickup point already chosen, if any - the
+          // best "near" signal available before a destination is picked.
+          nearLat: _normalPickupLat,
+          nearLng: _normalPickupLng,
         ),
       ),
     );
@@ -88,7 +94,10 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => const VoiceRideRequestSheet(),
+      builder: (context) => VoiceRideRequestSheet(
+        nearLat: _normalPickupLat,
+        nearLng: _normalPickupLng,
+      ),
     );
     if (result == null || !mounted) return;
     setState(() {
@@ -102,9 +111,11 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
   Future<void> _pickOpenPickup() async {
     final result = await Navigator.of(context).push<DestinationSuggestion>(
       MaterialPageRoute(
-        builder: (context) => const DestinationSearchScreen(
+        builder: (context) => DestinationSearchScreen(
           title: 'نقطة الانطلاق',
           mapPickerTitle: 'اختر نقطة الانطلاق من الخريطة',
+          nearLat: _openPickupLat,
+          nearLng: _openPickupLng,
         ),
       ),
     );

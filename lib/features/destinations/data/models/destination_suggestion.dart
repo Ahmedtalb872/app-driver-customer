@@ -1,3 +1,5 @@
+import 'place.dart';
+
 /// A single row from the unified `search_destinations` RPC
 /// (20260717000035_destination_search.sql). Unlike [Place], this can
 /// represent a place, a district, or a neighborhood - [resultType]
@@ -39,6 +41,36 @@ class DestinationSuggestion {
       categoryCode: json['category_code'] as String?,
       isVerified: json['is_verified'] as bool? ?? false,
       isPopular: json['is_popular'] as bool? ?? false,
+      latitude: (json['latitude'] as num).toDouble(),
+      longitude: (json['longitude'] as num).toDouble(),
+    );
+  }
+
+  /// From a [Place] returned by a category-scoped search (search_places) -
+  /// used for the "browse by category" fallback when a text/voice search
+  /// misses, so both paths return the same suggestion type to the caller.
+  factory DestinationSuggestion.fromPlace(Place place) {
+    return DestinationSuggestion(
+      resultType: DestinationResultType.place,
+      id: place.id,
+      title: place.displayName,
+      subtitle: place.displayAddress,
+      districtId: place.districtId,
+      isVerified: place.isVerified,
+      isPopular: place.isPopular,
+      latitude: place.latitude,
+      longitude: place.longitude,
+    );
+  }
+
+  /// From a `recent_places` row (fetch_recent_places) - a customer's own
+  /// previously-requested destination, shown before they type anything.
+  factory DestinationSuggestion.fromRecentPlaceJson(Map<String, dynamic> json) {
+    return DestinationSuggestion(
+      resultType: DestinationResultType.place,
+      id: (json['place_id'] as String?) ?? (json['id'] as String),
+      title: json['address'] as String,
+      districtId: json['district_id'] as String?,
       latitude: (json['latitude'] as num).toDouble(),
       longitude: (json['longitude'] as num).toDouble(),
     );
