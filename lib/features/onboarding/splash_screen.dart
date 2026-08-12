@@ -1,8 +1,14 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../core/auth/app_role.dart';
+import '../../core/auth/auth_service.dart';
 import '../../core/constants/colors.dart';
+import '../../core/services/session_guard_service.dart';
+import '../../providers/app_state_provider.dart';
 import '../authentication/auth_welcome_screen.dart';
+import '../home/customer_home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -43,16 +49,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     _navigationTimer = Timer(const Duration(milliseconds: 2600), () {
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              const AuthWelcomeScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-          transitionDuration: const Duration(milliseconds: 500),
-        ),
-      );
+      unawaited(_navigateNext());
     });
   }
 
@@ -61,6 +58,73 @@ class _SplashScreenState extends State<SplashScreen>
     _navigationTimer?.cancel();
     _controller.dispose();
     super.dispose();
+  }
+
+  /// Supabase already restores a previously-signed-in session from local
+  /// storage before this ever runs (the default `supabase_flutter`
+  /// behaviour) - so reopening the app is not the same event as choosing to
+  /// sign out, and shouldn't be treated as one. Only an explicit tap on
+  /// "تسجيل الخروج" (SettingsScreen) or a SessionGuardService kick from
+  /// another device signing in should ever land the user back on
+  /// [AuthWelcomeScreen]; a restored session skips straight to the home
+  /// screen instead of forcing a fresh login every time the app is closed
+  /// and reopened.
+  Future<void> _navigateNext() async {
+    if (AuthService.instance.isAuthenticated) {
+      try {
+        final role = await AuthService.instance.fetchCurrentRole();
+        if (!mounted) return;
+
+        if (role == AppRole.customer) {
+          final fullName = await AuthService.instance.fetchCurrentFullName();
+          if (!mounted) return;
+
+          // Best effort, same as the normal login path (see
+          // PhoneCodeLoginScreen) - this device just won't be forcibly
+          // kicked by a later login elsewhere until the next successful
+          // call.
+          try {
+            final sessionId = SessionGuardService.generateSessionId();
+            await AuthService.instance.setActiveSession(sessionId);
+            SessionGuardService.instance.start(sessionId);
+          } catch (_) {}
+
+          if (!mounted) return;
+          Provider.of<AppStateProvider>(context, listen: false).login(
+            AuthService.instance.currentUser?.phone ?? '',
+            fullName: fullName,
+          );
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => const CustomerHomeScreen(),
+            ),
+          );
+          return;
+        }
+
+        // Any other role (captain, admin, or a profile that failed to
+        // load) isn't supported on this mobile app - mirrors the same
+        // fallback PhoneCodeLoginScreen uses after a fresh login.
+        await AuthService.instance.signOut();
+      } catch (_) {
+        // Couldn't confirm the restored session is still good (e.g. no
+        // network yet) - fall through to the welcome screen rather than
+        // show a home screen that can't load anything. The session itself
+        // is untouched, so the next successful launch tries again.
+      }
+    }
+
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const AuthWelcomeScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 500),
+      ),
+    );
   }
 
   @override
