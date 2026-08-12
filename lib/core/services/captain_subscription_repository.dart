@@ -9,9 +9,9 @@ import '../config/supabase_config.dart';
 /// captains, negotiate a flat monthly price over a realtime chat, and once
 /// the captain accepts, request ordinary rides with that specific captain
 /// at no extra charge for 30 days. See
-/// 20260812000056_captain_subscriptions.sql for the full negotiate/pay/
-/// activate logic this only reads or triggers - this repository itself
-/// does no pricing/eligibility math client-side.
+/// 20260812000057_subscription_staged_payout.sql for the full negotiate/
+/// pay/activate/renew logic this only reads or triggers - this repository
+/// itself does no pricing/eligibility/payout math client-side.
 class CaptainSubscriptionRepository {
   CaptainSubscriptionRepository._();
 
@@ -29,9 +29,21 @@ class CaptainSubscriptionRepository {
   }
 
   /// The signed-in customer's single most-relevant subscription (active if
-  /// there is one, else the newest open negotiation), or `null` for none.
+  /// there is one, else the newest open negotiation, else a
+  /// cancelled-but-disputed one still awaiting admin review), or `null` for
+  /// none. Opportunistically runs the same due-transition housekeeping
+  /// [expire_trip] already does for trips (see the SQL migration header) so
+  /// every screen that calls this also nudges any due escrow payout/
+  /// renewal along - safe and cheap to call from anywhere, any number of
+  /// times.
   Future<CaptainSubscription?> fetchMyStatus() async {
     if (_client.auth.currentUser == null) return null;
+    try {
+      await _client.rpc('run_subscription_housekeeping');
+    } catch (_) {
+      // Best effort - a missed housekeeping pass just means the next
+      // caller's pass picks up whatever was due.
+    }
     final rows = await _client.rpc('customer_subscription_status');
     final list = (rows as List).cast<Map<String, dynamic>>();
     if (list.isEmpty) return null;
@@ -64,9 +76,50 @@ class CaptainSubscriptionRepository {
     );
   }
 
+  /// Cancels a still-negotiating (unpaid) thread.
   Future<void> cancelSubscription(String subscriptionId) async {
     await _client.rpc(
       'customer_cancel_subscription',
+      params: {'p_subscription_id': subscriptionId},
+    );
+  }
+
+  /// Ends an already-active (paid) subscription early. If the captain's
+  /// escrowed net share isn't fully paid out yet, the held amount is
+  /// flagged for admin review rather than refunded/paid out automatically
+  /// (see 20260812000057_subscription_staged_payout.sql).
+  Future<void> cancelActiveSubscription(String subscriptionId) async {
+    await _client.rpc(
+      'customer_cancel_active_subscription',
+      params: {'p_subscription_id': subscriptionId},
+    );
+  }
+
+  /// Switches the *next* renewal cycle's mode - never touches the cycle
+  /// already in progress. [CaptainSubscription.canOptIntoTrusted]/
+  /// [CaptainSubscription.canOptIntoEscrow] gate when each direction makes
+  /// sense to offer in the UI.
+  Future<void> setRenewalMode(
+    String subscriptionId,
+    SubscriptionRenewalMode mode,
+  ) async {
+    await _client.rpc(
+      'customer_set_subscription_renewal_mode',
+      params: {
+        'p_subscription_id': subscriptionId,
+        'p_mode': mode == SubscriptionRenewalMode.trusted
+            ? 'trusted'
+            : 'escrow',
+      },
+    );
+  }
+
+  /// Trusted-mode renewal: confirms the customer paid the captain directly
+  /// this cycle. Applies the renewal immediately once the captain has
+  /// confirmed too (see [CaptainSubscription.awaitingCustomerConfirmation]).
+  Future<void> confirmRenewalPayment(String subscriptionId) async {
+    await _client.rpc(
+      'customer_confirm_subscription_payment',
       params: {'p_subscription_id': subscriptionId},
     );
   }
@@ -112,6 +165,14 @@ class CaptainSubscriptionRepository {
       'agreed_price': row['agreed_price'],
       'started_at': row['started_at'],
       'expires_at': row['expires_at'],
+      'payout_status': row['payout_status'],
+      'renewal_mode': row['renewal_mode'],
+      'cycle_count': row['cycle_count'],
+      'renewal_window_opened_at': row['renewal_window_opened_at'],
+      'customer_confirmed_renewal_at': row['customer_confirmed_renewal_at'],
+      'captain_confirmed_renewal_at': row['captain_confirmed_renewal_at'],
+      'payment_dispute': row['payment_dispute'],
+      'dispute_reason': row['dispute_reason'],
     });
   }
 

@@ -855,13 +855,23 @@ class BrowsableCaptain {
 
 enum SubscriptionStatus { negotiating, active, rejected, cancelled }
 
+/// Who a renewal cycle's payment moves through (see
+/// 20260812000057_subscription_staged_payout.sql): 'escrow' is the default
+/// - the app charges the customer's wallet and stages the captain's payout
+/// over the month; 'trusted' is opt-in from the customer's second month
+/// onward - the customer pays the captain directly (cash) and both sides
+/// just confirm it happened, the app only pulling its flat commission from
+/// the captain's wallet once both have.
+enum SubscriptionRenewalMode { escrow, trusted }
+
 /// A monthly ride-with-this-captain arrangement (see
 /// customer_subscription_status(),
-/// 20260812000056_captain_subscriptions.sql): negotiated via free-text
-/// chat, then paid in full and activated the moment the captain accepts an
-/// offer. Always the customer's single most-relevant thread (the active
-/// one if there is one, else the newest still-open negotiation) - never a
-/// full history.
+/// 20260812000057_subscription_staged_payout.sql): negotiated via
+/// free-text chat, then paid in full and activated the moment the captain
+/// accepts an offer. Always the customer's single most-relevant thread
+/// (the active one if there is one, else the newest still-open
+/// negotiation, else a cancelled-but-disputed one still awaiting admin
+/// review) - never a full history.
 class CaptainSubscription {
   const CaptainSubscription({
     required this.id,
@@ -878,6 +888,14 @@ class CaptainSubscription {
     this.agreedPrice,
     this.startedAt,
     this.expiresAt,
+    this.payoutStatus,
+    this.renewalMode = SubscriptionRenewalMode.escrow,
+    this.cycleCount = 1,
+    this.renewalWindowOpenedAt,
+    this.customerConfirmedRenewalAt,
+    this.captainConfirmedRenewalAt,
+    this.paymentDispute = false,
+    this.disputeReason,
   });
 
   final String id;
@@ -895,6 +913,20 @@ class CaptainSubscription {
   final DateTime? startedAt;
   final DateTime? expiresAt;
 
+  /// Only meaningful once [status] has been active at least once - null
+  /// while still negotiating. 'pending_first_half'/'pending_second_half'/
+  /// 'fully_paid_out' track the current cycle's escrow release, regardless
+  /// of [renewalMode] (a cycle already in escrow finishes in escrow even if
+  /// the customer switches to trusted mode for the *next* cycle).
+  final String? payoutStatus;
+  final SubscriptionRenewalMode renewalMode;
+  final int cycleCount;
+  final DateTime? renewalWindowOpenedAt;
+  final DateTime? customerConfirmedRenewalAt;
+  final DateTime? captainConfirmedRenewalAt;
+  final bool paymentDispute;
+  final String? disputeReason;
+
   bool get isActive {
     final expiry = expiresAt;
     return status == SubscriptionStatus.active &&
@@ -909,6 +941,26 @@ class CaptainSubscription {
     if (expiry == null || !isActive) return null;
     return expiry.difference(DateTime.now()).inDays;
   }
+
+  /// The "موثوق" toggle only becomes available once the current escrow
+  /// cycle has fully paid out - i.e. from the customer's second month
+  /// onward, matching the product decision that the first month always
+  /// goes through the safety-net staged payout.
+  bool get canOptIntoTrusted =>
+      isActive &&
+      renewalMode == SubscriptionRenewalMode.escrow &&
+      payoutStatus == 'fully_paid_out';
+
+  bool get canOptIntoEscrow =>
+      isActive && renewalMode == SubscriptionRenewalMode.trusted;
+
+  /// True once this cycle has expired in trusted mode and the app is
+  /// waiting on the customer to confirm they paid the captain directly.
+  bool get awaitingCustomerConfirmation =>
+      status == SubscriptionStatus.active &&
+      renewalMode == SubscriptionRenewalMode.trusted &&
+      renewalWindowOpenedAt != null &&
+      customerConfirmedRenewalAt == null;
 
   factory CaptainSubscription.fromJson(Map<String, dynamic> json) {
     final name = json['captain_name'] as String?;
@@ -931,6 +983,28 @@ class CaptainSubscription {
       expiresAt: json['expires_at'] == null
           ? null
           : DateTime.parse(json['expires_at'] as String).toLocal(),
+      payoutStatus: json['payout_status'] as String?,
+      renewalMode: (json['renewal_mode'] as String?) == 'trusted'
+          ? SubscriptionRenewalMode.trusted
+          : SubscriptionRenewalMode.escrow,
+      cycleCount: (json['cycle_count'] as num?)?.toInt() ?? 1,
+      renewalWindowOpenedAt: json['renewal_window_opened_at'] == null
+          ? null
+          : DateTime.parse(
+              json['renewal_window_opened_at'] as String,
+            ).toLocal(),
+      customerConfirmedRenewalAt: json['customer_confirmed_renewal_at'] == null
+          ? null
+          : DateTime.parse(
+              json['customer_confirmed_renewal_at'] as String,
+            ).toLocal(),
+      captainConfirmedRenewalAt: json['captain_confirmed_renewal_at'] == null
+          ? null
+          : DateTime.parse(
+              json['captain_confirmed_renewal_at'] as String,
+            ).toLocal(),
+      paymentDispute: json['payment_dispute'] as bool? ?? false,
+      disputeReason: json['dispute_reason'] as String?,
     );
   }
 

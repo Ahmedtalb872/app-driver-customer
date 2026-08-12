@@ -57,6 +57,11 @@ const List<AdminSidebarItem> adminSidebarItems = [
     route: '/admin/finance/withdrawal',
   ),
   AdminSidebarItem(
+    label: 'مراجعة الاشتراكات الشهرية',
+    icon: Icons.gpp_maybe_rounded,
+    route: '/admin/finance/subscription-disputes',
+  ),
+  AdminSidebarItem(
     label: 'وسائل الدفع',
     icon: Icons.payments_rounded,
     route: '/admin/payments',

@@ -33,6 +33,7 @@ class _SubscriptionChatScreenState extends State<SubscriptionChatScreen> {
   List<SubscriptionMessage> _messages = [];
   bool _isSending = false;
   bool _isCancelling = false;
+  bool _isActing = false;
 
   @override
   void initState() {
@@ -144,6 +145,63 @@ class _SubscriptionChatScreenState extends State<SubscriptionChatScreen> {
     }
   }
 
+  Future<void> _handleCancelActive() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('إلغاء الاشتراك', style: TextStyle(fontFamily: 'Cairo')),
+        content: const Text(
+          'هل تريد إنهاء هذا الاشتراك النشط؟ إذا لم تُصرف كامل مستحقات الكابتن بعد، سيراجع فريقنا المبلغ المتبقي.',
+          style: TextStyle(fontFamily: 'Cairo'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('تراجع'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text(
+              'إلغاء الاشتراك',
+              style: TextStyle(color: AppColors.error),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() => _isActing = true);
+    try {
+      await _repository.cancelActiveSubscription(widget.subscriptionId);
+    } catch (_) {
+      _showError('تعذر إلغاء الاشتراك الآن.');
+    } finally {
+      if (mounted) setState(() => _isActing = false);
+    }
+  }
+
+  Future<void> _handleConfirmPayment() async {
+    setState(() => _isActing = true);
+    try {
+      await _repository.confirmRenewalPayment(widget.subscriptionId);
+    } catch (_) {
+      _showError('تعذر تأكيد الدفع الآن.');
+    } finally {
+      if (mounted) setState(() => _isActing = false);
+    }
+  }
+
+  Future<void> _handleSetRenewalMode(SubscriptionRenewalMode mode) async {
+    setState(() => _isActing = true);
+    try {
+      await _repository.setRenewalMode(widget.subscriptionId, mode);
+    } catch (_) {
+      _showError('تعذر تحديث طريقة التجديد الآن.');
+    } finally {
+      if (mounted) setState(() => _isActing = false);
+    }
+  }
+
   void _showError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -158,6 +216,8 @@ class _SubscriptionChatScreenState extends State<SubscriptionChatScreen> {
   Widget build(BuildContext context) {
     final status = _status;
     final canChat = status == null || status.isNegotiating;
+    final isActive = status?.status == SubscriptionStatus.active;
+    final disputed = status?.paymentDispute == true;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -189,22 +249,47 @@ class _SubscriptionChatScreenState extends State<SubscriptionChatScreen> {
                         _buildBubble(_messages[index]),
                   ),
           ),
-          if (canChat) _buildComposer(),
+          if (canChat)
+            _buildComposer()
+          else if (isActive && !disputed)
+            _buildActiveControls(status!),
         ],
       ),
     );
   }
 
   Widget _buildStatusBanner(CaptainSubscription status) {
+    if (status.paymentDispute) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        color: AppColors.warning.withOpacity(0.12),
+        child: Text(
+          'هذا الاشتراك قيد المراجعة من فريقنا - سنتواصل معك قريباً بخصوص المبلغ المحجوز.',
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontFamily: 'Cairo',
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: AppColors.warning,
+          ),
+        ),
+      );
+    }
+
     late final Color color;
     late final String text;
     switch (status.status) {
       case SubscriptionStatus.active:
         color = AppColors.success;
         final days = status.daysRemaining;
+        final modeText = status.renewalMode == SubscriptionRenewalMode.trusted
+            ? 'دفع مباشر (موثوق)'
+            : 'دفع عبر التطبيق';
         text = status.agreedPrice != null
-            ? 'الاشتراك نشط بمبلغ ${status.agreedPrice!.toStringAsFixed(0)} أوقية شهرياً'
-                '${days != null ? ' - باقي $days يوماً' : ''}'
+            ? 'الاشتراك نشط (الدورة ${status.cycleCount}) بمبلغ '
+                  '${status.agreedPrice!.toStringAsFixed(0)} أوقية شهرياً - $modeText'
+                  '${days != null ? ' - باقي $days يوماً' : ''}'
             : 'الاشتراك نشط';
         break;
       case SubscriptionStatus.rejected:
@@ -235,6 +320,72 @@ class _SubscriptionChatScreenState extends State<SubscriptionChatScreen> {
           fontSize: 12,
           fontWeight: FontWeight.bold,
           color: color,
+        ),
+      ),
+    );
+  }
+
+  /// Shown instead of the chat composer once a subscription is active (no
+  /// more negotiating to do): the trusted-mode payment-confirmation
+  /// prompt when one is pending, the "موثوق"/escrow renewal-mode toggle,
+  /// and the option to end the subscription early.
+  Widget _buildActiveControls(CaptainSubscription status) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(color: Color(0x14000000), blurRadius: 8, offset: Offset(0, -2)),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (status.awaitingCustomerConfirmation) ...[
+              Text(
+                'هل دفعت مباشرة اشتراك هذا الشهر لـ ${status.captainName}؟',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontFamily: 'Cairo',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: AppColors.darkText,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: _isActing ? null : _handleConfirmPayment,
+                child: Text(_isActing ? 'جارٍ التأكيد...' : 'نعم، دفعت الاشتراك'),
+              ),
+              const SizedBox(height: 8),
+            ] else if (status.canOptIntoTrusted) ...[
+              OutlinedButton(
+                onPressed: _isActing
+                    ? null
+                    : () => _handleSetRenewalMode(SubscriptionRenewalMode.trusted),
+                child: const Text('التبديل للدفع المباشر (موثوق) من الشهر القادم'),
+              ),
+              const SizedBox(height: 8),
+            ] else if (status.canOptIntoEscrow) ...[
+              OutlinedButton(
+                onPressed: _isActing
+                    ? null
+                    : () => _handleSetRenewalMode(SubscriptionRenewalMode.escrow),
+                child: const Text('العودة للدفع عبر التطبيق من الشهر القادم'),
+              ),
+              const SizedBox(height: 8),
+            ],
+            TextButton(
+              onPressed: _isActing ? null : _handleCancelActive,
+              child: const Text(
+                'إلغاء الاشتراك',
+                style: TextStyle(color: AppColors.error),
+              ),
+            ),
+          ],
         ),
       ),
     );

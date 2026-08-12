@@ -118,8 +118,12 @@ class _CaptainsBrowseScreenState extends State<CaptainsBrowseScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  if (status != null && status.paymentDispute)
+                    _buildDisputeBanner(status),
                   if (status != null && status.isActive)
                     _buildActiveBanner(status)
+                  else if (status != null && status.awaitingCustomerConfirmation)
+                    _buildConfirmationPendingBanner(status)
                   else ...[
                     if (status != null && status.isNegotiating)
                       _buildNegotiatingBanner(status),
@@ -268,6 +272,88 @@ class _CaptainsBrowseScreenState extends State<CaptainsBrowseScreen> {
               Expanded(
                 child: Text(
                   'لديك محادثة مفتوحة مع ${status.captainName} - اضغط للمتابعة',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.darkText,
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 14,
+                color: AppColors.secondaryText,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConfirmationPendingBanner(CaptainSubscription status) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: _openExistingThread,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.accent.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.accent.withOpacity(0.3)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.help_outline_rounded, color: AppColors.accent),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'هل دفعت اشتراك هذا الشهر لـ ${status.captainName}؟ اضغط للتأكيد',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.darkText,
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 14,
+                color: AppColors.secondaryText,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDisputeBanner(CaptainSubscription status) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: _openExistingThread,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.warning.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.gpp_maybe_rounded, color: AppColors.warning),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'اشتراكك مع ${status.captainName} قيد المراجعة من فريقنا',
                   style: const TextStyle(
                     fontSize: 12.5,
                     fontFamily: 'Cairo',
