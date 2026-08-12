@@ -600,7 +600,10 @@ $$;
 -- 20260812000056_captain_subscriptions.sql plus the new staged-payout/
 -- renewal-mode/dispute fields the customer app's UI needs (progress
 -- toward the "موثوق" toggle, a pending renewal-confirmation prompt, a
--- dispute-under-review banner).
+-- dispute-under-review banner). Postgres refuses to CREATE OR REPLACE a
+-- function whose return columns changed (unlike the body, that's not a
+-- replaceable detail) - has to be dropped first.
+drop function if exists public.customer_subscription_status();
 create or replace function public.customer_subscription_status()
 returns table (
   id uuid,
