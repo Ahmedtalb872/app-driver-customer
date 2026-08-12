@@ -802,3 +802,185 @@ class SelefliStatus {
     );
   }
 }
+
+/// An approved, currently-online captain as shown on the "browse captains
+/// to subscribe with" screen (see browsable_captains(),
+/// 20260812000056_captain_subscriptions.sql). Deliberately carries no phone
+/// number - that only becomes visible once a real relationship exists (a
+/// trip or a subscription with this captain).
+class BrowsableCaptain {
+  const BrowsableCaptain({
+    required this.captainId,
+    required this.fullName,
+    this.avatarUrl,
+    this.vehicleBrand,
+    this.vehicleModel,
+    this.vehicleColor,
+    this.rating,
+    required this.ratingsCount,
+  });
+
+  final String captainId;
+  final String fullName;
+  final String? avatarUrl;
+  final String? vehicleBrand;
+  final String? vehicleModel;
+  final String? vehicleColor;
+  final double? rating;
+  final int ratingsCount;
+
+  String get vehicleDescription {
+    final parts = [
+      vehicleBrand,
+      vehicleModel,
+      vehicleColor,
+    ].where((p) => p != null && p.trim().isNotEmpty).toList();
+    return parts.isEmpty ? '' : parts.join(' - ');
+  }
+
+  factory BrowsableCaptain.fromJson(Map<String, dynamic> json) {
+    final name = json['full_name'] as String?;
+    return BrowsableCaptain(
+      captainId: json['captain_id'] as String,
+      fullName: name == null || name.trim().isEmpty ? 'كابتن' : name,
+      avatarUrl: json['avatar_url'] as String?,
+      vehicleBrand: json['vehicle_brand'] as String?,
+      vehicleModel: json['vehicle_model'] as String?,
+      vehicleColor: json['vehicle_color'] as String?,
+      rating: (json['rating'] as num?)?.toDouble(),
+      ratingsCount: (json['ratings_count'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+enum SubscriptionStatus { negotiating, active, rejected, cancelled }
+
+/// A monthly ride-with-this-captain arrangement (see
+/// customer_subscription_status(),
+/// 20260812000056_captain_subscriptions.sql): negotiated via free-text
+/// chat, then paid in full and activated the moment the captain accepts an
+/// offer. Always the customer's single most-relevant thread (the active
+/// one if there is one, else the newest still-open negotiation) - never a
+/// full history.
+class CaptainSubscription {
+  const CaptainSubscription({
+    required this.id,
+    required this.captainId,
+    required this.captainName,
+    this.captainAvatarUrl,
+    this.captainPhone,
+    this.vehicleBrand,
+    this.vehicleModel,
+    this.vehicleColor,
+    required this.status,
+    this.proposedPrice,
+    this.proposedBy,
+    this.agreedPrice,
+    this.startedAt,
+    this.expiresAt,
+  });
+
+  final String id;
+  final String captainId;
+  final String captainName;
+  final String? captainAvatarUrl;
+  final String? captainPhone;
+  final String? vehicleBrand;
+  final String? vehicleModel;
+  final String? vehicleColor;
+  final SubscriptionStatus status;
+  final double? proposedPrice;
+  final String? proposedBy;
+  final double? agreedPrice;
+  final DateTime? startedAt;
+  final DateTime? expiresAt;
+
+  bool get isActive {
+    final expiry = expiresAt;
+    return status == SubscriptionStatus.active &&
+        expiry != null &&
+        expiry.isAfter(DateTime.now());
+  }
+
+  bool get isNegotiating => status == SubscriptionStatus.negotiating;
+
+  int? get daysRemaining {
+    final expiry = expiresAt;
+    if (expiry == null || !isActive) return null;
+    return expiry.difference(DateTime.now()).inDays;
+  }
+
+  factory CaptainSubscription.fromJson(Map<String, dynamic> json) {
+    final name = json['captain_name'] as String?;
+    return CaptainSubscription(
+      id: json['id'] as String,
+      captainId: json['captain_id'] as String,
+      captainName: name == null || name.trim().isEmpty ? 'كابتن' : name,
+      captainAvatarUrl: json['captain_avatar_url'] as String?,
+      captainPhone: json['captain_phone'] as String?,
+      vehicleBrand: json['vehicle_brand'] as String?,
+      vehicleModel: json['vehicle_model'] as String?,
+      vehicleColor: json['vehicle_color'] as String?,
+      status: _statusFromString(json['status'] as String?),
+      proposedPrice: (json['proposed_price'] as num?)?.toDouble(),
+      proposedBy: json['proposed_by'] as String?,
+      agreedPrice: (json['agreed_price'] as num?)?.toDouble(),
+      startedAt: json['started_at'] == null
+          ? null
+          : DateTime.parse(json['started_at'] as String).toLocal(),
+      expiresAt: json['expires_at'] == null
+          ? null
+          : DateTime.parse(json['expires_at'] as String).toLocal(),
+    );
+  }
+
+  static SubscriptionStatus _statusFromString(String? value) {
+    switch (value) {
+      case 'active':
+        return SubscriptionStatus.active;
+      case 'rejected':
+        return SubscriptionStatus.rejected;
+      case 'cancelled':
+        return SubscriptionStatus.cancelled;
+      case 'negotiating':
+      default:
+        return SubscriptionStatus.negotiating;
+    }
+  }
+}
+
+/// One chat bubble in a subscription negotiation thread (see
+/// captain_subscription_messages, 20260812000056_captain_subscriptions.sql).
+class SubscriptionMessage {
+  const SubscriptionMessage({
+    required this.id,
+    required this.subscriptionId,
+    required this.senderId,
+    required this.senderRole,
+    required this.body,
+    this.offerAmount,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String subscriptionId;
+  final String senderId;
+  final String senderRole;
+  final String body;
+  final double? offerAmount;
+  final DateTime createdAt;
+
+  bool get isOffer => offerAmount != null;
+
+  factory SubscriptionMessage.fromJson(Map<String, dynamic> json) {
+    return SubscriptionMessage(
+      id: json['id'] as String,
+      subscriptionId: json['subscription_id'] as String,
+      senderId: json['sender_id'] as String,
+      senderRole: json['sender_role'] as String,
+      body: json['body'] as String,
+      offerAmount: (json['offer_amount'] as num?)?.toDouble(),
+      createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
+    );
+  }
+}

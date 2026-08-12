@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../core/services/google_directions_route_estimator.dart';
 import '../../core/services/route_estimator.dart';
+import '../../core/services/captain_subscription_repository.dart';
 import '../../core/services/ride_repository.dart';
 import '../../core/services/selefli_repository.dart';
 import '../../models/models.dart';
@@ -25,10 +26,12 @@ import 'trip_tracking_screen.dart';
 /// vehicle-class picker - with a live, client-side fare estimate (see
 /// [RideRepository.fetchPricingConfig]) when a destination is known. Payment
 /// is cash by default (no picker for that, to keep this screen to as few
-/// steps as possible); a normal ride within a loyal customer's "سلفلي"
-/// (Selefli) credit line optionally offers pay-later instead (see
-/// [_buildSelefliOption]/[SelefliRepository]), then calls
-/// [RideRepository.requestTrip].
+/// steps as possible); a normal ride optionally offers a loyal customer's
+/// "سلفلي" (Selefli) pay-later credit line instead (see
+/// [_buildSelefliOption]/[SelefliRepository]), or - when the customer has
+/// an active monthly subscription with a captain - a free ride under that
+/// subscription instead (see [_buildSubscriptionOption]/
+/// [CaptainSubscriptionRepository]), then calls [RideRepository.requestTrip].
 class RequestRideScreen extends StatefulWidget {
   const RequestRideScreen({
     super.key,
@@ -66,6 +69,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
 
   final _recentPlacesRepository = RecentPlacesRepository();
   final _selefliRepository = SelefliRepository.instance;
+  final _captainSubscriptionRepository = CaptainSubscriptionRepository.instance;
 
   RouteEstimate? _route;
   late final TripType _tripType;
@@ -86,6 +90,15 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
   SelefliStatus? _selefliStatus;
   bool _useSelefli = false;
 
+  /// Only ever non-null for a normal ride - a monthly subscription is
+  /// pinned to one specific captain and only covers ordinary rides (backend
+  /// restricts it to service_type 'ride' + trip_type 'normal', same as
+  /// Selefli: SUBSCRIPTION_REQUIRES_NORMAL_RIDE). Unlike Selefli there's no
+  /// price cap to check - every ride with the subscribed captain is free
+  /// for the whole active window.
+  CaptainSubscription? _subscriptionStatus;
+  bool _useSubscription = false;
+
   @override
   void initState() {
     super.initState();
@@ -101,7 +114,10 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
         destination: LatLng(destination.latitude, destination.longitude),
       );
       _loadRoute(destination);
-      if (_tripType == TripType.normal) _loadSelefliStatus();
+      if (_tripType == TripType.normal) {
+        _loadSelefliStatus();
+        _loadSubscriptionStatus();
+      }
     }
     _loadPrice();
   }
@@ -112,6 +128,15 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
       if (mounted) setState(() => _selefliStatus = status);
     } catch (_) {
       // Best effort - the Selefli option just stays hidden if this fails.
+    }
+  }
+
+  Future<void> _loadSubscriptionStatus() async {
+    try {
+      final status = await _captainSubscriptionRepository.fetchMyStatus();
+      if (mounted) setState(() => _subscriptionStatus = status);
+    } catch (_) {
+      // Best effort - the subscription option just stays hidden if this fails.
     }
   }
 
@@ -166,6 +191,8 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
         price <= status.cap!;
   }
 
+  bool get _canOfferSubscription => _subscriptionStatus?.isActive == true;
+
   Future<void> _handleRequest() async {
     setState(() {
       _isRequesting = true;
@@ -182,7 +209,11 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
         destinationLng: widget.destination?.longitude,
         vehicleType: _vehicleType,
         paymentMethod: _paymentMethod,
-        paymentMethodCode: _useSelefli && _canOfferSelefli ? 'selefli' : null,
+        paymentMethodCode: _useSubscription && _canOfferSubscription
+            ? 'subscription'
+            : _useSelefli && _canOfferSelefli
+            ? 'selefli'
+            : null,
         estimatedPrice: _useSelefli && _canOfferSelefli
             ? _estimatedPrice
             : null,
@@ -236,6 +267,12 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
     if (message.contains('SELEFLI_REQUIRES_NORMAL_RIDE')) {
       return 'سلفلي متاح فقط لمشوار عادي بوجهة محددة.';
     }
+    if (message.contains('NO_ACTIVE_SUBSCRIPTION')) {
+      return 'ليس لديك اشتراك شهري نشط حالياً.';
+    }
+    if (message.contains('SUBSCRIPTION_REQUIRES_NORMAL_RIDE')) {
+      return 'الاشتراك الشهري متاح فقط لمشوار عادي بوجهة محددة.';
+    }
     return 'تعذر إرسال طلب المشوار الآن. تحقق من الاتصال وحاول مرة أخرى.\n$e';
   }
 
@@ -250,7 +287,10 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildRouteSummary(),
-            if (_canOfferSelefli) ...[
+            if (_canOfferSubscription) ...[
+              const SizedBox(height: 16),
+              _buildSubscriptionOption(),
+            ] else if (_canOfferSelefli) ...[
               const SizedBox(height: 16),
               _buildSelefliOption(),
             ],
@@ -416,6 +456,57 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
     );
   }
 
+  /// Only ever built while [_canOfferSubscription] is true, in which case
+  /// it's shown instead of the Selefli card (see build()) - a customer
+  /// with an active subscription rides free with that captain, which is
+  /// strictly better than paying later.
+  Widget _buildSubscriptionOption() {
+    final captainName = _subscriptionStatus?.captainName ?? 'الكابتن';
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'استخدم اشتراكك الشهري',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: AppColors.darkText,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'هذا المشوار مجاني ضمن اشتراكك مع $captainName.',
+                  style: const TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 11,
+                    color: AppColors.secondaryText,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: _useSubscription,
+            onChanged: (value) => setState(() => _useSubscription = value),
+            activeColor: AppColors.primary,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildLocationRow(IconData icon, Color color, String label) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -501,6 +592,8 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                   price != null
                       ? _tripType == TripType.open
                             ? 'اطلب الآن - بداية من ${price.toStringAsFixed(0)} أوقية تقريباً'
+                            : (_useSubscription && _canOfferSubscription)
+                            ? 'اطلب الآن - مجاناً ضمن اشتراكك الشهري'
                             : (_useSelefli && _canOfferSelefli)
                             ? 'اطلب الآن بسلفلي - سدّد ${price.toStringAsFixed(0)} أوقية لاحقاً'
                             : 'اطلب الآن - ${price.toStringAsFixed(0)} أوقية'

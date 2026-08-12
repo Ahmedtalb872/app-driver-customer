@@ -9,6 +9,7 @@ import '../../providers/app_state_provider.dart';
 import '../destinations/data/models/destination_suggestion.dart';
 import '../destinations/presentation/destination_search_screen.dart';
 import '../profile/profile_screen.dart';
+import '../subscription/captains_browse_screen.dart';
 import '../trips/delivery_request_screen.dart';
 import '../trips/my_trips_screen.dart';
 import '../trips/trip_planner_screen.dart';
@@ -115,6 +116,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           destination: destination,
         ),
       ),
+    );
+  }
+
+  void _openCaptainsBrowse() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const CaptainsBrowseScreen()),
     );
   }
 
@@ -311,7 +318,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
           InkWell(
-            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
             onTap: _startDeliveryRequest,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
@@ -327,6 +333,41 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   const Expanded(
                     child: Text(
                       'أريد توصيل طرد بدل ركوب مشوار',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12.5,
+                        color: AppColors.darkText,
+                      ),
+                    ),
+                  ),
+                  const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 12,
+                    color: AppColors.secondaryText,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          InkWell(
+            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+            onTap: _openCaptainsBrowse,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+              child: Row(
+                children: [
+                  _IconBadge(
+                    icon: Icons.handshake_rounded,
+                    color: AppColors.primary,
+                    size: 32,
+                    iconSize: 16,
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'اشتراك شهري مع كابتن - مشاوير بلا مقابل إضافي',
                       style: TextStyle(
                         fontFamily: 'Cairo',
                         fontWeight: FontWeight.w600,
