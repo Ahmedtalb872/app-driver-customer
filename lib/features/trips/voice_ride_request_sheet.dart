@@ -281,7 +281,7 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
             _buildMicButton(onTap: _finishListening, active: true),
             const SizedBox(height: 12),
             const Text(
-              'جارٍ الاستماع... تكلّم الآن',
+              'جاري إنشاء طلب...',
               style: TextStyle(
                 fontFamily: 'Cairo',
                 fontSize: 12,
@@ -313,7 +313,7 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
               CircularProgressIndicator(),
               SizedBox(height: 12),
               Text(
-                'جارٍ البحث عن الموقعين...',
+                'جاري إنشاء طلب...',
                 style: TextStyle(
                   fontFamily: 'Cairo',
                   color: AppColors.secondaryText,
@@ -370,6 +370,8 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
               onPressed: _confirm,
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 48),
+                backgroundColor: AppColors.warning,
+                foregroundColor: AppColors.darkText,
               ),
               child: const Text('تأكيد'),
             ),
@@ -389,7 +391,7 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
           width: 72,
           height: 72,
           decoration: BoxDecoration(
-            color: active ? AppColors.error : AppColors.primary,
+            color: active ? AppColors.error : AppColors.accent,
             shape: BoxShape.circle,
           ),
           child: const Icon(Icons.mic_rounded, color: Colors.white, size: 32),

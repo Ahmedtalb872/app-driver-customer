@@ -86,6 +86,12 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
   /// of picking each separately - see [VoiceRideRequestSheet]. Only offered
   /// for a normal ride (it needs both points; an open ride only ever has a
   /// pickup, so the two-part "من X إلى Y" phrasing wouldn't fit).
+  ///
+  /// Goes straight on to [RequestRideScreen] (same as tapping "متابعة" would)
+  /// once the sheet confirms - the customer already reviewed and, if
+  /// needed, corrected both points inside the sheet itself, so a second,
+  /// separate confirmation tap here would just repeat that same review for
+  /// no reason and delay seeing the actual trip price.
   Future<void> _requestNormalByVoice() async {
     final result = await showModalBottomSheet<
         ({DestinationSuggestion pickup, DestinationSuggestion destination})?>(
@@ -106,6 +112,7 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
       _normalPickupAddress = result.pickup.title;
       _normalDestination = result.destination;
     });
+    _continueNormal();
   }
 
   Future<void> _pickOpenPickup() async {
