@@ -49,13 +49,17 @@ class DestinationSuggestion {
   /// From a [Place] returned by a category-scoped search (search_places) -
   /// used for the "browse by category" fallback when a text/voice search
   /// misses, so both paths return the same suggestion type to the caller.
-  factory DestinationSuggestion.fromPlace(Place place) {
+  /// [categoryCode] isn't on [Place] itself (only categoryId, an internal
+  /// uuid) - pass the code of whichever category was actually searched,
+  /// since the caller already knows it.
+  factory DestinationSuggestion.fromPlace(Place place, {String? categoryCode}) {
     return DestinationSuggestion(
       resultType: DestinationResultType.place,
       id: place.id,
       title: place.displayName,
       subtitle: place.displayAddress,
       districtId: place.districtId,
+      categoryCode: categoryCode,
       isVerified: place.isVerified,
       isPopular: place.isPopular,
       latitude: place.latitude,

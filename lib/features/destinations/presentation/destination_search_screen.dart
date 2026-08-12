@@ -64,6 +64,7 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
 
   List<DestinationSuggestion> _recentPlaces = [];
   List<PlaceCategory> _categories = [];
+  Map<String, PlaceCategory> _categoryByCode = {};
   bool _loadingExtras = true;
 
   /// True while [_results] holds a category's places rather than a text
@@ -113,9 +114,11 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
         _categoriesRepository.loadActiveCategories(),
       ]);
       if (!mounted) return;
+      final categories = results[1] as List<PlaceCategory>;
       setState(() {
         _recentPlaces = results[0] as List<DestinationSuggestion>;
-        _categories = results[1] as List<PlaceCategory>;
+        _categories = categories;
+        _categoryByCode = {for (final c in categories) c.code: c};
         _loadingExtras = false;
       });
     } catch (_) {
@@ -201,7 +204,14 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
       );
       if (!mounted) return;
       setState(() {
-        _results = places.map(DestinationSuggestion.fromPlace).toList();
+        _results = places
+            .map(
+              (place) => DestinationSuggestion.fromPlace(
+                place,
+                categoryCode: category.code,
+              ),
+            )
+            .toList();
         _isLoading = false;
       });
     } catch (_) {
@@ -454,18 +464,36 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
     );
   }
 
+  /// A place with a known category leads with what it *is* before its
+  /// name ("بقالة / Epicerie Charee Bastami"), same as every major maps
+  /// app labels a search result. Falls back to the bare title for a
+  /// district/neighborhood or a place with no resolved category
+  /// (categories still loading, or none set).
   Widget _buildResultTile(DestinationSuggestion suggestion) {
+    final category = suggestion.categoryCode == null
+        ? null
+        : _categoryByCode[suggestion.categoryCode];
+    final title = category == null
+        ? suggestion.title
+        : '${category.nameAr} / ${suggestion.title}';
     return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: AppColors.primary.withOpacity(0.1),
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: AppColors.accent.withOpacity(0.18),
+          borderRadius: BorderRadius.circular(10),
+        ),
         child: Icon(
-          _iconFor(suggestion.resultType),
-          color: AppColors.primary,
+          category != null
+              ? iconForCategory(category.iconName)
+              : _iconFor(suggestion.resultType),
+          color: AppColors.accent,
           size: 20,
         ),
       ),
       title: Text(
-        suggestion.title,
+        title,
         style: const TextStyle(
           fontFamily: 'Cairo',
           fontWeight: FontWeight.bold,
