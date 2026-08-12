@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 import '../../core/constants/colors.dart';
+import '../../core/services/voice_search/voice_route_pipeline.dart';
 import '../destinations/data/models/destination_suggestion.dart';
-import '../destinations/data/repositories/destination_search_repository.dart';
+import '../destinations/presentation/destination_search_screen.dart';
 
 enum _VoiceStep { idle, listening, searching, error, confirm }
 
@@ -12,6 +13,12 @@ enum _VoiceStep { idle, listening, searching, error, confirm }
 /// instead of picking each separately through [DestinationSearchScreen].
 /// Pops with a (pickup, destination) record on success, or null if the
 /// customer backs out.
+///
+/// Speech recognition ([SpeechToText], Stage 1) stays local to this widget;
+/// everything after the raw transcript - normalizing the text, correcting
+/// misheard local place names against `assets/data/places.json`, splitting
+/// "from"/"to", and searching for each - is [VoiceRoutePipeline], so it can
+/// be unit-tested and reused on its own.
 class VoiceRideRequestSheet extends StatefulWidget {
   const VoiceRideRequestSheet({super.key, this.nearLat, this.nearLng});
 
@@ -27,14 +34,7 @@ class VoiceRideRequestSheet extends StatefulWidget {
 
 class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
   final _speech = SpeechToText();
-  final _repository = DestinationSearchRepository();
-
-  /// Matches "[من] X إلى Y" - the leading "من" is optional, "إلى"/"الى" are
-  /// both accepted since speech-to-text output is inconsistent about the
-  /// hamza. Loose on whitespace for the same reason.
-  static final _fromToPattern = RegExp(
-    r'^(?:من\s+)?(.+?)\s+(?:إلى|الى)\s+(.+)$',
-  );
+  final _pipeline = VoiceRoutePipeline();
 
   _VoiceStep _step = _VoiceStep.idle;
   bool _speechAvailable = false;
@@ -95,8 +95,16 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
   Future<void> _finishListening() async {
     await _speech.stop();
     if (!mounted) return;
+    await _resolve(_transcript);
+  }
 
-    if (_transcript.trim().isEmpty) {
+  /// Runs the full Text Normalization -> Place Correction -> From/To
+  /// Extraction -> Place Search pipeline on [transcript] (see
+  /// [VoiceRoutePipeline]) and lands on either the confirm step or an error
+  /// message naming exactly which side (or the sentence shape itself)
+  /// couldn't be resolved.
+  Future<void> _resolve(String transcript) async {
+    if (transcript.trim().isEmpty) {
       setState(() {
         _step = _VoiceStep.error;
         _errorMessage = 'لم أسمع شيئًا، حاول مرة أخرى.';
@@ -104,53 +112,35 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
       return;
     }
 
-    final match = _fromToPattern.firstMatch(_transcript.trim());
-    if (match == null) {
-      setState(() {
-        _step = _VoiceStep.error;
-        _errorMessage =
-            'لم أفهم طلبك. قل مثلاً: "من السوق المركزي إلى المطار".';
-      });
-      return;
-    }
-
-    final pickupQuery = match.group(1)!.trim();
-    final destinationQuery = match.group(2)!.trim();
     setState(() => _step = _VoiceStep.searching);
-
     try {
-      final results = await Future.wait([
-        _repository.search(
-          query: pickupQuery,
-          limit: 1,
-          nearLat: widget.nearLat,
-          nearLng: widget.nearLng,
-        ),
-        _repository.search(
-          query: destinationQuery,
-          limit: 1,
-          nearLat: widget.nearLat,
-          nearLng: widget.nearLng,
-        ),
-      ]);
+      final result = await _pipeline.resolve(
+        transcript,
+        nearLat: widget.nearLat,
+        nearLng: widget.nearLng,
+      );
       if (!mounted) return;
 
-      final pickupMatches = results[0];
-      final destinationMatches = results[1];
-      if (pickupMatches.isEmpty || destinationMatches.isEmpty) {
+      if (!result.from.isResolved || !result.to.isResolved) {
         setState(() {
           _step = _VoiceStep.error;
-          _errorMessage = pickupMatches.isEmpty
-              ? 'لم أجد "$pickupQuery". حاول أن تنطقها بوضوح أكبر أو استخدم اسمًا مختلفًا.'
-              : 'لم أجد "$destinationQuery". حاول أن تنطقها بوضوح أكبر أو استخدم اسمًا مختلفًا.';
+          _errorMessage = !result.from.isResolved
+              ? 'لم أجد "${result.from.text}". حاول أن تنطقها بوضوح أكبر أو استخدم اسمًا مختلفًا.'
+              : 'لم أجد "${result.to.text}". حاول أن تنطقها بوضوح أكبر أو استخدم اسمًا مختلفًا.';
         });
         return;
       }
 
       setState(() {
-        _pickupResult = pickupMatches.first;
-        _destinationResult = destinationMatches.first;
+        _pickupResult = result.from.suggestion;
+        _destinationResult = result.to.suggestion;
         _step = _VoiceStep.confirm;
+      });
+    } on VoiceRouteParseException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _step = _VoiceStep.error;
+        _errorMessage = e.message;
       });
     } catch (_) {
       if (!mounted) return;
@@ -167,6 +157,37 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
     final destination = _destinationResult;
     if (pickup == null || destination == null) return;
     Navigator.of(context).pop((pickup: pickup, destination: destination));
+  }
+
+  /// Manual correction for a misrecognized pickup - opens the same typed/
+  /// map search screen [TripPlannerScreen] itself uses, so picking a
+  /// different place here follows the exact same trusted path as the rest
+  /// of the app.
+  Future<void> _editPickup() async {
+    final result = await Navigator.of(context).push<DestinationSuggestion>(
+      MaterialPageRoute(
+        builder: (context) => DestinationSearchScreen(
+          title: 'نقطة الانطلاق',
+          mapPickerTitle: 'اختر نقطة الانطلاق من الخريطة',
+          nearLat: widget.nearLat,
+          nearLng: widget.nearLng,
+        ),
+      ),
+    );
+    if (result != null && mounted) setState(() => _pickupResult = result);
+  }
+
+  Future<void> _editDestination() async {
+    final result = await Navigator.of(context).push<DestinationSuggestion>(
+      MaterialPageRoute(
+        builder: (context) => DestinationSearchScreen(
+          mapPickerTitle: 'اختر الوجهة من الخريطة',
+          nearLat: _pickupResult?.latitude ?? widget.nearLat,
+          nearLng: _pickupResult?.longitude ?? widget.nearLng,
+        ),
+      ),
+    );
+    if (result != null && mounted) setState(() => _destinationResult = result);
   }
 
   void _retry() {
@@ -334,6 +355,7 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
               iconColor: AppColors.success,
               label: 'نقطة الانطلاق',
               title: _pickupResult!.title,
+              onEdit: _editPickup,
             ),
             const SizedBox(height: 10),
             _buildResultRow(
@@ -341,6 +363,7 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
               iconColor: AppColors.error,
               label: 'الوجهة',
               title: _destinationResult!.title,
+              onEdit: _editDestination,
             ),
             const SizedBox(height: 20),
             ElevatedButton(
@@ -380,6 +403,7 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
     required Color iconColor,
     required String label,
     required String title,
+    required VoidCallback onEdit,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -417,6 +441,15 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
                 ),
               ],
             ),
+          ),
+          IconButton(
+            icon: const Icon(
+              Icons.edit_rounded,
+              size: 18,
+              color: AppColors.secondaryText,
+            ),
+            tooltip: 'تعديل',
+            onPressed: onEdit,
           ),
         ],
       ),

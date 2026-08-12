@@ -132,6 +132,7 @@ flutter:
     - assets/images/al-houdhoud-logo-mark.png
     - assets/audio/hudhud_ride_request.wav
     - assets/geo/nouakchott_districts.geojson
+    - assets/data/places.json
     - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see
