@@ -149,6 +149,10 @@ class _DeliveryRequestScreenState extends State<DeliveryRequestScreen> {
         packageDescription: _packageController.text.trim().isEmpty
             ? null
             : _packageController.text.trim(),
+        // The only source of trips.estimated_price, which the captain app
+        // shows before deciding whether to accept a request - previously
+        // never sent at all, so every delivery left that column null.
+        estimatedPrice: _estimatedPrice,
       );
       if (!mounted) return;
       // Fire-and-forget - never blocks the trip flow over this bookkeeping

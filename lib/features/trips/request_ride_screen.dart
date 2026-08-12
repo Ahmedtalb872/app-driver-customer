@@ -214,9 +214,13 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
             : _useSelefli && _canOfferSelefli
             ? 'selefli'
             : null,
-        estimatedPrice: _useSelefli && _canOfferSelefli
-            ? _estimatedPrice
-            : null,
+        // Always sent (not just for Selefli, which only needs it for the
+        // cap check) - this is also the only source of trips.estimated_price,
+        // which the captain app shows before deciding whether to accept a
+        // request. Previously only ever sent for a Selefli request, so
+        // every ordinary cash/wallet ride left that column null and the
+        // captain saw no price at all until after completion.
+        estimatedPrice: _estimatedPrice,
         customerNote: _noteController.text.trim().isEmpty
             ? null
             : _noteController.text.trim(),
