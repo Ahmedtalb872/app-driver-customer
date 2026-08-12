@@ -64,5 +64,15 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Android 11+ (API 30+) package-visibility: without this,
+             url_launcher's canLaunchUrl(Uri(scheme: 'tel', ...)) - which
+             resolves via ACTION_VIEW - can never see any dialer app and
+             always returns false, so TripTrackingScreen._callCaptain
+             silently does nothing when tapped: no error, no dialer, no
+             feedback. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="tel"/>
+        </intent>
     </queries>
 </manifest>
