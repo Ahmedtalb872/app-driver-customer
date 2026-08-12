@@ -461,7 +461,7 @@ class _SearchingPulseState extends State<_SearchingPulse>
         width: 68,
         height: 68,
         decoration: const BoxDecoration(
-          color: AppColors.primary,
+          color: AppColors.accent,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(color: Colors.black26, blurRadius: 12, offset: Offset(0, 4)),
@@ -492,7 +492,7 @@ class _SearchingPulseState extends State<_SearchingPulse>
           height: 100,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: AppColors.primary, width: 2),
+            border: Border.all(color: AppColors.accent, width: 2),
           ),
         ),
       ),
