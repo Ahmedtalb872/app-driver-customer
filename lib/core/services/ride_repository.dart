@@ -31,10 +31,15 @@ class RideRepository {
   // exclude such a trip from every query that uses this select entirely -
   // `.single()` would throw "no rows", and watchIncomingRequests would
   // silently never surface it to any captain.
+  // `captains!trips_captain_id_fkey` (not bare `captains(...)`) is
+  // required, not stylistic: trips gained a second FK to captains
+  // (subscribed_captain_id, 20260812000056_captain_subscriptions.sql), so
+  // an unqualified embed is now ambiguous - PostgREST rejects it
+  // (PGRST201) rather than guessing which relationship was meant.
   static const String _fullJoin =
       '*, '
       'customers(avatar_url, rating, ratings_count, completed_trips_count, is_verified, profiles(full_name, phone)), '
-      'captains(avatar_url, vehicle_brand, vehicle_model, vehicle_plate, profiles(full_name, phone))';
+      'captains!trips_captain_id_fkey(avatar_url, vehicle_brand, vehicle_model, vehicle_plate, profiles(full_name, phone))';
 
   Trip _rowToTrip(Map<String, dynamic> row) {
     final customer = row['customers'] as Map<String, dynamic>?;

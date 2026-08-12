@@ -46,12 +46,16 @@ class AdminTripsRepository {
   /// Live Operations feed: currently active trips with customer/captain
   /// names embedded via the existing FK relationships (trips -> customers
   /// -> profiles, trips -> captains -> profiles) - no new columns/tables.
+  /// `captains!trips_captain_id_fkey` (not bare `captains(...)`) is
+  /// required: trips gained a second FK to captains (subscribed_captain_id,
+  /// 20260812000056_captain_subscriptions.sql), so an unqualified embed is
+  /// now ambiguous and PostgREST rejects it (PGRST201).
   Future<List<Map<String, dynamic>>> loadActiveTrips() async {
     final rows = await _client
         .from('trips')
         .select(
           '*, customers(profiles(full_name, phone)), '
-          'captains(profiles(full_name, phone))',
+          'captains!trips_captain_id_fkey(profiles(full_name, phone))',
         )
         .inFilter('status', activeStatuses)
         .order('requested_at', ascending: false);
