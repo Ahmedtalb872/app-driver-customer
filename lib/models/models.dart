@@ -769,3 +769,36 @@ class WalletTransaction {
     }
   }
 }
+
+/// A customer's eligibility for "سلفلي" (Selefli) - ride now, pay later up
+/// to a cap that rises with loyalty (see customer_selefli_status,
+/// 20260812000055_selefli_credit.sql). [cap] is null until
+/// [completedTripsCount] passes the first tier's threshold; even once
+/// eligible, a new Selefli ride can't be requested while
+/// [outstandingAmount] is still owed on a previous one.
+class SelefliStatus {
+  const SelefliStatus({
+    required this.cap,
+    required this.outstandingAmount,
+    required this.completedTripsCount,
+  });
+
+  final double? cap;
+  final double outstandingAmount;
+  final int completedTripsCount;
+
+  bool get isEligible => cap != null;
+  bool get hasOutstandingDebt => outstandingAmount > 0;
+
+  /// True only when a new Selefli ride could actually be requested right
+  /// now - eligible for a tier AND no debt left over from a previous one.
+  bool get canRequestNow => isEligible && !hasOutstandingDebt;
+
+  factory SelefliStatus.fromJson(Map<String, dynamic> json) {
+    return SelefliStatus(
+      cap: (json['cap'] as num?)?.toDouble(),
+      outstandingAmount: (json['outstanding_amount'] as num?)?.toDouble() ?? 0,
+      completedTripsCount: (json['completed_trips_count'] as num?)?.toInt() ?? 0,
+    );
+  }
+}

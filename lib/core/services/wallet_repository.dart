@@ -3,12 +3,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/models.dart';
 import '../config/supabase_config.dart';
 
-/// Read-only access to the signed-in user's `wallets`/`wallet_transactions`
-/// rows (see 20260712000005_create_wallets.sql,
+/// Access to the signed-in user's `wallets`/`wallet_transactions` rows (see
+/// 20260712000005_create_wallets.sql,
 /// 20260712000020_create_wallet_transactions.sql). Balance-changing writes
 /// only ever happen through admin-reviewed SECURITY DEFINER functions
-/// (`admin_approve_recharge`, ...) - there is no client write path, which is
-/// why this repository is fetch-only.
+/// (`admin_approve_recharge`, ...) - the client's only direct write is
+/// [submitRechargeRequest], a plain `recharge_requests` insert RLS already
+/// allows for the row's own owner (`auth.uid() = user_id`,
+/// 20260712000026_admin_rls.sql) - it only ever queues the request, an
+/// admin approving it is what actually moves the balance.
 class WalletRepository {
   WalletRepository._();
 
@@ -25,6 +28,29 @@ class WalletRepository {
         .eq('user_id', uid)
         .maybeSingle();
     return (row?['balance'] as num?)?.toDouble() ?? 0.0;
+  }
+
+  /// Queues a wallet top-up for admin review - does not credit the wallet
+  /// itself (see the class doc). [method] is the payment provider's
+  /// display name (Bankily/Masrvi/Sedad), stored as free text for the
+  /// admin's own reference.
+  Future<void> submitRechargeRequest({
+    required double amount,
+    required String method,
+  }) async {
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) throw StateError('Not signed in');
+    final wallet = await _client
+        .from('wallets')
+        .select('id')
+        .eq('user_id', uid)
+        .single();
+    await _client.from('recharge_requests').insert({
+      'user_id': uid,
+      'wallet_id': wallet['id'],
+      'amount': amount,
+      'payment_method': method,
+    });
   }
 
   Future<List<WalletTransaction>> fetchTransactions({int limit = 50}) async {

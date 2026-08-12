@@ -9,6 +9,7 @@ import '../../core/constants/colors.dart';
 import '../../core/services/google_directions_route_estimator.dart';
 import '../../core/services/route_estimator.dart';
 import '../../core/services/ride_repository.dart';
+import '../../core/services/selefli_repository.dart';
 import '../../models/models.dart';
 import '../../providers/app_state_provider.dart';
 import '../destinations/data/models/destination_suggestion.dart';
@@ -23,8 +24,11 @@ import 'trip_tracking_screen.dart';
 /// requests the single standard ([VehicleType.economy]) tier - there is no
 /// vehicle-class picker - with a live, client-side fare estimate (see
 /// [RideRepository.fetchPricingConfig]) when a destination is known. Payment
-/// is always cash for now (no payment-method picker, to keep this screen to
-/// as few steps as possible), then calls [RideRepository.requestTrip].
+/// is cash by default (no picker for that, to keep this screen to as few
+/// steps as possible); a normal ride within a loyal customer's "سلفلي"
+/// (Selefli) credit line optionally offers pay-later instead (see
+/// [_buildSelefliOption]/[SelefliRepository]), then calls
+/// [RideRepository.requestTrip].
 class RequestRideScreen extends StatefulWidget {
   const RequestRideScreen({
     super.key,
@@ -61,6 +65,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
   static const _paymentMethod = 'نقداً';
 
   final _recentPlacesRepository = RecentPlacesRepository();
+  final _selefliRepository = SelefliRepository.instance;
 
   RouteEstimate? _route;
   late final TripType _tripType;
@@ -72,6 +77,14 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
   Map<String, dynamic>? _pricingConfig;
   bool _isRequesting = false;
   String? _error;
+
+  /// Only ever non-null for a normal ride with a known destination -
+  /// Selefli needs an estimated price to check against a cap, which an
+  /// open trip (destination discovered mid-ride) doesn't have, and the
+  /// backend restricts it to service_type 'ride' + trip_type 'normal'
+  /// anyway (SELEFLI_REQUIRES_NORMAL_RIDE).
+  SelefliStatus? _selefliStatus;
+  bool _useSelefli = false;
 
   @override
   void initState() {
@@ -88,8 +101,18 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
         destination: LatLng(destination.latitude, destination.longitude),
       );
       _loadRoute(destination);
+      if (_tripType == TripType.normal) _loadSelefliStatus();
     }
     _loadPrice();
+  }
+
+  Future<void> _loadSelefliStatus() async {
+    try {
+      final status = await _selefliRepository.fetchStatus();
+      if (mounted) setState(() => _selefliStatus = status);
+    } catch (_) {
+      // Best effort - the Selefli option just stays hidden if this fails.
+    }
   }
 
   Future<void> _loadRoute(DestinationSuggestion destination) async {
@@ -134,6 +157,15 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
     if (mounted) setState(() => _loadingPrice = false);
   }
 
+  bool get _canOfferSelefli {
+    final status = _selefliStatus;
+    final price = _estimatedPrice;
+    return status != null &&
+        status.canRequestNow &&
+        price != null &&
+        price <= status.cap!;
+  }
+
   Future<void> _handleRequest() async {
     setState(() {
       _isRequesting = true;
@@ -150,6 +182,10 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
         destinationLng: widget.destination?.longitude,
         vehicleType: _vehicleType,
         paymentMethod: _paymentMethod,
+        paymentMethodCode: _useSelefli && _canOfferSelefli ? 'selefli' : null,
+        estimatedPrice: _useSelefli && _canOfferSelefli
+            ? _estimatedPrice
+            : null,
         customerNote: _noteController.text.trim().isEmpty
             ? null
             : _noteController.text.trim(),
@@ -173,12 +209,34 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
       if (!mounted) return;
       setState(() {
         _isRequesting = false;
-        // The raw exception is appended (not just a generic message) so a
-        // screenshot of this screen is enough to diagnose a real failure,
-        // instead of needing another round-trip just to see what broke.
-        _error = 'تعذر إرسال طلب المشوار الآن. تحقق من الاتصال وحاول مرة أخرى.\n$e';
+        _error = _friendlyErrorFor(e);
       });
     }
+  }
+
+  /// Selefli's server-side checks (SELEFLI_*, see customer_request_trip in
+  /// 20260812000055_selefli_credit.sql) are re-validated at request time
+  /// even though the UI already gates the toggle on the same conditions -
+  /// eligibility/debt/cap can all change between this screen loading and
+  /// the request actually landing. Recognized codes get a real Arabic
+  /// explanation; anything else falls back to the raw exception (appended,
+  /// not just a generic message, so a screenshot of this screen is enough
+  /// to diagnose an unexpected failure).
+  String _friendlyErrorFor(Object e) {
+    final message = e.toString();
+    if (message.contains('SELEFLI_DEBT_OUTSTANDING')) {
+      return 'لديك دين سلفلي سابق لم يُسدَّد بعد - سدّده أولاً لتتمكن من طلب مشوار جديد بسلفلي.';
+    }
+    if (message.contains('SELEFLI_OVER_CAP')) {
+      return 'سعر هذا المشوار يتجاوز الحد المسموح به لسلفلي حالياً.';
+    }
+    if (message.contains('SELEFLI_NOT_ELIGIBLE')) {
+      return 'لست مؤهلاً لسلفلي بعد.';
+    }
+    if (message.contains('SELEFLI_REQUIRES_NORMAL_RIDE')) {
+      return 'سلفلي متاح فقط لمشوار عادي بوجهة محددة.';
+    }
+    return 'تعذر إرسال طلب المشوار الآن. تحقق من الاتصال وحاول مرة أخرى.\n$e';
   }
 
   @override
@@ -192,6 +250,10 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildRouteSummary(),
+            if (_canOfferSelefli) ...[
+              const SizedBox(height: 16),
+              _buildSelefliOption(),
+            ],
             const SizedBox(height: 20),
             const Text(
               'عدد الركاب',
@@ -306,6 +368,54 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
         'أوقية، ثم يُحسب الإضافي حسب المسافة والوقت الفعلي.';
   }
 
+  /// Only ever built while [_canOfferSelefli] is true - see that getter
+  /// for the eligibility/debt/cap conditions.
+  Widget _buildSelefliOption() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.accent.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.accent.withOpacity(0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'ادفع لاحقاً مع سلفلي',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: AppColors.darkText,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'اطلب هذا المشوار الآن وسدّد قيمته لاحقاً من محفظتك.',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 11,
+                    color: AppColors.secondaryText,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: _useSelefli,
+            onChanged: (value) => setState(() => _useSelefli = value),
+            activeColor: AppColors.accent,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildLocationRow(IconData icon, Color color, String label) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -391,6 +501,8 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                   price != null
                       ? _tripType == TripType.open
                             ? 'اطلب الآن - بداية من ${price.toStringAsFixed(0)} أوقية تقريباً'
+                            : (_useSelefli && _canOfferSelefli)
+                            ? 'اطلب الآن بسلفلي - سدّد ${price.toStringAsFixed(0)} أوقية لاحقاً'
                             : 'اطلب الآن - ${price.toStringAsFixed(0)} أوقية'
                       : _loadingPrice
                       ? 'جارٍ حساب السعر...'

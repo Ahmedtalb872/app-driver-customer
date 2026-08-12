@@ -87,6 +87,16 @@ class RideRepository {
     String? recipientName,
     String? recipientPhone,
     String? packageDescription,
+    /// The backend payment_method code ('cash'/'wallet'/'selefli') to send
+    /// as-is, bypassing [paymentMethod]'s loose Arabic-label matching below
+    /// - needed for 'selefli', which has no display-label call site to
+    /// match against. Existing callers that only ever pass 'نقداً' don't
+    /// need this; it's for RequestRideScreen's Selefli opt-in.
+    String? paymentMethodCode,
+    /// Required (and validated server-side) when [paymentMethodCode] is
+    /// 'selefli' - the client-side price estimate the request is checked
+    /// against that tier's cap. Ignored for cash/wallet.
+    double? estimatedPrice,
   }) async {
     final row = await _client.rpc(
       'customer_request_trip',
@@ -99,7 +109,9 @@ class RideRepository {
         'p_destination_lat': destinationLat,
         'p_destination_lng': destinationLng,
         'p_vehicle_type': vehicleType.name,
-        'p_payment_method': paymentMethod == 'المحفظة' ? 'wallet' : 'cash',
+        'p_payment_method':
+            paymentMethodCode ??
+            (paymentMethod == 'المحفظة' ? 'wallet' : 'cash'),
         'p_customer_note': customerNote,
         'p_timeout_seconds': timeoutSeconds,
         'p_passenger_count': passengerCount,
@@ -107,6 +119,7 @@ class RideRepository {
         'p_recipient_name': recipientName,
         'p_recipient_phone': recipientPhone,
         'p_package_description': packageDescription,
+        'p_estimated_price': estimatedPrice,
       },
     );
     final tripId = (row as Map<String, dynamic>)['id'] as String;

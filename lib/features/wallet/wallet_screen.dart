@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
+import '../../core/services/selefli_repository.dart';
 import '../../core/services/wallet_repository.dart';
+import '../../models/models.dart';
 import '../../providers/app_state_provider.dart';
 import 'payment/payment_gateway_screen.dart';
 import 'payment/payment_provider_config.dart';
@@ -17,11 +19,13 @@ class WalletScreen extends StatefulWidget {
 class _WalletScreenState extends State<WalletScreen> {
   final _amountController = TextEditingController();
   bool _isLoading = true;
+  SelefliStatus? _selefliStatus;
 
   @override
   void initState() {
     super.initState();
     _loadWallet();
+    _loadSelefliStatus();
   }
 
   Future<void> _loadWallet() async {
@@ -36,6 +40,15 @@ class _WalletScreenState extends State<WalletScreen> {
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadSelefliStatus() async {
+    try {
+      final status = await SelefliRepository.instance.fetchStatus();
+      if (mounted) setState(() => _selefliStatus = status);
+    } catch (_) {
+      // Best effort - the Selefli card just stays hidden if this fails.
     }
   }
 
@@ -190,6 +203,7 @@ class _WalletScreenState extends State<WalletScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<AppStateProvider>(context);
+    final selefliCard = _buildSelefliCard();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -218,6 +232,9 @@ class _WalletScreenState extends State<WalletScreen> {
             // Main Balance Card
             _buildBalanceCard(provider),
             const SizedBox(height: 24),
+
+            // "سلفلي" eligibility / outstanding-debt status, when known.
+            if (selefliCard != null) selefliCard,
 
             // Transactions Header
             const Text(
@@ -291,6 +308,100 @@ class _WalletScreenState extends State<WalletScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// `null` while the status is still loading/unknown (the card just stays
+  /// hidden) - once loaded, shows exactly one of: outstanding debt (must be
+  /// paid off before Selefli can be used again), current eligibility cap,
+  /// or how many more completed trips unlock the first tier.
+  Widget? _buildSelefliCard() {
+    final status = _selefliStatus;
+    if (status == null) return null;
+
+    if (status.hasOutstandingDebt) {
+      return _selefliCardShell(
+        icon: Icons.account_balance_wallet_rounded,
+        color: AppColors.error,
+        title: 'دين سلفلي مستحق',
+        body:
+            '${status.outstandingAmount.toStringAsFixed(0)} أوقية - سيُخصم '
+            'تلقائياً من رصيدك عند الشحن، ولا يمكنك استخدام سلفلي مجدداً '
+            'حتى تسديده بالكامل.',
+      );
+    }
+
+    if (status.isEligible) {
+      return _selefliCardShell(
+        icon: Icons.bolt_rounded,
+        color: AppColors.primary,
+        title: 'خدمة سلفلي متاحة',
+        body:
+            'يمكنك طلب مشوار بدون رصيد حتى '
+            '${status.cap!.toStringAsFixed(0)} أوقية، تُخصم تلقائياً من '
+            'محفظتك لاحقاً.',
+      );
+    }
+
+    final remaining = 11 - status.completedTripsCount;
+    if (remaining <= 0) return null;
+    return _selefliCardShell(
+      icon: Icons.lock_clock_rounded,
+      color: AppColors.secondary,
+      title: 'اقترب من سلفلي',
+      body:
+          'أكمل $remaining مشوار إضافي لتصبح مؤهلاً لخدمة سلفلي '
+          '(السفر بدون رصيد).',
+    );
+  }
+
+  Widget _selefliCardShell({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String body,
+  }) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 28),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    fontFamily: 'Cairo',
+                    color: color,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  body,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontFamily: 'Cairo',
+                    color: AppColors.darkText,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

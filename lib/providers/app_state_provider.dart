@@ -84,25 +84,4 @@ class AppStateProvider extends ChangeNotifier {
     _walletTransactions = transactions;
     notifyListeners();
   }
-
-  /// Locally credits the wallet after a successful [PaymentGatewayScreen]
-  /// recharge. Wallet top-ups go through an admin-reviewed request on the
-  /// backend (see `recharge_requests`), so this reflects the payment
-  /// provider's own success immediately rather than waiting on approval -
-  /// the next [setWallet] refresh reconciles with the authoritative balance.
-  void rechargeWallet(double amount, String method) {
-    _walletBalance += amount;
-    _walletTransactions = [
-      WalletTransaction(
-        id: 'tx_rch_${DateTime.now().millisecondsSinceEpoch}',
-        amount: amount,
-        type: TransactionType.charge,
-        title: 'شحن رصيد المحفظة بواسطة $method',
-        date: DateTime.now().toString().substring(0, 16),
-        isCredit: true,
-      ),
-      ..._walletTransactions,
-    ];
-    notifyListeners();
-  }
 }
