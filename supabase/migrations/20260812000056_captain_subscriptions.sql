@@ -134,6 +134,15 @@ create policy "Profiles viewable by a related customer"
     )
   );
 
+-- Defensive: earlier migrations that were meant to add these to
+-- public.captains apparently never actually landed in every environment
+-- this project has been deployed to (confirmed live: "column c.rating
+-- does not exist" when this function was first created) - ensured here,
+-- at the point of first use, rather than assumed.
+alter table public.captains
+  add column if not exists rating numeric(2, 1),
+  add column if not exists ratings_count integer not null default 0;
+
 -- Public directory (name/photo/vehicle/rating only - no phone) of
 -- approved, currently online captains, for the "browse captains to
 -- subscribe with" screen. A SECURITY DEFINER function rather than an RLS
