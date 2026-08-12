@@ -372,18 +372,53 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
                     ),
                 ],
               ),
-              if (trip.vehicleName != null || trip.vehiclePlate != null)
+              if (trip.vehicleName != null && trip.vehicleName!.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
                   child: Text(
-                    [
-                      trip.vehicleName,
-                      trip.vehiclePlate,
-                    ].where((s) => (s ?? '').isNotEmpty).join(' - '),
+                    trip.vehicleName!,
                     style: const TextStyle(
                       fontFamily: 'Cairo',
                       fontSize: 11,
                       color: AppColors.secondaryText,
+                    ),
+                  ),
+                ),
+              if (trip.vehiclePlate != null && trip.vehiclePlate!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'رقم اللوحة',
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 10,
+                            color: AppColors.secondaryText,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          trip.vehiclePlate!,
+                          style: const TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.darkText,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
