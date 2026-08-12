@@ -186,13 +186,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _buildPickupLocationCard(),
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: _buildWhereToBar(),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: _buildServiceCards(),
           ),
         ],
         ),
@@ -200,196 +195,39 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     );
   }
 
-  /// Replaces the map that used to sit here. Pickup is now GPS-only (see
-  /// [_determinePickup], re-triggered by the locate button above) with no
-  /// on-map drag-to-adjust - this card just reports the detected address.
-  Widget _buildPickupLocationCard() {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      elevation: 4,
-      shadowColor: AppColors.primaryDark.withOpacity(0.2),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        child: Row(
-          children: [
-            _IconBadge(
-              icon: _isLocating
-                  ? Icons.hourglass_empty_rounded
-                  : Icons.my_location_rounded,
-              color: AppColors.primary,
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'موقع الانطلاق',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 11.5,
-                      color: AppColors.secondaryText,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    _isLocating ? 'جارٍ تحديد موقعك...' : _pickupAddress,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: AppColors.darkText,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+  /// Each service is its own elevated card with a gap between them
+  /// (previously one card with hairline dividers between rows) - easier to
+  /// scan and matches the spaced-card style used elsewhere in the app
+  /// (e.g. WalletScreen's Selefli/subscription banners).
+  Widget _buildServiceCards() {
+    return Column(
+      children: [
+        _ServiceCard(
+          onTap: _openTripPlanner,
+          leadingColor: AppColors.primary,
+          leadingIcon: Icons.search_rounded,
+          title: 'إلى أين تريد الذهاب؟',
+          subtitle: 'مشوار عادي أو مفتوح',
         ),
-      ),
+        const SizedBox(height: 12),
+        _ServiceCard(
+          onTap: _startDeliveryRequest,
+          leadingColor: AppColors.secondary,
+          leadingIcon: Icons.local_shipping_rounded,
+          title: 'توصيل طرد',
+          subtitle: 'أريد توصيل طرد بدل ركوب مشوار',
+        ),
+        const SizedBox(height: 12),
+        _ServiceCard(
+          onTap: _openCaptainsBrowse,
+          leadingColor: AppColors.primary,
+          leadingIcon: Icons.handshake_rounded,
+          title: 'اشتراك شهري مع كابتن',
+          subtitle: 'مشاوير بلا مقابل إضافي',
+        ),
+      ],
     );
   }
-
-  Widget _buildWhereToBar() {
-    // Material + elevation instead of a Container/BoxDecoration with a
-    // manual boxShadow - a diagnostic build proved this card's background,
-    // border and shadow simply never painted (only its child content did)
-    // while everything else on the same screen rendered fine; Material's
-    // elevation system is the standard, better-tested way to get a white
-    // elevated surface and doesn't have that failure mode.
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(24),
-      elevation: 10,
-      shadowColor: AppColors.primaryDark.withOpacity(0.35),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          InkWell(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            onTap: _openTripPlanner,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
-              child: Row(
-                children: [
-                  const _IconBadge(
-                    icon: Icons.search_rounded,
-                    color: AppColors.primary,
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'إلى أين تريد الذهاب؟',
-                          style: TextStyle(
-                            fontFamily: 'Cairo',
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                            color: AppColors.darkText,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          'مشوار عادي أو مفتوح - الانطلاق من: $_pickupAddress',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontFamily: 'Cairo',
-                            fontSize: 11.5,
-                            color: AppColors.secondaryText,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 14,
-                    color: AppColors.secondaryText,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          InkWell(
-            onTap: _startDeliveryRequest,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-              child: Row(
-                children: [
-                  _IconBadge(
-                    icon: Icons.local_shipping_rounded,
-                    color: AppColors.secondary,
-                    size: 32,
-                    iconSize: 16,
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'أريد توصيل طرد بدل ركوب مشوار',
-                      style: TextStyle(
-                        fontFamily: 'Cairo',
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12.5,
-                        color: AppColors.darkText,
-                      ),
-                    ),
-                  ),
-                  const Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 12,
-                    color: AppColors.secondaryText,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          InkWell(
-            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
-            onTap: _openCaptainsBrowse,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-              child: Row(
-                children: [
-                  _IconBadge(
-                    icon: Icons.handshake_rounded,
-                    color: AppColors.primary,
-                    size: 32,
-                    iconSize: 16,
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'اشتراك شهري مع كابتن - مشاوير بلا مقابل إضافي',
-                      style: TextStyle(
-                        fontFamily: 'Cairo',
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12.5,
-                        color: AppColors.darkText,
-                      ),
-                    ),
-                  ),
-                  const Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 12,
-                    color: AppColors.secondaryText,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
 
   static const List<_NavItemData> _navItems = [
     _NavItemData(Icons.home_rounded, 'الرئيسية'),
@@ -519,6 +357,79 @@ class _IconBadge extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: Icon(icon, color: color, size: iconSize),
+    );
+  }
+}
+
+/// One of the home dashboard's service entry points - its own elevated,
+/// rounded card (see [_CustomerHomeScreenState._buildServiceCards]).
+class _ServiceCard extends StatelessWidget {
+  final VoidCallback onTap;
+  final Color leadingColor;
+  final IconData leadingIcon;
+  final String title;
+  final String subtitle;
+
+  const _ServiceCard({
+    required this.onTap,
+    required this.leadingColor,
+    required this.leadingIcon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      elevation: 6,
+      shadowColor: AppColors.primaryDark.withOpacity(0.2),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              _IconBadge(icon: leadingIcon, color: leadingColor, size: 42, iconSize: 20),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontFamily: 'Cairo',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14.5,
+                        color: AppColors.darkText,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 11.5,
+                        color: AppColors.secondaryText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 14,
+                color: AppColors.secondaryText,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
