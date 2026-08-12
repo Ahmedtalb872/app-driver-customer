@@ -197,6 +197,17 @@ class RideRepository {
     final controller = StreamController<Trip?>.broadcast();
     Trip? lastKnown;
 
+    Future<void> refresh() async {
+      try {
+        lastKnown = await _fetchEnrichedTrip(tripId);
+        controller.add(lastKnown);
+      } catch (_) {
+        // Transient fetch failure: keep showing the last known state
+        // rather than surfacing a raw error to the UI.
+        controller.add(lastKnown);
+      }
+    }
+
     final sub = _client
         .from('trips')
         .stream(primaryKey: ['id'])
@@ -206,17 +217,27 @@ class RideRepository {
             controller.add(null);
             return;
           }
-          try {
-            lastKnown = await _fetchEnrichedTrip(tripId);
-            controller.add(lastKnown);
-          } catch (_) {
-            // Transient fetch failure: keep showing the last known state
-            // rather than surfacing a raw error to the UI.
-            controller.add(lastKnown);
-          }
+          await refresh();
         });
 
-    controller.onCancel = () => sub.cancel();
+    // Realtime should push every change (captain accepts, arrives, moves,
+    // ...) the moment it happens, but this is the customer's only channel
+    // for that while this screen is open, and nothing here ever explicitly
+    // resubscribes/refreshes on app resume - a websocket that quietly drops
+    // (locked screen, a brief connectivity blip while waiting for a
+    // captain) can otherwise leave the customer stuck on "جاري البحث عن
+    // كابتن..." forever even after a captain actually accepted. This
+    // periodic re-fetch is a cheap safety net that guarantees the screen
+    // catches up within a few seconds regardless of what the realtime
+    // channel did.
+    final pollTimer = Timer.periodic(const Duration(seconds: 6), (_) {
+      refresh();
+    });
+
+    controller.onCancel = () {
+      sub.cancel();
+      pollTimer.cancel();
+    };
     return controller.stream;
   }
 
