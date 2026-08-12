@@ -34,7 +34,7 @@ class RideRepository {
   static const String _fullJoin =
       '*, '
       'customers(avatar_url, rating, ratings_count, completed_trips_count, is_verified, profiles(full_name, phone)), '
-      'captains(vehicle_brand, vehicle_model, vehicle_plate, profiles(full_name, phone))';
+      'captains(avatar_url, vehicle_brand, vehicle_model, vehicle_plate, profiles(full_name, phone))';
 
   Trip _rowToTrip(Map<String, dynamic> row) {
     final customer = row['customers'] as Map<String, dynamic>?;

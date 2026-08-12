@@ -249,6 +249,7 @@ class Trip {
       customerPhone: (customerProfile?['phone'] as String?) ?? '',
       captainName: captainProfile?['full_name'] as String?,
       captainPhone: captainProfile?['phone'] as String?,
+      captainAvatar: captainProfile?['avatar_url'] as String?,
       vehicleName: (vehicleName ?? '').isEmpty ? null : vehicleName,
       vehiclePlate: captainProfile?['vehicle_plate'] as String?,
       pickupLocation: row['pickup_address'] as String? ?? '',

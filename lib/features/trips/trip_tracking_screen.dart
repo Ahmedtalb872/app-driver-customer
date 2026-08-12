@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/colors.dart';
 import '../../core/services/ride_repository.dart';
+import '../../core/widgets/real_map_widget.dart';
 import '../../models/models.dart';
 import '../../providers/app_state_provider.dart';
 import 'trip_summary_screen.dart';
@@ -116,7 +117,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
           ? _buildSearchingView()
           : Stack(
               children: [
-                Positioned.fill(child: _buildStatusBackground(trip)),
+                Positioned.fill(child: _buildLiveMap(trip)),
                 Positioned(
                   top: 0,
                   left: 0,
@@ -201,26 +202,26 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
     );
   }
 
-  /// Decorative full-screen backdrop behind the status banner/bottom card,
-  /// standing in for the live map for the rest of the trip (same spirit as
-  /// [_buildSearchingView]'s pulse for the "searching" status).
-  Widget _buildStatusBackground(Trip trip) {
-    final (icon, color) = switch (trip.status) {
-      TripStatus.accepted => (Icons.two_wheeler_rounded, AppColors.primary),
-      TripStatus.enRoute => (Icons.two_wheeler_rounded, AppColors.primary),
-      TripStatus.arrived => (Icons.flag_rounded, AppColors.success),
-      TripStatus.started => (Icons.alt_route_rounded, AppColors.primary),
-      _ => (Icons.directions_car_rounded, AppColors.secondaryText),
-    };
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [AppColors.background, color.withOpacity(0.12)],
-        ),
-      ),
-      child: Center(child: Icon(icon, size: 96, color: color.withOpacity(0.35))),
+  /// The real map behind the status banner/bottom card, from the moment a
+  /// captain is assigned onward - pickup pin always shown, destination pin
+  /// added once there is a real one (never for an open trip - it has no
+  /// destination yet by definition), and the captain's actual live
+  /// position (see [Trip.captainLat]/[captainLng], pushed by the captain
+  /// app) when known. Falls back to [RealMapWidget]'s own simulated
+  /// pickup<->destination animation only when no real position has arrived
+  /// yet, rather than showing nothing.
+  Widget _buildLiveMap(Trip trip) {
+    final hasDestination = !trip.isOpenTrip;
+    return RealMapWidget(
+      status: trip.status,
+      showRoute: true,
+      animateCar: trip.captainLat == null,
+      pickupLat: trip.pickupLat,
+      pickupLng: trip.pickupLng,
+      destLat: hasDestination ? trip.destLat : null,
+      destLng: hasDestination ? trip.destLng : null,
+      carLat: trip.captainLat,
+      carLng: trip.captainLng,
     );
   }
 
@@ -308,44 +309,94 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
   }
 
   Widget _buildCaptainCard(Trip trip) {
+    final avatarUrl = trip.captainAvatar;
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         CircleAvatar(
           radius: 26,
           backgroundColor: AppColors.primary.withOpacity(0.1),
-          child: Text(
-            trip.captainName!.isNotEmpty ? trip.captainName!.substring(0, 1) : '؟',
-            style: const TextStyle(
-              fontFamily: 'Cairo',
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-              color: AppColors.primary,
-            ),
-          ),
+          backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
+              ? NetworkImage(avatarUrl)
+              : null,
+          child: (avatarUrl != null && avatarUrl.isNotEmpty)
+              ? null
+              : Text(
+                  trip.captainName!.isNotEmpty
+                      ? trip.captainName!.substring(0, 1)
+                      : '؟',
+                  style: const TextStyle(
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: AppColors.primary,
+                  ),
+                ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                trip.captainName!,
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      trip.captainName!,
+                      style: const TextStyle(
+                        fontFamily: 'Cairo',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  if (trip.price > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.accent.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${trip.price.toStringAsFixed(0)} أوقية',
+                        style: const TextStyle(
+                          fontFamily: 'Cairo',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: AppColors.secondary,
+                        ),
+                      ),
+                    ),
+                ],
               ),
               if (trip.vehicleName != null || trip.vehiclePlate != null)
-                Text(
-                  [
-                    trip.vehicleName,
-                    trip.vehiclePlate,
-                  ].where((s) => (s ?? '').isNotEmpty).join(' - '),
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 11,
-                    color: AppColors.secondaryText,
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    [
+                      trip.vehicleName,
+                      trip.vehiclePlate,
+                    ].where((s) => (s ?? '').isNotEmpty).join(' - '),
+                    style: const TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 11,
+                      color: AppColors.secondaryText,
+                    ),
+                  ),
+                ),
+              if (trip.captainPhone != null && trip.captainPhone!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    trip.captainPhone!,
+                    style: const TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 11,
+                      color: AppColors.secondaryText,
+                    ),
                   ),
                 ),
             ],
