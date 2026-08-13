@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
+import '../../core/services/avatar_repository.dart';
 import '../../providers/app_state_provider.dart';
 import '../wallet/wallet_screen.dart';
 import '../trips/my_trips_screen.dart';
@@ -8,9 +10,78 @@ import '../support/support_screen.dart';
 import '../support/settings_screen.dart';
 import '../support/about_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   final bool showAppBar;
   const ProfileScreen({super.key, this.showAppBar = false});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final _picker = ImagePicker();
+  String? _avatarUrl;
+  bool _isUploadingAvatar = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAvatar();
+  }
+
+  Future<void> _loadAvatar() async {
+    try {
+      final url = await AvatarRepository.instance.fetchMyAvatarUrl();
+      if (mounted) setState(() => _avatarUrl = url);
+    } catch (_) {
+      // Best effort - the avatar just falls back to the initial letter.
+    }
+  }
+
+  Future<void> _pickAndUploadAvatar() async {
+    final XFile? picked = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
+    );
+    if (picked == null || !mounted) return;
+
+    setState(() => _isUploadingAvatar = true);
+    try {
+      final bytes = await picked.readAsBytes();
+      final mimeType = picked.mimeType ?? _guessMimeType(picked.path);
+      final url = await AvatarRepository.instance.uploadCustomerAvatar(
+        bytes: bytes,
+        mimeType: mimeType,
+      );
+      if (!mounted) return;
+      setState(() => _avatarUrl = url);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'تعذر رفع الصورة الآن، تحقق من الاتصال وحاول مرة أخرى.',
+            style: TextStyle(fontFamily: 'Cairo'),
+          ),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isUploadingAvatar = false);
+    }
+  }
+
+  /// Best-effort fallback when the picker doesn't report a mime type
+  /// (mainly older Android/iOS versions) - guesses from the file
+  /// extension, defaulting to jpeg for anything unrecognized.
+  String _guessMimeType(String path) {
+    final lower = path.toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    return 'image/jpeg';
+  }
 
   void _showEditNameDialog(BuildContext context, AppStateProvider provider) {
     final controller = TextEditingController(text: provider.customerName);
@@ -57,7 +128,7 @@ class ProfileScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: showAppBar
+      appBar: widget.showAppBar
           ? AppBar(
               leading: Padding(
                 padding: const EdgeInsets.all(8.0),
@@ -73,7 +144,7 @@ class ProfileScreen extends StatelessWidget {
         padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
-            if (!showAppBar) const SizedBox(height: 20),
+            if (!widget.showAppBar) const SizedBox(height: 20),
 
             _buildProfileHeader(context, provider, userName, userPhone),
             const SizedBox(height: 24),
@@ -96,17 +167,63 @@ class ProfileScreen extends StatelessWidget {
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
-            CircleAvatar(
-              radius: 46,
-              backgroundColor: AppColors.primary.withOpacity(0.1),
-              child: Text(
-                name.isNotEmpty ? name.substring(0, 1) : '؟',
-                style: const TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
-                  fontFamily: 'Cairo',
-                ),
+            GestureDetector(
+              onTap: _isUploadingAvatar ? null : _pickAndUploadAvatar,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  CircleAvatar(
+                    radius: 46,
+                    backgroundColor: AppColors.primary.withOpacity(0.1),
+                    backgroundImage: (_avatarUrl != null && _avatarUrl!.isNotEmpty)
+                        ? NetworkImage(_avatarUrl!)
+                        : null,
+                    child: (_avatarUrl != null && _avatarUrl!.isNotEmpty)
+                        ? null
+                        : Text(
+                            name.isNotEmpty ? name.substring(0, 1) : '؟',
+                            style: const TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                              fontFamily: 'Cairo',
+                            ),
+                          ),
+                  ),
+                  if (_isUploadingAvatar)
+                    const Positioned.fill(
+                      child: CircleAvatar(
+                        backgroundColor: Colors.black38,
+                        child: SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  Positioned(
+                    bottom: -2,
+                    left: -2,
+                    child: Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: const BoxDecoration(
+                        color: AppColors.accent,
+                        shape: BoxShape.circle,
+                        border: Border.fromBorderSide(
+                          BorderSide(color: Colors.white, width: 2),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.camera_alt_rounded,
+                        size: 14,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),
