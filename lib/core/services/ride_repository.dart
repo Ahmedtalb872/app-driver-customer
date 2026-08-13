@@ -72,6 +72,34 @@ class RideRepository {
     return _rowToTrip(row);
   }
 
+  static const List<String> _activeStatuses = [
+    'searching',
+    'accepted',
+    'arrived',
+    'in_progress',
+  ];
+
+  /// This customer's current in-progress trip, if any - null otherwise.
+  /// [AppStateProvider.activeTrip] only ever lives in memory (this app has
+  /// no local persistence of it at all), so a fresh app start/restart -
+  /// e.g. after losing connectivity mid-trip - has no way to know a trip is
+  /// still running server-side without this. See
+  /// [CustomerHomeScreen._resumeActiveTripIfAny], the only caller.
+  Future<Trip?> fetchActiveTrip() async {
+    final customerId = _client.auth.currentUser?.id;
+    if (customerId == null) return null;
+
+    final rows = await _client
+        .from('trips')
+        .select(_fullJoin)
+        .eq('customer_id', customerId)
+        .inFilter('status', _activeStatuses)
+        .order('requested_at', ascending: false)
+        .limit(1);
+    final list = List<Map<String, dynamic>>.from(rows);
+    return list.isEmpty ? null : _rowToTrip(list.first);
+  }
+
   // -------------------------------------------------------------------
   // Customer: request a trip (normal or Open Trip).
   // -------------------------------------------------------------------

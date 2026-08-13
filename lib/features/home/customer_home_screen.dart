@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/constants/colors.dart';
 import '../../core/services/geocoding_service.dart';
+import '../../core/services/ride_repository.dart';
 import '../../models/models.dart';
 import '../../providers/app_state_provider.dart';
 import '../destinations/data/models/destination_suggestion.dart';
@@ -36,6 +37,32 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   void initState() {
     super.initState();
     _determinePickup();
+    _resumeActiveTripIfAny();
+  }
+
+  /// Best-effort: [AppStateProvider.activeTrip] only ever lives in memory -
+  /// this app has no local persistence of it at all - so if this customer
+  /// already has a trip running server-side that this fresh screen load
+  /// doesn't know about yet (the app was restarted after losing
+  /// connectivity mid-trip, or simply relaunched), there would otherwise be
+  /// no way back into [TripTrackingScreen] even though the trip is still
+  /// very much active. build() below already pushes it whenever
+  /// provider.activeTrip holds a non-terminal trip; this just makes sure
+  /// that field actually gets populated here too, not only by
+  /// [TripTrackingScreen] itself once already open.
+  Future<void> _resumeActiveTripIfAny() async {
+    if (!mounted) return;
+    final provider = context.read<AppStateProvider>();
+    if (provider.activeTrip != null) return;
+    try {
+      final trip = await RideRepository.instance.fetchActiveTrip();
+      if (trip != null && mounted) {
+        provider.setActiveTripFromBackend(trip);
+      }
+    } catch (_) {
+      // Best effort - a fetch failure just leaves the customer on the home
+      // screen, same as if they truly had no active trip.
+    }
   }
 
   Future<void> _determinePickup() async {
