@@ -110,14 +110,13 @@ class _DeliveryRequestScreenState extends State<DeliveryRequestScreen> {
       if (config != null) {
         final baseFare = (config['base_fare'] as num).toDouble();
         final pricePerKm = (config['price_per_km'] as num).toDouble();
-        final pricePerMinute = (config['price_per_minute'] as num).toDouble();
         final minimumFare = (config['minimum_fare'] as num).toDouble();
         final surge = (config['surge_multiplier'] as num?)?.toDouble() ?? 1.0;
-        final raw =
-            (baseFare +
-                _route.distanceKm * pricePerKm +
-                _route.durationMinutes * pricePerMinute) *
-            surge;
+        // Distance-based only, no time component - a delivery is always
+        // trip_type = 'normal' server-side too, see
+        // 20260813000070_normal_trip_price_ignores_time.sql, so this
+        // estimate is never higher than what actually gets charged.
+        final raw = (baseFare + _route.distanceKm * pricePerKm) * surge;
         _estimatedPrice = raw < minimumFare ? minimumFare : raw;
       }
     } catch (_) {

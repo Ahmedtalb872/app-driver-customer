@@ -166,14 +166,13 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
       if (config != null && route != null) {
         final baseFare = (config['base_fare'] as num).toDouble();
         final pricePerKm = (config['price_per_km'] as num).toDouble();
-        final pricePerMinute = (config['price_per_minute'] as num).toDouble();
         final minimumFare = (config['minimum_fare'] as num).toDouble();
         final surge = (config['surge_multiplier'] as num?)?.toDouble() ?? 1.0;
-        final raw =
-            (baseFare +
-                route.distanceKm * pricePerKm +
-                route.durationMinutes * pricePerMinute) *
-            surge;
+        // Distance-based only, no time component - matches
+        // captain_end_trip's normal-ride formula
+        // (20260813000070_normal_trip_price_ignores_time.sql) so this
+        // estimate is never higher than what actually gets charged.
+        final raw = (baseFare + route.distanceKm * pricePerKm) * surge;
         _estimatedPrice = raw < minimumFare ? minimumFare : raw;
       }
     } catch (_) {
