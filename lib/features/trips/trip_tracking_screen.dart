@@ -359,11 +359,6 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
       children: [
         Row(
           children: [
-            IconButton.filledTonal(
-              onPressed: () => _callCaptain(trip.captainPhone),
-              icon: const Icon(Icons.call_rounded),
-            ),
-            const Spacer(),
             if (trip.price > 0)
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -384,6 +379,11 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
                   ),
                 ),
               ),
+            const Spacer(),
+            IconButton.filledTonal(
+              onPressed: () => _callCaptain(trip.captainPhone),
+              icon: const Icon(Icons.call_rounded),
+            ),
           ],
         ),
         const SizedBox(height: 14),
