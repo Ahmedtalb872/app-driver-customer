@@ -258,10 +258,86 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+            child: _buildLocationBar(),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             child: _buildServiceCards(),
           ),
         ],
+        ),
+      ),
+    );
+  }
+
+  /// The location "خانة تحديث الموقع" the home screen shows the detected
+  /// pickup address in, with a refresh action - separate from the compact
+  /// icon-only button in the logo row above (kept for a quick refresh
+  /// without needing to read the address), this is the only place on the
+  /// home screen that actually shows *where* the app currently thinks the
+  /// customer is before they ever open the trip planner.
+  Widget _buildLocationBar() {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      elevation: 4,
+      shadowColor: AppColors.primaryDark.withOpacity(0.15),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: _isLocating ? null : _determinePickup,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              const _IconBadge(
+                icon: Icons.location_on_rounded,
+                color: AppColors.success,
+                size: 36,
+                iconSize: 18,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'موقعك الحالي',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 10.5,
+                        color: AppColors.secondaryText,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _isLocating ? 'جارٍ تحديد الموقع...' : _pickupAddress,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontFamily: 'Cairo',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: AppColors.darkText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              _isLocating
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(
+                      Icons.refresh_rounded,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
+            ],
+          ),
         ),
       ),
     );
