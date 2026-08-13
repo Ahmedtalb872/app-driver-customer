@@ -320,6 +320,23 @@ class RideRepository {
         .eq('id', tripId);
   }
 
+  /// Customer rates the captain (1-5 stars, optional note) right after a
+  /// completed trip - see `customer_rate_trip`
+  /// (20260812000067_customer_rate_trip.sql), which also folds this into
+  /// the captain's running `captains.rating` average server-side. Throws if
+  /// this trip was already rated (the RPC is idempotent-guarded, not
+  /// silently a no-op) - callers should only ever call this once per trip.
+  Future<void> rateTrip(String tripId, {required int rating, String? note}) async {
+    await _client.rpc(
+      'customer_rate_trip',
+      params: {
+        'p_trip_id': tripId,
+        'p_rating': rating,
+        'p_note': note,
+      },
+    );
+  }
+
   Future<void> setCaptainOnline(bool isOnline) async {
     await _client.rpc('captain_set_online', params: {'p_is_online': isOnline});
   }
