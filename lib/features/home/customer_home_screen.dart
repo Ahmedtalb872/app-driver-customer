@@ -146,6 +146,21 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     );
   }
 
+  /// "سلفلي" (pay-later credit) isn't its own request flow - it's a
+  /// payment method picked at request time (see
+  /// [RequestRideScreen._buildSelefliOption]), only ever offered once an
+  /// estimated price is known for a normal ride. WalletScreen already shows
+  /// a customer's real Selefli status (eligible/outstanding debt/how many
+  /// more rides until eligible - see its `_buildSelefliCard`), so that's
+  /// the most useful thing this home-screen entry point can open directly.
+  void _openSelefli() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const WalletScreen(showAppBar: true),
+      ),
+    );
+  }
+
   void _openCaptainsBrowse() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => const CaptainsBrowseScreen()),
@@ -231,7 +246,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       children: [
         _ServiceCard(
           onTap: _openTripPlanner,
-          leadingColor: AppColors.primary,
+          leadingColor: AppColors.accent,
           leadingIcon: Icons.search_rounded,
           title: 'إلى أين تريد الذهاب؟',
           subtitle: 'مشوار عادي أو مفتوح',
@@ -239,7 +254,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         const SizedBox(height: 12),
         _ServiceCard(
           onTap: _startDeliveryRequest,
-          leadingColor: AppColors.secondary,
+          leadingColor: AppColors.accent,
           leadingIcon: Icons.local_shipping_rounded,
           title: 'توصيل طرد',
           subtitle: 'أريد توصيل طرد بدل ركوب مشوار',
@@ -247,10 +262,18 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         const SizedBox(height: 12),
         _ServiceCard(
           onTap: _openCaptainsBrowse,
-          leadingColor: AppColors.primary,
+          leadingColor: AppColors.accent,
           leadingIcon: Icons.handshake_rounded,
           title: 'اشتراك شهري مع كابتن',
           subtitle: 'مشاوير بلا مقابل إضافي',
+        ),
+        const SizedBox(height: 12),
+        _ServiceCard(
+          onTap: _openSelefli,
+          leadingColor: AppColors.accent,
+          leadingIcon: Icons.payments_rounded,
+          title: 'سلفلي',
+          subtitle: 'اطلب مشوارك الآن وادفع لاحقاً',
         ),
       ],
     );
