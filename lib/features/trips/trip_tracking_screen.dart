@@ -227,10 +227,10 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
 
   Widget _buildTopBanner(Trip trip) {
     final (text, color) = switch (trip.status) {
-      TripStatus.accepted => ('الكابتن في الطريق إليك', AppColors.primary),
-      TripStatus.enRoute => ('الكابتن في الطريق إليك', AppColors.primary),
+      TripStatus.accepted => ('الكابتن في الطريق إليك', AppColors.accent),
+      TripStatus.enRoute => ('الكابتن في الطريق إليك', AppColors.accent),
       TripStatus.arrived => ('وصل الكابتن إلى موقعك', AppColors.success),
-      TripStatus.started => ('الرحلة جارية الآن', AppColors.primary),
+      TripStatus.started => ('الرحلة جارية الآن', AppColors.accent),
       _ => (trip.statusArabic, AppColors.secondaryText),
     };
     return Material(
@@ -264,10 +264,11 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
 
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 14)],
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        border: Border(top: BorderSide(color: AppColors.accent, width: 4)),
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 14)],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -313,25 +314,34 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CircleAvatar(
-          radius: 26,
-          backgroundColor: AppColors.primary.withOpacity(0.1),
-          backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
-              ? NetworkImage(avatarUrl)
-              : null,
-          child: (avatarUrl != null && avatarUrl.isNotEmpty)
-              ? null
-              : Text(
-                  trip.captainName!.isNotEmpty
-                      ? trip.captainName!.substring(0, 1)
-                      : '؟',
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    color: AppColors.primary,
+        Container(
+          padding: const EdgeInsets.all(2.5),
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.fromBorderSide(
+              BorderSide(color: AppColors.accent, width: 2.5),
+            ),
+          ),
+          child: CircleAvatar(
+            radius: 26,
+            backgroundColor: AppColors.primary.withOpacity(0.1),
+            backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
+                ? NetworkImage(avatarUrl)
+                : null,
+            child: (avatarUrl != null && avatarUrl.isNotEmpty)
+                ? null
+                : Text(
+                    trip.captainName!.isNotEmpty
+                        ? trip.captainName!.substring(0, 1)
+                        : '؟',
+                    style: const TextStyle(
+                      fontFamily: 'Cairo',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: AppColors.primary,
+                    ),
                   ),
-                ),
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -393,9 +403,9 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
                       vertical: 3,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.background,
+                      color: AppColors.accent.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: AppColors.accent),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
