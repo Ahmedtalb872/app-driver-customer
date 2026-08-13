@@ -131,6 +131,51 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
       _loadDocuments();
     } catch (_) {
       _showDocError();
+      return;
+    }
+
+    // Best-effort, separate from the approval above (which already
+    // succeeded) - a failure here just leaves the customer-facing photo
+    // unset, exactly as it was before this document existed, rather than
+    // undoing a real approval over a copy/sync problem.
+    if (doc.documentType == DocumentType.profilePhoto) {
+      try {
+        await _repository.syncApprovedProfilePhotoToAvatar(doc);
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'تم اعتماد المستند، لكن تعذر تعيينه صورةً ظاهرة للزبون. حاول مجدداً لاحقاً.',
+                style: TextStyle(fontFamily: 'Cairo'),
+              ),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  /// Manual re-trigger for a "profile_photo" document approved before this
+  /// sync existed (or one that failed to sync the first time) - the
+  /// [_approveDocument] flow above already does this automatically for a
+  /// fresh approval, but that's a one-time hook, not something that reruns
+  /// on its own for already-approved documents.
+  Future<void> _setAsAvatar(CaptainDocument doc) async {
+    try {
+      await _repository.syncApprovedProfilePhotoToAvatar(doc);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'تم تعيين الصورة لتظهر للزبون.',
+              style: TextStyle(fontFamily: 'Cairo'),
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) _showDocError();
     }
   }
 
@@ -315,6 +360,9 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
                       onRequestReplacement: _documents[type] == null
                           ? null
                           : () => _requestReplacement(_documents[type]!),
+                      onSetAsAvatar: _documents[type] == null
+                          ? null
+                          : () => _setAsAvatar(_documents[type]!),
                     ),
                   ),
                 ),
@@ -476,6 +524,7 @@ class _AdminDocumentCard extends StatelessWidget {
   final VoidCallback? onApprove;
   final VoidCallback? onReject;
   final VoidCallback? onRequestReplacement;
+  final VoidCallback? onSetAsAvatar;
 
   const _AdminDocumentCard({
     required this.documentType,
@@ -483,6 +532,7 @@ class _AdminDocumentCard extends StatelessWidget {
     required this.onApprove,
     required this.onReject,
     required this.onRequestReplacement,
+    required this.onSetAsAvatar,
   });
 
   @override
@@ -590,6 +640,13 @@ class _AdminDocumentCard extends StatelessWidget {
                         _actionChip('اعتماد', AdminColors.success, onApprove),
                       if (doc.status != DocumentStatus.rejected)
                         _actionChip('رفض', AdminColors.error, onReject),
+                      if (documentType == DocumentType.profilePhoto &&
+                          doc.status == DocumentStatus.approved)
+                        _actionChip(
+                          'تعيين كصورة للزبون',
+                          AdminColors.primary,
+                          onSetAsAvatar,
+                        ),
                       _actionChip(
                         'طلب استبدال',
                         AdminColors.warning,
