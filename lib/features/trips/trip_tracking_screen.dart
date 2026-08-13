@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/colors.dart';
 import '../../core/services/ride_repository.dart';
+import '../../core/services/route_estimator.dart';
 import '../../core/services/trip_foreground_service.dart';
 import '../../core/widgets/real_map_widget.dart';
 import '../../models/models.dart';
@@ -25,8 +27,11 @@ class TripTrackingScreen extends StatefulWidget {
 }
 
 class _TripTrackingScreenState extends State<TripTrackingScreen> {
+  static const _routeEstimator = HaversineRouteEstimator();
+
   StreamSubscription<Trip?>? _sub;
   Trip? _trip;
+  RouteEstimate? _liveEstimate;
   bool _handledTerminal = false;
   bool _isCancelling = false;
 
@@ -47,9 +52,39 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
     super.dispose();
   }
 
+  /// Straight-line ETA/remaining-distance from the captain's last known
+  /// position to whatever point is currently relevant: the pickup while the
+  /// captain is still on the way, or the destination once the ride is under
+  /// way - except for an open trip, which has no fixed destination, so
+  /// there is nothing to estimate toward once it starts (the bottom card
+  /// falls back to elapsed time / distance traveled so far instead).
+  RouteEstimate? _computeLiveEstimate(Trip trip) {
+    final captainLat = trip.captainLat;
+    final captainLng = trip.captainLng;
+    if (captainLat == null || captainLng == null) return null;
+
+    final targetingPickup =
+        trip.status == TripStatus.accepted ||
+        trip.status == TripStatus.enRoute ||
+        trip.status == TripStatus.arrived;
+    final targetingDestination = trip.status == TripStatus.started && !trip.isOpenTrip;
+    if (!targetingPickup && !targetingDestination) return null;
+
+    final target = targetingPickup
+        ? LatLng(trip.pickupLat, trip.pickupLng)
+        : LatLng(trip.destLat, trip.destLng);
+    return _routeEstimator.estimate(
+      pickup: LatLng(captainLat, captainLng),
+      destination: target,
+    );
+  }
+
   void _onTrip(Trip? trip) {
     if (!mounted) return;
-    setState(() => _trip = trip);
+    setState(() {
+      _trip = trip;
+      _liveEstimate = trip != null ? _computeLiveEstimate(trip) : null;
+    });
     if (trip == null || _handledTerminal) return;
 
     context.read<AppStateProvider>().setActiveTripFromBackend(trip);
@@ -319,145 +354,245 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
 
   Widget _buildCaptainCard(Trip trip) {
     final avatarUrl = trip.captainAvatar;
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.all(2.5),
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.fromBorderSide(
-              BorderSide(color: AppColors.accent, width: 2.5),
+        Row(
+          children: [
+            IconButton.filledTonal(
+              onPressed: () => _callCaptain(trip.captainPhone),
+              icon: const Icon(Icons.call_rounded),
             ),
-          ),
-          child: CircleAvatar(
-            radius: 26,
-            backgroundColor: AppColors.primary.withOpacity(0.1),
-            backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
-                ? NetworkImage(avatarUrl)
-                : null,
-            child: (avatarUrl != null && avatarUrl.isNotEmpty)
-                ? null
-                : Text(
-                    trip.captainName!.isNotEmpty
-                        ? trip.captainName!.substring(0, 1)
-                        : '؟',
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      color: AppColors.primary,
-                    ),
+            const Spacer(),
+            if (trip.price > 0)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${trip.price.toStringAsFixed(0)} أوقية',
+                  style: const TextStyle(
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: AppColors.secondary,
                   ),
-          ),
+                ),
+              ),
+          ],
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      trip.captainName!,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                  if (trip.price > 0)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.accent.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '${trip.price.toStringAsFixed(0)} أوقية',
+        const SizedBox(height: 14),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(2.5),
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.fromBorderSide(
+                  BorderSide(color: AppColors.accent, width: 2.5),
+                ),
+              ),
+              child: CircleAvatar(
+                radius: 26,
+                backgroundColor: AppColors.primary.withOpacity(0.1),
+                backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
+                    ? NetworkImage(avatarUrl)
+                    : null,
+                child: (avatarUrl != null && avatarUrl.isNotEmpty)
+                    ? null
+                    : Text(
+                        trip.captainName!.isNotEmpty
+                            ? trip.captainName!.substring(0, 1)
+                            : '؟',
                         style: const TextStyle(
                           fontFamily: 'Cairo',
                           fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          color: AppColors.primary,
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    trip.captainName!,
+                    style: const TextStyle(
+                      fontFamily: 'Cairo',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  if (trip.vehicleName != null && trip.vehicleName!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        trip.vehicleName!,
+                        style: const TextStyle(
+                          fontFamily: 'Cairo',
                           fontSize: 12,
-                          color: AppColors.secondary,
+                          color: AppColors.secondaryText,
                         ),
                       ),
                     ),
                 ],
               ),
-              if (trip.vehicleName != null && trip.vehicleName!.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Text(
-                    trip.vehicleName!,
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 11,
-                      color: AppColors.secondaryText,
-                    ),
+            ),
+          ],
+        ),
+        if (trip.vehiclePlate != null && trip.vehiclePlate!.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.accent.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.accent, width: 1.5),
+            ),
+            child: Column(
+              children: [
+                const Text(
+                  'رقم اللوحة',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 10,
+                    color: AppColors.secondaryText,
                   ),
                 ),
-              if (trip.vehiclePlate != null && trip.vehiclePlate!.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.accent.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: AppColors.accent),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          'رقم اللوحة',
-                          style: TextStyle(
-                            fontFamily: 'Cairo',
-                            fontSize: 10,
-                            color: AppColors.secondaryText,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          trip.vehiclePlate!,
-                          style: const TextStyle(
-                            fontFamily: 'Cairo',
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.darkText,
-                          ),
-                        ),
-                      ],
-                    ),
+                const SizedBox(height: 2),
+                Text(
+                  trip.vehiclePlate!,
+                  style: const TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                    color: AppColors.darkText,
                   ),
                 ),
-              if (trip.captainPhone != null && trip.captainPhone!.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Text(
-                    trip.captainPhone!,
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 11,
-                      color: AppColors.secondaryText,
-                    ),
+              ],
+            ),
+          ),
+        ],
+        if (trip.captainPhone != null && trip.captainPhone!.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.phone_rounded,
+                  size: 14,
+                  color: AppColors.secondaryText,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  trip.captainPhone!,
+                  style: const TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 12,
+                    color: AppColors.secondaryText,
                   ),
                 ),
-            ],
+              ],
+            ),
+          ),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 14),
+          child: Divider(height: 1),
+        ),
+        _buildStatTileRow(trip),
+      ],
+    );
+  }
+
+  /// Three fixed-width tiles: captain rating (always shown, sourced from
+  /// [Trip.captainRating] regardless of trip type/phase), then ETA and
+  /// remaining distance while there is a fixed point to head toward
+  /// (pickup before the ride starts, destination during a normal ride) -
+  /// or, once an open trip (no fixed destination) is under way, elapsed
+  /// time and distance traveled so far instead.
+  Widget _buildStatTileRow(Trip trip) {
+    final estimate = _liveEstimate;
+    final isOpenInProgress = trip.status == TripStatus.started && trip.isOpenTrip;
+
+    String etaLabel = 'الوصول';
+    String etaValue = '—';
+    String distanceLabel = 'المسافة المتبقية';
+    String distanceValue = '—';
+
+    if (estimate != null) {
+      etaValue = '${estimate.durationMinutes} د';
+      distanceValue = '${estimate.distanceKm.toStringAsFixed(1)} كم';
+    } else if (isOpenInProgress) {
+      etaLabel = 'مدة المشوار';
+      final startedAt = trip.startedAt;
+      if (startedAt != null) {
+        final minutes = DateTime.now().difference(startedAt).inMinutes;
+        etaValue = '$minutes د';
+      }
+      distanceLabel = 'المسافة المقطوعة';
+      final traveled = trip.liveTraveledDistanceKm;
+      if (traveled != null) {
+        distanceValue = '${traveled.toStringAsFixed(1)} كم';
+      }
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          child: _buildStatTile(
+            Icons.star_rounded,
+            'تقييم الكابتن',
+            trip.captainRating != null
+                ? trip.captainRating!.toStringAsFixed(1)
+                : '—',
           ),
         ),
-        IconButton.filledTonal(
-          onPressed: () => _callCaptain(trip.captainPhone),
-          icon: const Icon(Icons.call_rounded),
+        Expanded(child: _buildStatTile(Icons.schedule_rounded, etaLabel, etaValue)),
+        Expanded(
+          child: _buildStatTile(
+            Icons.directions_car_rounded,
+            distanceLabel,
+            distanceValue,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatTile(IconData icon, String label, String value) {
+    return Column(
+      children: [
+        Icon(icon, size: 18, color: AppColors.accent),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            fontFamily: 'Cairo',
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+            color: AppColors.darkText,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontFamily: 'Cairo',
+            fontSize: 10,
+            color: AppColors.secondaryText,
+          ),
         ),
       ],
     );

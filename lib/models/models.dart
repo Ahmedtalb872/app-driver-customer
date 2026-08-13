@@ -59,6 +59,7 @@ class Trip {
   final String? captainName;
   final String? captainPhone;
   final String? captainAvatar;
+  final double? captainRating;
   final String? vehiclePlate;
   final String? vehicleName;
   final String pickupLocation;
@@ -158,6 +159,7 @@ class Trip {
     this.captainName,
     this.captainPhone,
     this.captainAvatar,
+    this.captainRating,
     this.vehiclePlate,
     this.vehicleName,
     required this.pickupLocation,
@@ -250,6 +252,7 @@ class Trip {
       captainName: captainProfile?['full_name'] as String?,
       captainPhone: captainProfile?['phone'] as String?,
       captainAvatar: captainProfile?['avatar_url'] as String?,
+      captainRating: (captainProfile?['rating'] as num?)?.toDouble(),
       vehicleName: (vehicleName ?? '').isEmpty ? null : vehicleName,
       vehiclePlate: captainProfile?['vehicle_plate'] as String?,
       pickupLocation: row['pickup_address'] as String? ?? '',
@@ -345,6 +348,7 @@ class Trip {
     String? captainName,
     String? captainPhone,
     String? captainAvatar,
+    double? captainRating,
     String? vehiclePlate,
     String? vehicleName,
     String? pickupLocation,
@@ -396,6 +400,7 @@ class Trip {
       captainName: captainName ?? this.captainName,
       captainPhone: captainPhone ?? this.captainPhone,
       captainAvatar: captainAvatar ?? this.captainAvatar,
+      captainRating: captainRating ?? this.captainRating,
       vehiclePlate: vehiclePlate ?? this.vehiclePlate,
       vehicleName: vehicleName ?? this.vehicleName,
       pickupLocation: pickupLocation ?? this.pickupLocation,
