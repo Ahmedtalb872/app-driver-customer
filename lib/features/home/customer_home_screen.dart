@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
@@ -24,7 +25,8 @@ class CustomerHomeScreen extends StatefulWidget {
   State<CustomerHomeScreen> createState() => _CustomerHomeScreenState();
 }
 
-class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
+class _CustomerHomeScreenState extends State<CustomerHomeScreen>
+    with WidgetsBindingObserver {
   int _currentIndex = 0;
   String? _pushedActiveTripId;
 
@@ -36,20 +38,44 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _determinePickup();
     _resumeActiveTripIfAny();
   }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// Nothing else in this app ever reacts to app-lifecycle transitions -
+  /// this screen is the sole exception, specifically so a still-active trip
+  /// isn't missed on the far more common case of the app being backgrounded
+  /// and later resumed *without* the process actually restarting (a full
+  /// restart already re-triggers [_resumeActiveTripIfAny] via [initState],
+  /// but that alone left a gap: the OS can resume this exact same
+  /// long-lived screen instance - initState never runs again - after the
+  /// customer switched away mid-request and the trip only became active
+  /// while they were gone).
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _resumeActiveTripIfAny();
+    }
+  }
+
   /// Best-effort: [AppStateProvider.activeTrip] only ever lives in memory -
   /// this app has no local persistence of it at all - so if this customer
-  /// already has a trip running server-side that this fresh screen load
-  /// doesn't know about yet (the app was restarted after losing
-  /// connectivity mid-trip, or simply relaunched), there would otherwise be
-  /// no way back into [TripTrackingScreen] even though the trip is still
-  /// very much active. build() below already pushes it whenever
-  /// provider.activeTrip holds a non-terminal trip; this just makes sure
-  /// that field actually gets populated here too, not only by
-  /// [TripTrackingScreen] itself once already open.
+  /// already has a trip running server-side that this screen doesn't know
+  /// about yet (the app was restarted after losing connectivity mid-trip,
+  /// simply relaunched, or just resumed from the background - see
+  /// [didChangeAppLifecycleState]), there would otherwise be no way back
+  /// into [TripTrackingScreen] even though the trip is still very much
+  /// active. build() below already pushes it whenever provider.activeTrip
+  /// holds a non-terminal trip; this just makes sure that field actually
+  /// gets populated here too, not only by [TripTrackingScreen] itself once
+  /// already open.
   Future<void> _resumeActiveTripIfAny() async {
     if (!mounted) return;
     final provider = context.read<AppStateProvider>();
@@ -59,9 +85,13 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       if (trip != null && mounted) {
         provider.setActiveTripFromBackend(trip);
       }
-    } catch (_) {
+    } catch (e) {
       // Best effort - a fetch failure just leaves the customer on the home
-      // screen, same as if they truly had no active trip.
+      // screen, same as if they truly had no active trip - but still worth
+      // a trace for anyone debugging with the device connected, since this
+      // silently doing nothing is exactly the failure mode that's hardest
+      // to notice otherwise.
+      debugPrint('CustomerHomeScreen: fetchActiveTrip failed: $e');
     }
   }
 
