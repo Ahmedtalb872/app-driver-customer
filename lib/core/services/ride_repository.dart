@@ -85,6 +85,15 @@ class RideRepository {
   /// e.g. after losing connectivity mid-trip - has no way to know a trip is
   /// still running server-side without this. See
   /// [CustomerHomeScreen._resumeActiveTripIfAny], the only caller.
+  ///
+  /// A 'searching' trip whose [Trip.requestExpiresAt] has already passed is
+  /// skipped rather than treated as active: nothing in this app ever calls
+  /// [expireTrip] on its own (no captain accepted it, so nothing else would
+  /// either), so an old, never-accepted request can otherwise sit in
+  /// 'searching' forever and get resumed into on every single app open.
+  /// Found expired requests are cleaned up opportunistically here, the same
+  /// "client calls it when it happens to notice" pattern already used
+  /// elsewhere in this project (there's no pg_cron backing this app).
   Future<Trip?> fetchActiveTrip() async {
     final customerId = _client.auth.currentUser?.id;
     if (customerId == null) return null;
@@ -95,9 +104,21 @@ class RideRepository {
         .eq('customer_id', customerId)
         .inFilter('status', _activeStatuses)
         .order('requested_at', ascending: false)
-        .limit(1);
-    final list = List<Map<String, dynamic>>.from(rows);
-    return list.isEmpty ? null : _rowToTrip(list.first);
+        .limit(5);
+
+    final now = DateTime.now();
+    for (final row in List<Map<String, dynamic>>.from(rows)) {
+      final trip = _rowToTrip(row);
+      final expiresAt = trip.requestExpiresAt;
+      if (trip.status == TripStatus.searching &&
+          expiresAt != null &&
+          expiresAt.isBefore(now)) {
+        unawaited(expireTrip(trip.id));
+        continue;
+      }
+      return trip;
+    }
+    return null;
   }
 
   // -------------------------------------------------------------------
