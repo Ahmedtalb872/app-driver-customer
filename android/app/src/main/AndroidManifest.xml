@@ -16,6 +16,17 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- Voice search on the district/place map picker (speech_to_text). -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- TripForegroundService: keeps the process alive (with a persistent
+         notification, Android's own requirement for this) while a trip is
+         active, so the OS can't kill the app in the background and
+         silently break trip tracking/realtime updates. FOREGROUND_SERVICE
+         is required on Android 9+ for any foreground service at all;
+         FOREGROUND_SERVICE_DATA_SYNC specifically on Android 14+, matching
+         the service's declared foregroundServiceType below (this keeps a
+         realtime/network connection alive, not GPS - the customer's own
+         location is never tracked during a trip, only the captain's). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <application
         android:label="الهدهد Customer"
         android:name="${applicationName}"
@@ -53,6 +64,10 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <service
+            android:name=".TripForegroundService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

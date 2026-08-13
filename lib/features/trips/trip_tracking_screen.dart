@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/colors.dart';
 import '../../core/services/ride_repository.dart';
+import '../../core/services/trip_foreground_service.dart';
 import '../../core/widgets/real_map_widget.dart';
 import '../../models/models.dart';
 import '../../providers/app_state_provider.dart';
@@ -33,11 +34,16 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
   void initState() {
     super.initState();
     _sub = RideRepository.instance.watchTrip(widget.tripId).listen(_onTrip);
+    // Keeps the app process alive in the background for as long as this
+    // screen represents a real, non-terminal trip (stopped the moment
+    // _onTrip below sees it end) - see TripForegroundService for why.
+    TripForegroundService.start();
   }
 
   @override
   void dispose() {
     _sub?.cancel();
+    TripForegroundService.stop();
     super.dispose();
   }
 
@@ -50,6 +56,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
 
     if (trip.status == TripStatus.completed) {
       _handledTerminal = true;
+      TripForegroundService.stop();
       context.read<AppStateProvider>().archiveActiveTrip();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -59,6 +66,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
       });
     } else if (trip.status == TripStatus.cancelled) {
       _handledTerminal = true;
+      TripForegroundService.stop();
       context.read<AppStateProvider>()
         ..archiveActiveTrip()
         ..setActiveTripFromBackend(null);

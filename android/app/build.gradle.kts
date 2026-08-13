@@ -97,6 +97,11 @@ configurations.all {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // NotificationCompat, used by TripForegroundService's required
+    // persistent notification - flutter_local_notifications also pulls
+    // this in transitively, but declared explicitly here so it doesn't
+    // depend on that plugin's dependency tree staying exactly as it is.
+    implementation("androidx.core:core-ktx:1.13.1")
 }
 
 flutter {
