@@ -567,8 +567,26 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
     return 'اطلب الآن - يبدأ بـ ${baseFare.toStringAsFixed(0)} أوقية';
   }
 
+  /// The amount/status text shown in its own row above the request button -
+  /// separated out so the price reads as a prominent figure rather than
+  /// being buried inside the button's own label.
+  String? _priceRowText(double? price) {
+    if (price == null) return null;
+    if (_tripType == TripType.open) {
+      return 'بداية من ${price.toStringAsFixed(0)} أوقية تقريباً';
+    }
+    if (_useSubscription && _canOfferSubscription) {
+      return 'مجاناً ضمن اشتراكك الشهري';
+    }
+    if (_useSelefli && _canOfferSelefli) {
+      return 'سدّد ${price.toStringAsFixed(0)} أوقية لاحقاً بسلفلي';
+    }
+    return '${price.toStringAsFixed(0)} أوقية';
+  }
+
   Widget _buildBottomBar() {
     final price = _estimatedPrice;
+    final priceRowText = _priceRowText(price);
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       decoration: const BoxDecoration(
@@ -577,35 +595,56 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
       ),
       child: SafeArea(
         top: false,
-        child: ElevatedButton(
-          onPressed: _isRequesting ? null : _handleRequest,
-          style: ElevatedButton.styleFrom(
-            minimumSize: const Size(double.infinity, 52),
-          ),
-          child: _isRequesting
-              ? const SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 2.5,
-                  ),
-                )
-              : Text(
-                  price != null
-                      ? _tripType == TripType.open
-                            ? 'اطلب الآن - بداية من ${price.toStringAsFixed(0)} أوقية تقريباً'
-                            : (_useSubscription && _canOfferSubscription)
-                            ? 'اطلب الآن - مجاناً ضمن اشتراكك الشهري'
-                            : (_useSelefli && _canOfferSelefli)
-                            ? 'اطلب الآن بسلفلي - سدّد ${price.toStringAsFixed(0)} أوقية لاحقاً'
-                            : 'اطلب الآن - ${price.toStringAsFixed(0)} أوقية'
-                      : _loadingPrice
-                      ? 'جارٍ حساب السعر...'
-                      : widget.destination == null
-                      ? _openTripButtonLabel()
-                      : 'اطلب الآن',
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (priceRowText != null) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(14),
                 ),
+                child: Text(
+                  priceRowText,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: AppColors.secondary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            ElevatedButton(
+              onPressed: _isRequesting ? null : _handleRequest,
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 52),
+              ),
+              child: _isRequesting
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                  : Text(
+                      price != null
+                          ? 'اطلب الآن'
+                          : _loadingPrice
+                          ? 'جارٍ حساب السعر...'
+                          : widget.destination == null
+                          ? _openTripButtonLabel()
+                          : 'اطلب الآن',
+                    ),
+            ),
+          ],
         ),
       ),
     );
