@@ -6,7 +6,12 @@ import '../../core/constants/colors.dart';
 import '../../core/services/call_service.dart';
 import '../../core/services/call_signaling_service.dart';
 
-enum _CallPhase { ringingOutgoing, ringingIncoming, connecting, inCall, ended }
+enum _CallPhase { ringingOutgoing, ringingIncoming, connecting, inCall, noAnswer, ended }
+
+/// How long an outgoing call rings before giving up - matches a normal
+/// phone call's rough patience window rather than ringing forever if the
+/// other party never opens their call screen.
+const _ringTimeout = Duration(seconds: 30);
 
 /// Full-screen in-app call UI, audio-only. Two ways in:
 /// - Outgoing: [incomingOfferSdp] is null - creates and sends the WebRTC
@@ -41,6 +46,7 @@ class _CallScreenState extends State<CallScreen> {
   late final CallService _call;
   late _CallPhase _phase;
   Timer? _durationTimer;
+  Timer? _ringTimeoutTimer;
   Duration _elapsed = Duration.zero;
   bool _muted = false;
   bool _speakerOn = false;
@@ -60,6 +66,7 @@ class _CallScreenState extends State<CallScreen> {
 
     if (widget.incomingOfferSdp == null) {
       _startOutgoingCall();
+      _ringTimeoutTimer = Timer(_ringTimeout, _onRingTimeout);
     }
   }
 
@@ -87,6 +94,7 @@ class _CallScreenState extends State<CallScreen> {
     if (!mounted) return;
     switch (status) {
       case CallConnectionStatus.connected:
+        _ringTimeoutTimer?.cancel();
         setState(() => _phase = _CallPhase.inCall);
         _startTimer();
       case CallConnectionStatus.failed:
@@ -95,6 +103,19 @@ class _CallScreenState extends State<CallScreen> {
       case CallConnectionStatus.connecting:
         break;
     }
+  }
+
+  /// The other side never answered within [_ringTimeout] - ends the call
+  /// (still tells them, in case they open their call screen a moment
+  /// later) and shows "لم يتم الرد" briefly instead of popping instantly,
+  /// so the customer/captain actually sees why the call stopped.
+  void _onRingTimeout() {
+    if (_phase != _CallPhase.ringingOutgoing && _phase != _CallPhase.connecting) return;
+    _call.hangUp();
+    setState(() => _phase = _CallPhase.noAnswer);
+    Future.delayed(const Duration(milliseconds: 1600), () {
+      if (mounted) Navigator.of(context).pop();
+    });
   }
 
   void _startTimer() {
@@ -110,8 +131,9 @@ class _CallScreenState extends State<CallScreen> {
   /// decline, back button, a failed dial); false when we're reacting to a
   /// message/status that already means the other side is gone.
   void _endCall({required bool notifyPeer}) {
-    if (_phase == _CallPhase.ended) return;
+    if (_phase == _CallPhase.ended || _phase == _CallPhase.noAnswer) return;
     _durationTimer?.cancel();
+    _ringTimeoutTimer?.cancel();
     if (notifyPeer) {
       _call.hangUp();
     } else {
@@ -126,13 +148,14 @@ class _CallScreenState extends State<CallScreen> {
   @override
   void dispose() {
     _durationTimer?.cancel();
+    _ringTimeoutTimer?.cancel();
     _statusSub?.cancel();
     _remoteHangupSub?.cancel();
     // Covers every way off this screen that isn't already-handled by
     // _endCall (back button, swipe-back, a parent navigator popping this
     // route) - hangUp (not just dispose) so the other party is told the
     // call ended instead of just seeing the connection silently drop.
-    if (_phase != _CallPhase.ended) {
+    if (_phase != _CallPhase.ended && _phase != _CallPhase.noAnswer) {
       _call.hangUp();
     }
     super.dispose();
@@ -153,6 +176,8 @@ class _CallScreenState extends State<CallScreen> {
         return 'مكالمة واردة';
       case _CallPhase.inCall:
         return _formatElapsed();
+      case _CallPhase.noAnswer:
+        return 'لم يتم الرد';
       case _CallPhase.ended:
         return 'انتهت المكالمة';
     }
@@ -165,7 +190,7 @@ class _CallScreenState extends State<CallScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 48),
+            const SizedBox(height: 56),
             _buildAvatar(),
             const SizedBox(height: 20),
             Text(
@@ -188,7 +213,7 @@ class _CallScreenState extends State<CallScreen> {
             ),
             const Spacer(),
             _buildControls(),
-            const SizedBox(height: 48),
+            const SizedBox(height: 56),
           ],
         ),
       ),
@@ -198,8 +223,8 @@ class _CallScreenState extends State<CallScreen> {
   Widget _buildAvatar() {
     final url = widget.peerAvatarUrl;
     return Container(
-      width: 100,
-      height: 100,
+      width: 110,
+      height: 110,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: Colors.white.withOpacity(0.15),
@@ -213,7 +238,7 @@ class _CallScreenState extends State<CallScreen> {
                 style: const TextStyle(
                   fontFamily: 'Cairo',
                   fontWeight: FontWeight.bold,
-                  fontSize: 34,
+                  fontSize: 38,
                   color: Colors.white,
                 ),
               ),
@@ -224,16 +249,17 @@ class _CallScreenState extends State<CallScreen> {
   Widget _buildControls() {
     if (_phase == _CallPhase.ringingIncoming) {
       return Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           _CallButton(
             icon: Icons.call_end_rounded,
+            label: 'رفض',
             color: AppColors.error,
             onPressed: _declineIncomingCall,
           ),
-          const SizedBox(width: 40),
           _CallButton(
             icon: Icons.call_rounded,
+            label: 'رد',
             color: AppColors.success,
             onPressed: _acceptIncomingCall,
           ),
@@ -245,23 +271,24 @@ class _CallScreenState extends State<CallScreen> {
       return Column(
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               _CallButton(
                 icon: _muted ? Icons.mic_off_rounded : Icons.mic_rounded,
-                color: Colors.white.withOpacity(0.2),
-                size: 56,
+                label: _muted ? 'إلغاء الكتم' : 'كتم الصوت',
+                color: _muted ? AppColors.accent : Colors.white.withOpacity(0.2),
+                size: 58,
                 iconSize: 24,
                 onPressed: () {
                   _call.toggleMute();
                   setState(() => _muted = _call.isMuted);
                 },
               ),
-              const SizedBox(width: 24),
               _CallButton(
                 icon: _speakerOn ? Icons.volume_up_rounded : Icons.volume_down_rounded,
-                color: Colors.white.withOpacity(0.2),
-                size: 56,
+                label: 'مكبر الصوت',
+                color: _speakerOn ? AppColors.accent : Colors.white.withOpacity(0.2),
+                size: 58,
                 iconSize: 24,
                 onPressed: () async {
                   await _call.toggleSpeaker();
@@ -270,9 +297,10 @@ class _CallScreenState extends State<CallScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 32),
           _CallButton(
             icon: Icons.call_end_rounded,
+            label: 'إنهاء المكالمة',
             color: AppColors.error,
             onPressed: () => _endCall(notifyPeer: true),
           ),
@@ -280,9 +308,10 @@ class _CallScreenState extends State<CallScreen> {
       );
     }
 
-    // Outgoing/connecting/ended: a single hang-up button.
+    // Outgoing/connecting/no-answer/ended: a single hang-up button.
     return _CallButton(
       icon: Icons.call_end_rounded,
+      label: 'إنهاء',
       color: AppColors.error,
       onPressed: () => _endCall(notifyPeer: true),
     );
@@ -292,6 +321,7 @@ class _CallScreenState extends State<CallScreen> {
 class _CallButton extends StatelessWidget {
   const _CallButton({
     required this.icon,
+    required this.label,
     required this.color,
     required this.onPressed,
     this.size = 64,
@@ -299,6 +329,7 @@ class _CallButton extends StatelessWidget {
   });
 
   final IconData icon;
+  final String label;
   final Color color;
   final VoidCallback onPressed;
   final double size;
@@ -306,18 +337,32 @@ class _CallButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: color,
-      shape: const CircleBorder(),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onPressed,
-        child: SizedBox(
-          width: size,
-          height: size,
-          child: Icon(icon, color: Colors.white, size: iconSize),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Material(
+          color: color,
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onPressed,
+            child: SizedBox(
+              width: size,
+              height: size,
+              child: Icon(icon, color: Colors.white, size: iconSize),
+            ),
+          ),
         ),
-      ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: const TextStyle(
+            fontFamily: 'Cairo',
+            fontSize: 12,
+            color: Colors.white,
+          ),
+        ),
+      ],
     );
   }
 }
