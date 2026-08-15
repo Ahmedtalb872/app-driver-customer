@@ -9,6 +9,7 @@ import '../../core/services/call_signaling_service.dart';
 import '../../core/services/ride_repository.dart';
 import '../../core/services/route_estimator.dart';
 import '../../core/services/trip_foreground_service.dart';
+import '../../core/widgets/call_options_sheet.dart';
 import '../../core/widgets/real_map_widget.dart';
 import '../../models/models.dart';
 import '../../providers/app_state_provider.dart';
@@ -419,7 +420,11 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
               ),
             const Spacer(),
             IconButton.filledTonal(
-              onPressed: () => _openCallScreen(),
+              onPressed: () => showCallOptionsSheet(
+                context,
+                phone: trip.captainPhone,
+                onInAppCall: _openCallScreen,
+              ),
               icon: const Icon(Icons.call_rounded),
             ),
           ],
