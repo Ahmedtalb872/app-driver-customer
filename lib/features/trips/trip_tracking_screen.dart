@@ -3,15 +3,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/colors.dart';
+import '../../core/services/call_signaling_service.dart';
 import '../../core/services/ride_repository.dart';
 import '../../core/services/route_estimator.dart';
 import '../../core/services/trip_foreground_service.dart';
 import '../../core/widgets/real_map_widget.dart';
 import '../../models/models.dart';
 import '../../providers/app_state_provider.dart';
+import '../calls/call_screen.dart';
 import 'trip_summary_screen.dart';
 
 /// Watches a single trip (see [RideRepository.watchTrip]) from the moment a
@@ -35,6 +36,14 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
   bool _handledTerminal = false;
   bool _isCancelling = false;
 
+  /// Owns the trip's call-signaling channel for this screen's whole
+  /// lifetime (not just while a call is on screen), so an incoming call can
+  /// be caught and surfaced at any point while the trip is open - see
+  /// [_onIncomingCallOffer].
+  late final CallSignalingService _callSignaling;
+  StreamSubscription<CallSignal>? _incomingCallSub;
+  bool _callScreenOpen = false;
+
   @override
   void initState() {
     super.initState();
@@ -43,13 +52,48 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
     // screen represents a real, non-terminal trip (stopped the moment
     // _onTrip below sees it end) - see TripForegroundService for why.
     TripForegroundService.start();
+
+    _callSignaling = CallSignalingService(
+      tripId: widget.tripId,
+      selfRole: 'customer',
+    )..start();
+    _incomingCallSub = _callSignaling.onOffer.listen(_onIncomingCallOffer);
   }
 
   @override
   void dispose() {
     _sub?.cancel();
+    _incomingCallSub?.cancel();
+    _callSignaling.dispose();
     TripForegroundService.stop();
     super.dispose();
+  }
+
+  /// Only ever reacts while no call screen is already open on top of this
+  /// one - a second offer while a call is already in progress is either a
+  /// stray retransmit or something to handle inside that call screen, not
+  /// a new incoming call to prompt for.
+  void _onIncomingCallOffer(CallSignal signal) {
+    if (!mounted || _callScreenOpen || signal.sdp == null) return;
+    _openCallScreen(incomingOfferSdp: signal.sdp);
+  }
+
+  void _openCallScreen({String? incomingOfferSdp}) {
+    final trip = _trip;
+    if (trip == null) return;
+    _callScreenOpen = true;
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (context) => CallScreen(
+              signaling: _callSignaling,
+              peerName: trip.captainName ?? 'الكابتن',
+              peerAvatarUrl: trip.captainAvatar,
+              incomingOfferSdp: incomingOfferSdp,
+            ),
+          ),
+        )
+        .then((_) => _callScreenOpen = false);
   }
 
   /// Straight-line ETA/remaining-distance from the captain's last known
@@ -141,12 +185,6 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
     } finally {
       if (mounted) setState(() => _isCancelling = false);
     }
-  }
-
-  Future<void> _callCaptain(String? phone) async {
-    if (phone == null || phone.isEmpty) return;
-    final uri = Uri(scheme: 'tel', path: phone);
-    if (await canLaunchUrl(uri)) await launchUrl(uri);
   }
 
   @override
@@ -381,7 +419,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
               ),
             const Spacer(),
             IconButton.filledTonal(
-              onPressed: () => _callCaptain(trip.captainPhone),
+              onPressed: () => _openCallScreen(),
               icon: const Icon(Icons.call_rounded),
             ),
           ],
