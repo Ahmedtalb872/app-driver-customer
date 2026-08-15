@@ -128,8 +128,12 @@ class _CallScreenState extends State<CallScreen> {
     _durationTimer?.cancel();
     _statusSub?.cancel();
     _remoteHangupSub?.cancel();
+    // Covers every way off this screen that isn't already-handled by
+    // _endCall (back button, swipe-back, a parent navigator popping this
+    // route) - hangUp (not just dispose) so the other party is told the
+    // call ended instead of just seeing the connection silently drop.
     if (_phase != _CallPhase.ended) {
-      _call.dispose();
+      _call.hangUp();
     }
     super.dispose();
   }
@@ -156,43 +160,36 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithPop: (didPop, result) {
-        if (didPop) return;
-        _endCall(notifyPeer: true);
-      },
-      child: Scaffold(
-        backgroundColor: AppColors.primary,
-        body: SafeArea(
-          child: Column(
-            children: [
-              const SizedBox(height: 48),
-              _buildAvatar(),
-              const SizedBox(height: 20),
-              Text(
-                widget.peerName,
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 22,
-                  color: Colors.white,
-                ),
+    return Scaffold(
+      backgroundColor: AppColors.primary,
+      body: SafeArea(
+        child: Column(
+          children: [
+            const SizedBox(height: 48),
+            _buildAvatar(),
+            const SizedBox(height: 20),
+            Text(
+              widget.peerName,
+              style: const TextStyle(
+                fontFamily: 'Cairo',
+                fontWeight: FontWeight.bold,
+                fontSize: 22,
+                color: Colors.white,
               ),
-              const SizedBox(height: 8),
-              Text(
-                _statusText,
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 14,
-                  color: Colors.white.withOpacity(0.85),
-                ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _statusText,
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 14,
+                color: Colors.white.withOpacity(0.85),
               ),
-              const Spacer(),
-              _buildControls(),
-              const SizedBox(height: 48),
-            ],
-          ),
+            ),
+            const Spacer(),
+            _buildControls(),
+            const SizedBox(height: 48),
+          ],
         ),
       ),
     );
