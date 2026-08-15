@@ -64,7 +64,7 @@ dependencies:
   # lib/core/services/call_service.dart. Signaling rides on a Supabase
   # Realtime broadcast channel (call_signaling_service.dart), no new
   # backend/TURN server needed; audio only, STUN-only NAT traversal.
-  flutter_webrtc: ^0.11.7
+  flutter_webrtc: ^1.6.0
   cronet_http: ^1.9.0
   # Pinned as a direct dependency (would otherwise resolve transitively,
   # e.g. via speech_to_text/geolocator_android): 12.4.0 generates an
