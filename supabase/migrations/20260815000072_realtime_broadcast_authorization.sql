@@ -15,8 +15,13 @@
 -- channel name and a trip's UUID is already unguessable/one-call-at-a-time,
 -- matching the same trade-off already made in call_signaling_service.dart's
 -- own comments.
-alter table realtime.messages enable row level security;
-
+--
+-- No `alter table realtime.messages enable row level security` here - that
+-- table is owned by Supabase's own internal role, not this project's
+-- postgres/owner role, so running it from the SQL editor fails with
+-- "must be owner of table messages" (42501). RLS is already enabled on
+-- realtime.messages by default on every current Supabase project; only
+-- adding policies is needed, and CREATE POLICY doesn't require ownership.
 drop policy if exists "authenticated can receive broadcast" on realtime.messages;
 create policy "authenticated can receive broadcast"
 on realtime.messages for select
