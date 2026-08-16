@@ -259,7 +259,7 @@ class _DeliveryRequestScreenState extends State<DeliveryRequestScreen> {
                 ),
         ),
       ),
-      bottomSheet: _buildBottomBar(),
+      bottomNavigationBar: _buildBottomBar(),
     );
   }
 

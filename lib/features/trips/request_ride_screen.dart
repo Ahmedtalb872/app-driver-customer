@@ -335,7 +335,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
           ],
         ),
       ),
-      bottomSheet: _buildBottomBar(),
+      bottomNavigationBar: _buildBottomBar(),
     );
   }
 
