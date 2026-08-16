@@ -94,6 +94,11 @@ class RideRepository {
   /// Found expired requests are cleaned up opportunistically here, the same
   /// "client calls it when it happens to notice" pattern already used
   /// elsewhere in this project (there's no pg_cron backing this app).
+  /// TEMPORARY diagnostic for [CustomerHomeScreen]'s active-trip-resume
+  /// SnackBar - remove alongside it once the reported "trip not resumed
+  /// after close/reopen" case is root-caused.
+  String? get currentUserIdForDebug => _client.auth.currentUser?.id;
+
   Future<Trip?> fetchActiveTrip() async {
     final customerId = _client.auth.currentUser?.id;
     if (customerId == null) return null;
