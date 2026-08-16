@@ -74,6 +74,10 @@ dependencies:
   # "error: cannot find symbol" on every build. 13.x's registration matches
   # its real Android implementation.
   device_info_plus: ^13.2.0
+  # Reads the real installed build's version name/number for the About
+  # screen - it used to show a hardcoded "1.0.0+1" string that never
+  # reflected what was actually installed.
+  package_info_plus: ^8.1.2
   flutter_web_plugins:
     sdk: flutter
 

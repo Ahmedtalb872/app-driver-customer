@@ -1,8 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../core/constants/colors.dart';
 
-class AboutScreen extends StatelessWidget {
+class AboutScreen extends StatefulWidget {
   const AboutScreen({super.key});
+
+  @override
+  State<AboutScreen> createState() => _AboutScreenState();
+}
+
+class _AboutScreenState extends State<AboutScreen> {
+  // Was a hardcoded "1.0.0+1" string that never reflected what was
+  // actually installed - every build stamps a real, unique version+build
+  // number since build-customer-apk.yml started bumping it per run, but
+  // this screen kept showing the same placeholder regardless.
+  String _versionLabel = '...';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    if (!mounted) return;
+    setState(() => _versionLabel = '${info.version}+${info.buildNumber}');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +88,7 @@ class AboutScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    _buildInfoRow('رقم الإصدار', '1.0.0+1'),
+                    _buildInfoRow('رقم الإصدار', _versionLabel),
                     const Divider(height: 1),
                     _buildInfoRow('المطور', 'Al Hodhod'),
                   ],
