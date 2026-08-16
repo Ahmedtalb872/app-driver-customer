@@ -323,7 +323,10 @@ class _RealMapWidgetState extends State<RealMapWidget>
             ? (tapPosition, latLng) => widget.onMapTap!(latLng)
             : null,
         onPositionChanged: widget.onCameraMove != null
-            ? (camera, hasGesture) => widget.onCameraMove!(camera.center)
+            ? (camera, hasGesture) {
+                final center = camera.center;
+                if (center != null) widget.onCameraMove!(center);
+              }
             : null,
         interactionOptions: InteractionOptions(
           flags: widget.interactive ? InteractiveFlag.all : InteractiveFlag.none,
