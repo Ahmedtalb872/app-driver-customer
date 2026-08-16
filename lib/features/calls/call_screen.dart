@@ -267,53 +267,56 @@ class _CallScreenState extends State<CallScreen> {
       );
     }
 
-    if (_phase == _CallPhase.inCall) {
-      return Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _CallButton(
-                icon: _muted ? Icons.mic_off_rounded : Icons.mic_rounded,
-                label: _muted ? 'إلغاء الكتم' : 'كتم الصوت',
-                color: _muted ? AppColors.accent : Colors.white.withOpacity(0.2),
-                size: 58,
-                iconSize: 24,
-                onPressed: () {
-                  _call.toggleMute();
-                  setState(() => _muted = _call.isMuted);
-                },
-              ),
-              _CallButton(
-                icon: _speakerOn ? Icons.volume_up_rounded : Icons.volume_down_rounded,
-                label: 'مكبر الصوت',
-                color: _speakerOn ? AppColors.accent : Colors.white.withOpacity(0.2),
-                size: 58,
-                iconSize: 24,
-                onPressed: () async {
-                  await _call.toggleSpeaker();
-                  if (mounted) setState(() => _speakerOn = _call.isSpeakerOn);
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
-          _CallButton(
-            icon: Icons.call_end_rounded,
-            label: 'إنهاء المكالمة',
-            color: AppColors.error,
-            onPressed: () => _endCall(notifyPeer: true),
-          ),
-        ],
+    if (_phase == _CallPhase.noAnswer || _phase == _CallPhase.ended) {
+      return _CallButton(
+        icon: Icons.call_end_rounded,
+        label: 'إنهاء',
+        color: AppColors.error,
+        onPressed: () => _endCall(notifyPeer: true),
       );
     }
 
-    // Outgoing/connecting/no-answer/ended: a single hang-up button.
-    return _CallButton(
-      icon: Icons.call_end_rounded,
-      label: 'إنهاء',
-      color: AppColors.error,
-      onPressed: () => _endCall(notifyPeer: true),
+    // Outgoing/connecting/in-call: mute + speaker are available from the
+    // moment the call starts dialing (not only once it connects), matching
+    // a normal phone dialer - lets someone mute or switch to speaker while
+    // still waiting for the other side to answer.
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _CallButton(
+              icon: _muted ? Icons.mic_off_rounded : Icons.mic_rounded,
+              label: _muted ? 'إلغاء الكتم' : 'كتم الصوت',
+              color: _muted ? AppColors.accent : Colors.white.withOpacity(0.2),
+              size: 58,
+              iconSize: 24,
+              onPressed: () {
+                _call.toggleMute();
+                setState(() => _muted = _call.isMuted);
+              },
+            ),
+            _CallButton(
+              icon: _speakerOn ? Icons.volume_up_rounded : Icons.volume_down_rounded,
+              label: 'مكبر الصوت',
+              color: _speakerOn ? AppColors.accent : Colors.white.withOpacity(0.2),
+              size: 58,
+              iconSize: 24,
+              onPressed: () async {
+                await _call.toggleSpeaker();
+                if (mounted) setState(() => _speakerOn = _call.isSpeakerOn);
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 32),
+        _CallButton(
+          icon: Icons.call_end_rounded,
+          label: _phase == _CallPhase.inCall ? 'إنهاء المكالمة' : 'إنهاء',
+          color: AppColors.error,
+          onPressed: () => _endCall(notifyPeer: true),
+        ),
+      ],
     );
   }
 }

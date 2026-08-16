@@ -45,6 +45,13 @@ class CallService {
       'audio': true,
       'video': false,
     });
+    // Applies a mute toggled while the call was still connecting (before
+    // this stream existed) - toggleMute() below only flips tracks that
+    // already exist, so a mute tapped early would otherwise be silently
+    // lost the moment the real mic stream comes up.
+    for (final track in _localStream!.getAudioTracks()) {
+      track.enabled = !_muted;
+    }
 
     final pc = await createPeerConnection(_config);
     _pc = pc;
