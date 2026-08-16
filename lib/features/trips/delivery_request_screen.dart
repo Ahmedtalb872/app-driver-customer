@@ -334,27 +334,54 @@ class _DeliveryRequestScreenState extends State<DeliveryRequestScreen> {
       ),
       child: SafeArea(
         top: false,
-        child: ElevatedButton(
-          onPressed: _isRequesting ? null : _handleRequest,
-          style: ElevatedButton.styleFrom(
-            minimumSize: const Size(double.infinity, 52),
-          ),
-          child: _isRequesting
-              ? const SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 2.5,
-                  ),
-                )
-              : Text(
-                  price != null
-                      ? 'اطلب التوصيل الآن - ${price.toStringAsFixed(0)} أوقية'
-                      : _loadingPrice
-                      ? 'جارٍ حساب السعر...'
-                      : 'اطلب التوصيل الآن',
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (price != null) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(14),
                 ),
+                child: Text(
+                  '${price.toStringAsFixed(0)} أوقية',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: AppColors.secondary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            ElevatedButton(
+              onPressed: _isRequesting ? null : _handleRequest,
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 52),
+              ),
+              child: _isRequesting
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                  : Text(
+                      price != null
+                          ? 'اطلب التوصيل الآن'
+                          : _loadingPrice
+                          ? 'جارٍ حساب السعر...'
+                          : 'اطلب التوصيل الآن',
+                    ),
+            ),
+          ],
         ),
       ),
     );
