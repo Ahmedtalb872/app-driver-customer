@@ -87,11 +87,24 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
       }
     } catch (e) {
       // Best effort - a fetch failure just leaves the customer on the home
-      // screen, same as if they truly had no active trip - but still worth
-      // a trace for anyone debugging with the device connected, since this
-      // silently doing nothing is exactly the failure mode that's hardest
-      // to notice otherwise.
+      // screen, same as if they truly had no active trip. debugPrint alone
+      // is invisible on a real installed APK (only shows with a debugger
+      // attached), and a reported case of this exact failure mode (a still-
+      // open trip not being resumed after a full app close/reopen) had no
+      // way to be diagnosed without it - a visible SnackBar at least lets
+      // whoever hits this screenshot the real error.
       debugPrint('CustomerHomeScreen: fetchActiveTrip failed: $e');
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('تعذر التحقق من مشوار جارٍ: $e'),
+              duration: const Duration(seconds: 8),
+            ),
+          );
+        });
+      }
     }
   }
 
