@@ -93,15 +93,52 @@ jobs:
           fi
 
       - name: Build release APK (customer app)
+        # Always signed with the debug key (see android/app/build.gradle.kts)
+        # regardless of whether the Play Store secrets below are set - this
+        # is the sideload-for-testing build, must stay install-over-previous
+        # compatible for anyone who already has an earlier debug-signed copy.
         run: flutter build apk --release -t lib/main.dart
 
-      - name: Publish rolling release with the APK
+      - name: Write release keystore (Play Store signing)
+        # Skipped entirely until the four ANDROID_* secrets are added to the
+        # repo (Settings -> Secrets and variables -> Actions) - the workflow
+        # keeps working exactly as before (APK-only) without them.
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+          : > android/key.properties
+          printf 'storeFile=app/release.keystore\n' >> android/key.properties
+          printf 'storePassword=%s\n' "$STORE_PASSWORD" >> android/key.properties
+          printf 'keyAlias=%s\n' "$KEY_ALIAS" >> android/key.properties
+          printf 'keyPassword=%s\n' "$KEY_PASSWORD" >> android/key.properties
+
+      - name: Build App Bundle (Play Store upload)
+        # .aab, not .apk - the format Google Play requires for a real
+        # submission. Only runs once the release keystore is configured
+        # (see the step above); android/key.properties existing is what
+        # switches build.gradle.kts's release signingConfig off the debug
+        # key and onto this one.
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        run: flutter build appbundle --release -t lib/main.dart
+
+      - name: Publish rolling release with the APK (and App Bundle if built)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           APK=build/app/outputs/flutter-apk/app-release.apk
           mv "$APK" "hudhud-customer-${GITHUB_SHA::7}.apk"
+          ASSETS=("hudhud-customer-${GITHUB_SHA::7}.apk")
+          AAB=build/app/outputs/bundle/release/app-release.aab
+          if [ -f "$AAB" ]; then
+            mv "$AAB" "hudhud-customer-${GITHUB_SHA::7}.aab"
+            ASSETS+=("hudhud-customer-${GITHUB_SHA::7}.aab")
+          fi
           gh release delete customer-apk-latest --yes --cleanup-tag || true
-          gh release create customer-apk-latest "hudhud-customer-${GITHUB_SHA::7}.apk" \
+          gh release create customer-apk-latest "${ASSETS[@]}" \
             --title "تطبيق الزبون - أحدث نسخة" \
-            --notes "بُني تلقائياً من الالتزام ${GITHUB_SHA::7} على فرع ${GITHUB_REF_NAME}. حمّل ملف APK أدناه وثبّته مباشرة على الهاتف (فعّل \"تثبيت من مصادر غير معروفة\" إذا طُلب ذلك)."
+            --notes "بُني تلقائياً من الالتزام ${GITHUB_SHA::7} على فرع ${GITHUB_REF_NAME}. حمّل ملف APK أدناه وثبّته مباشرة على الهاتف (فعّل \"تثبيت من مصادر غير معروفة\" إذا طُلب ذلك). ملف AAB (إن وُجد) مخصص للرفع على Google Play Console فقط، وليس للتثبيت المباشر."

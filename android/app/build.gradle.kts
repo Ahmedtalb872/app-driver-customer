@@ -18,6 +18,19 @@ if (localPropertiesFile.exists()) {
 }
 val mapsApiKey: String = localProperties.getProperty("MAPS_API_KEY") ?: ""
 
+// Play Store release signing - loaded from android/key.properties (gitignored,
+// never committed) if present. CI writes this file from repository secrets
+// right before the build (see build-customer-apk.yml); a developer building
+// locally without it falls through to the debug key below, same as before -
+// only `flutter build appbundle` for an actual Play Store upload needs the
+// real key.
+val keyProperties = Properties()
+val keyPropertiesFile = rootProject.file("key.properties")
+val hasReleaseSigning = keyPropertiesFile.exists()
+if (hasReleaseSigning) {
+    keyProperties.load(FileInputStream(keyPropertiesFile))
+}
+
 android {
     namespace = "com.alhudhud.customerapp"
     compileSdk = flutter.compileSdkVersion
@@ -61,13 +74,27 @@ android {
             keyAlias = "androiddebugkey"
             keyPassword = "android"
         }
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = rootProject.file(keyProperties.getProperty("storeFile"))
+                storePassword = keyProperties.getProperty("storePassword")
+                keyAlias = keyProperties.getProperty("keyAlias")
+                keyPassword = keyProperties.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Real Play Store signing when key.properties is present (CI's
+            // appbundle build); falls back to the debug key otherwise so
+            // `flutter build apk --release`/`flutter run --release` keep
+            // working unsigned-for-Play-Store, exactly as before.
+            signingConfig = if (hasReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
