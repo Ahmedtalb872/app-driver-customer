@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -6,14 +8,14 @@ import '../../../core/services/geocoding_service.dart';
 import '../../../core/widgets/real_map_widget.dart';
 import '../data/models/destination_suggestion.dart';
 
-/// Full-screen map for picking a point by tapping directly - used for both
-/// a pickup point and a destination (see [title]). Pops with a synthetic
-/// [DestinationSuggestion] built from the tapped point and its
-/// reverse-geocoded address, same shape as picking a real search result so
-/// every caller downstream is unaffected. Deliberately just a full-screen
-/// map plus one small confirm card, not sharing a screen with any other
-/// floating content - see [TripPlannerScreen] for why that separation
-/// matters here.
+/// Full-screen map for picking a point - used for both a pickup point and a
+/// destination (see [title]). A pin stays fixed at the exact center of the
+/// screen while the map pans underneath it (the standard ride-hailing-app
+/// picker pattern), rather than requiring a tap to place a marker; whatever
+/// ends up under the pin's tip when the map stops moving is what gets
+/// reverse-geocoded and offered up. Pops with a synthetic
+/// [DestinationSuggestion] built from that point, same shape as picking a
+/// real search result so every caller downstream is unaffected.
 class DestinationMapPickerScreen extends StatefulWidget {
   const DestinationMapPickerScreen({
     super.key,
@@ -29,29 +31,55 @@ class DestinationMapPickerScreen extends StatefulWidget {
 
 class _DestinationMapPickerScreenState
     extends State<DestinationMapPickerScreen> {
-  LatLng? _picked;
+  LatLng? _center;
   String? _address;
   bool _isGeocoding = false;
+  Timer? _debounce;
 
-  Future<void> _handleTap(LatLng point) async {
-    setState(() {
-      _picked = point;
-      _isGeocoding = true;
-      _address = null;
-    });
+  /// Fires on every frame of the map panning - only the point where the map
+  /// actually stops (after [_settleDelay] of no further movement) gets
+  /// reverse-geocoded, so a fast drag across the city doesn't fire a
+  /// network call per frame.
+  static const _settleDelay = Duration(milliseconds: 500);
+
+  void _onCameraMove(LatLng point) {
+    setState(() => _center = point);
+    _debounce?.cancel();
+    _debounce = Timer(_settleDelay, () => _geocode(point));
+  }
+
+  Future<void> _geocode(LatLng point) async {
+    if (!mounted) return;
+    setState(() => _isGeocoding = true);
     final address = await GeocodingService.instance.reverseGeocode(
       point.latitude,
       point.longitude,
     );
-    if (!mounted) return;
+    // The map may have moved again while this request was in flight - only
+    // apply the result if it's still the point the pin is sitting on
+    // (compared by coordinates, not object identity/== - not relying on
+    // LatLng overriding equality).
+    final current = _center;
+    if (!mounted ||
+        current == null ||
+        current.latitude != point.latitude ||
+        current.longitude != point.longitude) {
+      return;
+    }
     setState(() {
       _address = address ?? 'الموقع المحدد على الخريطة';
       _isGeocoding = false;
     });
   }
 
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
   void _confirm() {
-    final point = _picked;
+    final point = _center;
     if (point == null) return;
     Navigator.of(context).pop(
       DestinationSuggestion(
@@ -71,13 +99,26 @@ class _DestinationMapPickerScreenState
       body: Stack(
         children: [
           Positioned.fill(
-            child: RealMapWidget(
-              interactive: true,
-              destLat: _picked?.latitude,
-              destLng: _picked?.longitude,
-              onMapTap: _handleTap,
-              destDraggable: true,
-              onDestDragged: _handleTap,
+            child: RealMapWidget(interactive: true, onCameraMove: _onCameraMove),
+          ),
+          // The fixed pin - drawn as a plain overlay (not a map marker) so
+          // it stays glued to the screen center while the map moves under
+          // it. Offset so the icon's *tip*, not its visual middle, marks
+          // the selected point.
+          IgnorePointer(
+            child: Align(
+              alignment: Alignment.center,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 38),
+                child: Icon(
+                  Icons.location_on,
+                  size: 46,
+                  color: AppColors.error,
+                  shadows: const [
+                    Shadow(color: Colors.black38, blurRadius: 4, offset: Offset(0, 2)),
+                  ],
+                ),
+              ),
             ),
           ),
           Positioned(
@@ -100,8 +141,8 @@ class _DestinationMapPickerScreenState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _picked == null
-                              ? 'اضغط على أي نقطة فى الخريطة لتحديدها.'
+                          _center == null
+                              ? 'حرّك الخريطة لتحديد الموقع.'
                               : (_isGeocoding
                                     ? 'جارٍ تحديد العنوان...'
                                     : _address ?? ''),
@@ -113,9 +154,7 @@ class _DestinationMapPickerScreenState
                         ),
                         const SizedBox(height: 12),
                         ElevatedButton(
-                          onPressed: _picked == null || _isGeocoding
-                              ? null
-                              : _confirm,
+                          onPressed: _center == null ? null : _confirm,
                           style: ElevatedButton.styleFrom(
                             minimumSize: const Size(double.infinity, 48),
                           ),

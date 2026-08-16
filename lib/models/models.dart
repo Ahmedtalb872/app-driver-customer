@@ -1063,3 +1063,32 @@ class SubscriptionMessage {
     );
   }
 }
+
+/// One of the labeled spots (`home`/`work`/`school`/`other`) a customer has
+/// saved for one-tap reuse instead of searching for the same address every
+/// time - see SavedPlacesRepository.
+class SavedPlace {
+  const SavedPlace({
+    required this.id,
+    required this.label,
+    required this.address,
+    required this.lat,
+    required this.lng,
+  });
+
+  final String id;
+  final String label;
+  final String address;
+  final double lat;
+  final double lng;
+
+  factory SavedPlace.fromJson(Map<String, dynamic> json) {
+    return SavedPlace(
+      id: json['id'] as String,
+      label: json['label'] as String,
+      address: json['address'] as String,
+      lat: (json['lat'] as num).toDouble(),
+      lng: (json['lng'] as num).toDouble(),
+    );
+  }
+}

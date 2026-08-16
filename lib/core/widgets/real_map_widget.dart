@@ -58,6 +58,13 @@ class RealMapWidget extends StatefulWidget {
   /// dragged. Only used when [destDraggable] is true.
   final ValueChanged<LatLng>? onDestDragged;
 
+  /// Fires continuously with the map's current center while the user pans
+  /// it - drives a fixed-center "floating pin" overlay (drawn by the
+  /// caller, not this widget - a real marker can't stay glued to the
+  /// screen center while the map moves under it) instead of requiring a
+  /// tap to place a marker. See [DestinationMapPickerScreen].
+  final ValueChanged<LatLng>? onCameraMove;
+
   const RealMapWidget({
     super.key,
     this.status,
@@ -78,6 +85,7 @@ class RealMapWidget extends StatefulWidget {
     this.destDraggable = false,
     this.onPickupDragged,
     this.onDestDragged,
+    this.onCameraMove,
   });
 
   @override
@@ -314,6 +322,9 @@ class _RealMapWidgetState extends State<RealMapWidget>
         onTap: widget.interactive && widget.onMapTap != null
             ? (tapPosition, latLng) => widget.onMapTap!(latLng)
             : null,
+        onPositionChanged: widget.onCameraMove != null
+            ? (camera, hasGesture) => widget.onCameraMove!(camera.center)
+            : null,
         interactionOptions: InteractionOptions(
           flags: widget.interactive ? InteractiveFlag.all : InteractiveFlag.none,
         ),
@@ -406,6 +417,11 @@ class _RealMapWidgetState extends State<RealMapWidget>
       onMapCreated: (controller) => _googleMapController = controller,
       onTap: widget.interactive && widget.onMapTap != null
           ? (point) => widget.onMapTap!(LatLng(point.latitude, point.longitude))
+          : null,
+      onCameraMove: widget.onCameraMove != null
+          ? (position) => widget.onCameraMove!(
+              LatLng(position.target.latitude, position.target.longitude),
+            )
           : null,
       zoomGesturesEnabled: widget.interactive,
       scrollGesturesEnabled: widget.interactive,
