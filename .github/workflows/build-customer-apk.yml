@@ -66,6 +66,19 @@ jobs:
           echo "MAPTILER_API_KEY=${{ secrets.MAPTILER_API_KEY }}" >> .env
           echo "GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" >> .env
 
+      - name: Give this build a unique version code
+        # pubspec.yaml's build number (the part after "+") was hardcoded at
+        # 1 forever, so every APK/AAB this workflow ever produced had the
+        # exact same Android versionCode. That's harmless for the sideload
+        # APK (same-signature reinstalls work regardless), but Google Play
+        # rejects a second .aab upload with a versionCode it's already seen
+        # - it requires a strictly increasing one per upload. Mirrors the
+        # same fix already applied to the captain app's build-apk.yml.
+        # github.run_number strictly increases on every run of this
+        # workflow, so it's a safe, always-fresh versionCode.
+        run: |
+          sed -i -E "s/^version: [0-9]+\.[0-9]+\.[0-9]+\+[0-9]+/version: 1.0.0+${{ github.run_number }}/" pubspec.yaml
+
       - name: Install dependencies
         run: flutter pub get
 
