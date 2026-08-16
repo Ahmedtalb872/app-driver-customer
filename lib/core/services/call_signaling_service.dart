@@ -1,14 +1,11 @@
 import 'dart:async';
 
-import 'package:supabase_flutter/supabase_flutter.dart';
-
 import '../config/supabase_config.dart';
 
-/// One signaling message exchanged over a trip's call channel. [from] is
-/// always the *other* party's role by the time a listener sees it - see
+/// One signaling message exchanged over a trip's call. [from] is always
+/// the *other* party's role by the time a listener sees it - see
 /// [CallSignalingService.start], which drops anything tagged with our own
-/// [CallSignalingService.selfRole] (Realtime broadcasts echo back to the
-/// sender too).
+/// [CallSignalingService.selfRole].
 class CallSignal {
   const CallSignal({
     required this.type,
@@ -27,11 +24,14 @@ class CallSignal {
   final int? sdpMLineIndex;
 }
 
-/// Carries WebRTC offer/answer/ICE/hangup messages for one trip's call over
-/// a Supabase Realtime broadcast channel - no persisted table, since a
-/// signaling message is only ever useful to a peer that's live on the
-/// channel right now, and a trip's UUID (unguessable, one call at a time)
-/// is a good enough channel key for this app's threat model.
+/// Carries WebRTC offer/answer/ICE/hangup messages for one trip's call
+/// through the `call_signals` table (RLS: only that trip's own customer/
+/// captain can read or insert its rows), watched via the same
+/// `.stream()` realtime mechanism [RideRepository.watchTrip] already
+/// relies on for live trip updates - not Realtime Broadcast, which this
+/// app had no other proven usage of and turned out not to reliably
+/// deliver messages between the two apps (see
+/// 20260816000075_call_signals_table.sql for the full story).
 ///
 /// Owned by the trip-tracking screen for the screen's whole lifetime (not
 /// by [CallScreen] itself), so the same subscription keeps listening for
@@ -43,11 +43,19 @@ class CallSignalingService {
   final String tripId;
 
   /// 'customer' or 'captain' - tags every message we send, and lets us
-  /// ignore the echo of our own broadcasts (Realtime delivers a broadcast
-  /// to every subscriber on the channel, sender included).
+  /// ignore our own inserts (the stream delivers every matching row,
+  /// sender included).
   final String selfRole;
 
-  RealtimeChannel? _channel;
+  StreamSubscription<List<Map<String, dynamic>>>? _sub;
+  final _seenIds = <int>{};
+
+  /// Signals inserted before this service started are from a previous call
+  /// attempt on the same trip (rows are never deleted) - skipped so a new
+  /// call doesn't immediately "receive" a stale offer/answer left over from
+  /// an earlier one.
+  DateTime? _startedAt;
+
   final _offers = StreamController<CallSignal>.broadcast();
   final _answers = StreamController<CallSignal>.broadcast();
   final _iceCandidates = StreamController<CallSignal>.broadcast();
@@ -59,63 +67,79 @@ class CallSignalingService {
   Stream<CallSignal> get onHangup => _hangups.stream;
 
   void start() {
-    _channel = SupabaseConfig.client.channel('call_trip_$tripId')
-      ..onBroadcast(
-        event: 'signal',
-        callback: (payload) {
-          final from = payload['from'] as String?;
-          if (from == null || from == selfRole) return;
-          final signal = CallSignal(
-            type: payload['type'] as String? ?? '',
-            from: from,
-            sdp: payload['sdp'] as String?,
-            candidate: payload['candidate'] as String?,
-            sdpMid: payload['sdpMid'] as String?,
-            sdpMLineIndex: payload['sdpMLineIndex'] as int?,
-          );
-          switch (signal.type) {
-            case 'offer':
-              _offers.add(signal);
-            case 'answer':
-              _answers.add(signal);
-            case 'ice':
-              _iceCandidates.add(signal);
-            case 'hangup':
-              _hangups.add(signal);
+    _startedAt = DateTime.now().toUtc();
+    _sub = SupabaseConfig.client
+        .from('call_signals')
+        .stream(primaryKey: ['id'])
+        .eq('trip_id', tripId)
+        .listen((rows) {
+          for (final row in rows) {
+            final id = (row['id'] as num).toInt();
+            if (!_seenIds.add(id)) continue;
+
+            final createdAtRaw = row['created_at'] as String?;
+            final createdAt = createdAtRaw != null
+                ? DateTime.tryParse(createdAtRaw)
+                : null;
+            if (createdAt != null &&
+                _startedAt != null &&
+                createdAt.isBefore(_startedAt!)) {
+              continue;
+            }
+
+            final from = row['from_role'] as String?;
+            if (from == null || from == selfRole) continue;
+
+            final payload = (row['payload'] as Map?)?.cast<String, dynamic>() ?? const {};
+            final signal = CallSignal(
+              type: row['type'] as String? ?? '',
+              from: from,
+              sdp: payload['sdp'] as String?,
+              candidate: payload['candidate'] as String?,
+              sdpMid: payload['sdpMid'] as String?,
+              sdpMLineIndex: (payload['sdpMLineIndex'] as num?)?.toInt(),
+            );
+            switch (signal.type) {
+              case 'offer':
+                _offers.add(signal);
+              case 'answer':
+                _answers.add(signal);
+              case 'ice':
+                _iceCandidates.add(signal);
+              case 'hangup':
+                _hangups.add(signal);
+            }
           }
-        },
-      )
-      ..subscribe();
+        });
   }
 
-  Future<void> sendOffer(String sdp) => _send({'type': 'offer', 'sdp': sdp});
+  Future<void> sendOffer(String sdp) => _send('offer', {'sdp': sdp});
 
-  Future<void> sendAnswer(String sdp) => _send({'type': 'answer', 'sdp': sdp});
+  Future<void> sendAnswer(String sdp) => _send('answer', {'sdp': sdp});
 
   Future<void> sendIceCandidate({
     required String candidate,
     String? sdpMid,
     int? sdpMLineIndex,
-  }) => _send({
-    'type': 'ice',
+  }) => _send('ice', {
     'candidate': candidate,
     'sdpMid': sdpMid,
     'sdpMLineIndex': sdpMLineIndex,
   });
 
-  Future<void> sendHangup() => _send({'type': 'hangup'});
+  Future<void> sendHangup() => _send('hangup', const {});
 
-  Future<void> _send(Map<String, dynamic> payload) async {
-    final channel = _channel;
-    if (channel == null) return;
-    await channel.sendBroadcastMessage(
-      event: 'signal',
-      payload: {...payload, 'from': selfRole},
-    );
+  Future<void> _send(String type, Map<String, dynamic> payload) async {
+    await SupabaseConfig.client.from('call_signals').insert({
+      'trip_id': tripId,
+      'from_role': selfRole,
+      'type': type,
+      'payload': payload,
+    });
   }
 
   void dispose() {
-    _channel?.unsubscribe();
+    _sub?.cancel();
     _offers.close();
     _answers.close();
     _iceCandidates.close();
