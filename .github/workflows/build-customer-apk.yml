@@ -39,6 +39,11 @@ permissions:
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
+    env:
+      # The `secrets` context can't be referenced directly in a step's
+      # `if:` condition ("Unrecognized named-value: 'secrets'") - routed
+      # through `env` here instead, which `if:` can read fine.
+      HAS_RELEASE_SIGNING: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -103,7 +108,7 @@ jobs:
         # Skipped entirely until the four ANDROID_* secrets are added to the
         # repo (Settings -> Secrets and variables -> Actions) - the workflow
         # keeps working exactly as before (APK-only) without them.
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        if: ${{ env.HAS_RELEASE_SIGNING == 'true' }}
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -123,7 +128,7 @@ jobs:
         # (see the step above); android/key.properties existing is what
         # switches build.gradle.kts's release signingConfig off the debug
         # key and onto this one.
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        if: ${{ env.HAS_RELEASE_SIGNING == 'true' }}
         run: flutter build appbundle --release -t lib/main.dart
 
       - name: Publish rolling release with the APK (and App Bundle if built)
