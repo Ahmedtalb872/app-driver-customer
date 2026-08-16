@@ -77,7 +77,7 @@ dependencies:
   # Reads the real installed build's version name/number for the About
   # screen - it used to show a hardcoded "1.0.0+1" string that never
   # reflected what was actually installed.
-  package_info_plus: ^8.1.2
+  package_info_plus: ^10.2.1
   flutter_web_plugins:
     sdk: flutter
 
