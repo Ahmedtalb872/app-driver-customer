@@ -94,12 +94,17 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
         // tell whether that's the expected "no session yet" state or an
         // unexpectedly missing customer id/session. Remove once resolved.
         final uid = RideRepository.instance.currentUserIdForDebug;
+        final summary = await RideRepository.instance
+            .fetchMostRecentTripDebugSummary();
+        if (!mounted) return;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('لا يوجد مشوار نشط (uid: ${uid ?? "بدون جلسة"})'),
-              duration: const Duration(seconds: 5),
+              content: Text(
+                'لا يوجد مشوار نشط (uid: ${uid ?? "بدون جلسة"}) | $summary',
+              ),
+              duration: const Duration(seconds: 12),
               backgroundColor: Colors.blueGrey,
             ),
           );
