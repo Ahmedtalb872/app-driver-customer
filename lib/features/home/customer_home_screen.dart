@@ -93,7 +93,14 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
         // rows. Shows exactly what it searched with so a screenshot can
         // tell whether that's the expected "no session yet" state or an
         // unexpectedly missing customer id/session. Remove once resolved.
+        // Only the last 6 chars of the uid - just enough to tell two
+        // accounts apart in a report without cluttering the banner with
+        // the full 36-char uuid (the actual diagnostic payload is
+        // [summary], not the id itself).
         final uid = RideRepository.instance.currentUserIdForDebug;
+        final shortUid = uid != null && uid.length > 6
+            ? uid.substring(uid.length - 6)
+            : (uid ?? 'بدون جلسة');
         final summary = await RideRepository.instance
             .fetchMostRecentTripDebugSummary();
         if (!mounted) return;
@@ -101,9 +108,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                'لا يوجد مشوار نشط (uid: ${uid ?? "بدون جلسة"}) | $summary',
-              ),
+              content: Text('لا يوجد مشوار نشط ($shortUid) | $summary'),
               duration: const Duration(seconds: 12),
               backgroundColor: Colors.blueGrey,
             ),
