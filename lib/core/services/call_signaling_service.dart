@@ -26,12 +26,22 @@ class CallSignal {
 
 /// Carries WebRTC offer/answer/ICE/hangup messages for one trip's call
 /// through the `call_signals` table (RLS: only that trip's own customer/
-/// captain can read or insert its rows), watched via the same
-/// `.stream()` realtime mechanism [RideRepository.watchTrip] already
-/// relies on for live trip updates - not Realtime Broadcast, which this
-/// app had no other proven usage of and turned out not to reliably
-/// deliver messages between the two apps (see
-/// 20260816000075_call_signals_table.sql for the full story).
+/// captain can read or insert its rows). Watched two ways at once:
+/// - the same `.stream()` realtime mechanism [RideRepository.watchTrip]
+///   already relies on for live trip updates - not Realtime Broadcast,
+///   which this app had no other proven usage of and turned out not to
+///   reliably deliver messages between the two apps (see
+///   20260816000075_call_signals_table.sql for that story);
+/// - a plain REST poll every 2 seconds, as a guaranteed-delivery fallback.
+///   Realtime *changes* delivery for this table has proven unreliable
+///   across multiple attempts in this exact codebase (Broadcast, then
+///   `.stream()` alone still wasn't consistently ringing the other side
+///   even after the RLS fix in 20260816000076) - rather than keep
+///   debugging Realtime internals blind (no way to attach a debugger to
+///   the reporting device), polling guarantees a signal is picked up
+///   within a couple of seconds regardless of whether Realtime fires at
+///   all. Both paths feed the same dedup/parsing logic below, so whichever
+///   delivers first wins and the other is a no-op.
 ///
 /// Owned by the trip-tracking screen for the screen's whole lifetime (not
 /// by [CallScreen] itself), so the same subscription keeps listening for
@@ -43,11 +53,12 @@ class CallSignalingService {
   final String tripId;
 
   /// 'customer' or 'captain' - tags every message we send, and lets us
-  /// ignore our own inserts (the stream delivers every matching row,
-  /// sender included).
+  /// ignore our own inserts (both delivery paths return every matching
+  /// row, sender included).
   final String selfRole;
 
   StreamSubscription<List<Map<String, dynamic>>>? _sub;
+  Timer? _pollTimer;
   final _seenIds = <int>{};
 
   /// Signals inserted before this service started are from a previous call
@@ -72,45 +83,60 @@ class CallSignalingService {
         .from('call_signals')
         .stream(primaryKey: ['id'])
         .eq('trip_id', tripId)
-        .listen((rows) {
-          for (final row in rows) {
-            final id = (row['id'] as num).toInt();
-            if (!_seenIds.add(id)) continue;
+        .listen(_processRows, onError: (_) {});
 
-            final createdAtRaw = row['created_at'] as String?;
-            final createdAt = createdAtRaw != null
-                ? DateTime.tryParse(createdAtRaw)
-                : null;
-            if (createdAt != null &&
-                _startedAt != null &&
-                createdAt.isBefore(_startedAt!)) {
-              continue;
-            }
+    _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
+      try {
+        final rows = await SupabaseConfig.client
+            .from('call_signals')
+            .select()
+            .eq('trip_id', tripId);
+        _processRows(List<Map<String, dynamic>>.from(rows));
+      } catch (_) {
+        // Best effort - the realtime stream above is still live, and the
+        // next poll tick tries again regardless.
+      }
+    });
+  }
 
-            final from = row['from_role'] as String?;
-            if (from == null || from == selfRole) continue;
+  void _processRows(List<Map<String, dynamic>> rows) {
+    for (final row in rows) {
+      final id = (row['id'] as num).toInt();
+      if (!_seenIds.add(id)) continue;
 
-            final payload = (row['payload'] as Map?)?.cast<String, dynamic>() ?? const {};
-            final signal = CallSignal(
-              type: row['type'] as String? ?? '',
-              from: from,
-              sdp: payload['sdp'] as String?,
-              candidate: payload['candidate'] as String?,
-              sdpMid: payload['sdpMid'] as String?,
-              sdpMLineIndex: (payload['sdpMLineIndex'] as num?)?.toInt(),
-            );
-            switch (signal.type) {
-              case 'offer':
-                _offers.add(signal);
-              case 'answer':
-                _answers.add(signal);
-              case 'ice':
-                _iceCandidates.add(signal);
-              case 'hangup':
-                _hangups.add(signal);
-            }
-          }
-        });
+      final createdAtRaw = row['created_at'] as String?;
+      final createdAt = createdAtRaw != null
+          ? DateTime.tryParse(createdAtRaw)
+          : null;
+      if (createdAt != null &&
+          _startedAt != null &&
+          createdAt.isBefore(_startedAt!)) {
+        continue;
+      }
+
+      final from = row['from_role'] as String?;
+      if (from == null || from == selfRole) continue;
+
+      final payload = (row['payload'] as Map?)?.cast<String, dynamic>() ?? const {};
+      final signal = CallSignal(
+        type: row['type'] as String? ?? '',
+        from: from,
+        sdp: payload['sdp'] as String?,
+        candidate: payload['candidate'] as String?,
+        sdpMid: payload['sdpMid'] as String?,
+        sdpMLineIndex: (payload['sdpMLineIndex'] as num?)?.toInt(),
+      );
+      switch (signal.type) {
+        case 'offer':
+          _offers.add(signal);
+        case 'answer':
+          _answers.add(signal);
+        case 'ice':
+          _iceCandidates.add(signal);
+        case 'hangup':
+          _hangups.add(signal);
+      }
+    }
   }
 
   Future<void> sendOffer(String sdp) => _send('offer', {'sdp': sdp});
@@ -140,6 +166,7 @@ class CallSignalingService {
 
   void dispose() {
     _sub?.cancel();
+    _pollTimer?.cancel();
     _offers.close();
     _answers.close();
     _iceCandidates.close();
