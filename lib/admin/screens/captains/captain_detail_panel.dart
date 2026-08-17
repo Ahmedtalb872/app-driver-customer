@@ -346,10 +346,10 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
                 runSpacing: 8,
                 children: [
                   _infoTile(
-                    'تطبيق الدفع',
-                    captain.paymentAppLabel ?? '-',
+                    'وسيلة استلام المدفوعات',
+                    captain.payoutMethodLabel ?? '-',
                   ),
-                  _infoTile('رقم الدفع', captain.paymentNumber ?? '-'),
+                  _infoTile('رقم الهاتف', captain.payoutPhone ?? '-'),
                 ],
               ),
 
