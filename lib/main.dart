@@ -10,6 +10,7 @@ import 'admin/admin_app.dart';
 import 'core/config/supabase_config.dart';
 import 'core/navigation/app_navigator.dart';
 import 'core/network/doh_fallback_http_overrides.dart';
+import 'core/services/push_notifications.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/app_state_provider.dart';
 import 'features/onboarding/splash_screen.dart';
@@ -71,6 +72,8 @@ Future<void> main() async {
     runApp(const AdminApp());
     return;
   }
+
+  await PushNotifications.initialize();
 
   runApp(
     MultiProvider(

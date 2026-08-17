@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -7,6 +9,7 @@ import '../../core/auth/app_role.dart';
 import '../../core/auth/auth_service.dart';
 import '../../core/config/demo_mode_config.dart';
 import '../../core/constants/colors.dart';
+import '../../core/services/push_notifications.dart';
 import '../../core/services/session_guard_service.dart';
 import '../../providers/app_state_provider.dart';
 
@@ -286,6 +289,10 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
           listen: false,
         );
         provider.login(_fullPhone!, fullName: fullName);
+        // Fire-and-forget, same as SessionGuardService above - a failure
+        // here just means this device misses admin broadcast
+        // notifications until the next successful sync.
+        unawaited(PushNotifications.syncToken());
         widget.onSignedIn();
         break;
       case AppRole.captain:

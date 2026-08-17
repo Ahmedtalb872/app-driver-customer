@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/auth/app_role.dart';
 import '../../core/auth/auth_service.dart';
 import '../../core/constants/colors.dart';
+import '../../core/services/push_notifications.dart';
 import '../../core/services/session_guard_service.dart';
 import '../../providers/app_state_provider.dart';
 import '../authentication/auth_welcome_screen.dart';
@@ -94,6 +95,10 @@ class _SplashScreenState extends State<SplashScreen>
             AuthService.instance.currentUser?.phone ?? '',
             fullName: fullName,
           );
+          // Fire-and-forget, same as SessionGuardService above - a
+          // failure here just means this device misses admin broadcast
+          // notifications until the next successful sync.
+          unawaited(PushNotifications.syncToken());
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
               builder: (context) => const CustomerHomeScreen(),

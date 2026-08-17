@@ -65,6 +65,15 @@ dependencies:
   # Realtime broadcast channel (call_signaling_service.dart), no new
   # backend/TURN server needed; audio only, STUN-only NAT traversal.
   flutter_webrtc: ^1.6.0
+  # Broadcast push notifications sent from the admin dashboard - see
+  # lib/core/services/push_notifications.dart and
+  # supabase/functions/send-broadcast-push. Same Firebase project as the
+  # captain app (aihoudhoud), just a second Android app registered under
+  # it - versions matched to aihoudhoud's pubspec.yaml to avoid pulling in
+  # two different generated Firebase plugin registrations across the two
+  # apps' shared backend.
+  firebase_core: ^4.13.0
+  firebase_messaging: ^16.5.0
   cronet_http: ^1.9.0
   # Pinned as a direct dependency (would otherwise resolve transitively,
   # e.g. via speech_to_text/geolocator_android): 12.4.0 generates an
