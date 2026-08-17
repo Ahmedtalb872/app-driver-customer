@@ -334,6 +334,25 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
                 ],
               ),
 
+              const SizedBox(height: 20),
+              _sectionTitle('معلومات الدفع'),
+              const SizedBox(height: 8),
+              // Set by the captain themselves from their own app profile -
+              // this admin panel only ever displays it (for the finance/ops
+              // team to use when paying the captain directly or giving them
+              // a bonus/reward), never edits it.
+              Wrap(
+                spacing: 24,
+                runSpacing: 8,
+                children: [
+                  _infoTile(
+                    'تطبيق الدفع',
+                    captain.paymentAppLabel ?? '-',
+                  ),
+                  _infoTile('رقم الدفع', captain.paymentNumber ?? '-'),
+                ],
+              ),
+
               const SizedBox(height: 24),
               _sectionTitle('المستندات'),
               const SizedBox(height: 8),
