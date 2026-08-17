@@ -84,36 +84,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
       final trip = await RideRepository.instance.fetchActiveTrip();
       if (trip != null && mounted) {
         provider.setActiveTripFromBackend(trip);
-      } else if (mounted) {
-        // TEMPORARY diagnostic for a reported case where a trip that's
-        // still active server-side doesn't get resumed after a full app
-        // close/reopen, with no exception (see the catch block below,
-        // which already covers that case) - this covers the other
-        // possibility: the query ran fine and simply found zero matching
-        // rows. Shows exactly what it searched with so a screenshot can
-        // tell whether that's the expected "no session yet" state or an
-        // unexpectedly missing customer id/session. Remove once resolved.
-        // Only the last 6 chars of the uid - just enough to tell two
-        // accounts apart in a report without cluttering the banner with
-        // the full 36-char uuid (the actual diagnostic payload is
-        // [summary], not the id itself).
-        final uid = RideRepository.instance.currentUserIdForDebug;
-        final shortUid = uid != null && uid.length > 6
-            ? uid.substring(uid.length - 6)
-            : (uid ?? 'بدون جلسة');
-        final summary = await RideRepository.instance
-            .fetchMostRecentTripDebugSummary();
-        if (!mounted) return;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('لا يوجد مشوار نشط ($shortUid) | $summary'),
-              duration: const Duration(seconds: 12),
-              backgroundColor: Colors.blueGrey,
-            ),
-          );
-        });
       }
     } catch (e) {
       // Best effort - a fetch failure just leaves the customer on the home

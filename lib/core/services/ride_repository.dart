@@ -76,6 +76,16 @@ class RideRepository {
     'searching',
     'accepted',
     'arrived',
+    // An open trip's captain-side "board passenger" action sets status
+    // straight to 'boarded' (see aihoudhoud's app_state_provider.dart,
+    // `_activeTrip!.isOpenRide ? 'boarded' : 'in_progress'`) rather than
+    // 'in_progress' - missing here meant a still-ongoing open trip
+    // vanished from this exact query the moment it was boarded, which is
+    // what made [fetchActiveTrip] stop finding it after a full app
+    // close/reopen. models.dart's status parsing already treats 'boarded'
+    // the same as 'in_progress' (both map to TripStatus.started) - only
+    // this raw SQL filter had fallen out of sync with that.
+    'boarded',
     'in_progress',
   ];
 
@@ -94,37 +104,6 @@ class RideRepository {
   /// Found expired requests are cleaned up opportunistically here, the same
   /// "client calls it when it happens to notice" pattern already used
   /// elsewhere in this project (there's no pg_cron backing this app).
-  /// TEMPORARY diagnostic for [CustomerHomeScreen]'s active-trip-resume
-  /// SnackBar - remove alongside it once the reported "trip not resumed
-  /// after close/reopen" case is root-caused.
-  String? get currentUserIdForDebug => _client.auth.currentUser?.id;
-
-  /// TEMPORARY: shows what [fetchActiveTrip]'s status filter is excluding.
-  /// Looks up this customer's single most recent trip *regardless of
-  /// status* (unlike [fetchActiveTrip], which only looks at
-  /// [_activeStatuses]) - so a "no active trip" report can be told apart
-  /// from "there's a recent trip, but its status is already terminal" vs.
-  /// "there's no trip for this customer id at all". Remove alongside the
-  /// banner that calls this once root-caused.
-  Future<String> fetchMostRecentTripDebugSummary() async {
-    final customerId = _client.auth.currentUser?.id;
-    if (customerId == null) return 'no customerId';
-    try {
-      final rows = await _client
-          .from('trips')
-          .select('id, status, requested_at')
-          .eq('customer_id', customerId)
-          .order('requested_at', ascending: false)
-          .limit(1);
-      final list = List<Map<String, dynamic>>.from(rows);
-      if (list.isEmpty) return 'no trips at all for this customer_id';
-      final row = list.first;
-      return 'most recent trip: id=${row['id']} status=${row['status']} requested_at=${row['requested_at']}';
-    } catch (e) {
-      return 'lookup failed: $e';
-    }
-  }
-
   Future<Trip?> fetchActiveTrip() async {
     final customerId = _client.auth.currentUser?.id;
     if (customerId == null) return null;

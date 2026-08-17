@@ -40,6 +40,10 @@ class AdminTripsRepository {
     'searching',
     'accepted',
     'arrived',
+    // An open trip's "board passenger" action sets status straight to
+    // 'boarded' rather than 'in_progress' - see the same fix/comment in
+    // RideRepository._activeStatuses.
+    'boarded',
     'in_progress',
   ];
 
