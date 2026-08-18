@@ -64,6 +64,26 @@ class AuthService {
 
   Future<void> signOut() => _auth.signOut();
 
+  /// Permanently deletes this customer's account and personal data, then
+  /// signs out. Server-side this is [customer_delete_account] (see
+  /// 20260818000081_customer_delete_account.sql), which refuses while a
+  /// trip is still running or Selefli money is still owed - those come
+  /// back as `ACTIVE_TRIP` / `OUTSTANDING_DEBT` for the caller to turn
+  /// into a readable message.
+  ///
+  /// Past trips survive with their customer link nulled, because they're
+  /// also the assigned captain's earnings record - deleting them would
+  /// rewrite someone else's financial history.
+  Future<void> deleteAccount() async {
+    await SupabaseConfig.client.rpc('customer_delete_account');
+    // The account is already gone server-side by this point; signOut just
+    // clears the now-orphaned local session, so a failure here (e.g. the
+    // token is already rejected) must not surface as a failed deletion.
+    try {
+      await _auth.signOut();
+    } catch (_) {}
+  }
+
   /// Whether [phone] already has an account - lets the login screen decide
   /// between the password step (existing account) and the OTP sign-up flow
   /// (new number), before any auth session exists.

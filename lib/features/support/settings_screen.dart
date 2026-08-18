@@ -50,7 +50,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                _handleLogout();
+                _handleDeleteAccount();
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
               child: const Text('نعم، احذف الحساب'),
@@ -71,6 +71,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
       MaterialPageRoute(builder: (context) => const AuthWelcomeScreen()),
       (route) => false,
     );
+  }
+
+  /// Really deletes the account, unlike before - this button used to just
+  /// call [_handleLogout] while the confirmation dialog promised the data
+  /// was gone forever. See AuthService.deleteAccount.
+  Future<void> _handleDeleteAccount() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+    try {
+      await AuthService.instance.deleteAccount();
+      SessionGuardService.instance.stop();
+      if (!mounted) return;
+      Navigator.of(context).pop(); // the progress dialog
+      final provider = Provider.of<AppStateProvider>(context, listen: false);
+      provider.logout();
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const AuthWelcomeScreen()),
+        (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop(); // the progress dialog
+      final message = e.toString().contains('ACTIVE_TRIP')
+          ? 'لا يمكن حذف الحساب أثناء وجود مشوار جارٍ. أنهِ المشوار أولاً ثم حاول مرة أخرى.'
+          : e.toString().contains('OUTSTANDING_DEBT')
+          ? 'لا يمكن حذف الحساب قبل تسديد دين سلفلي المستحق عليك.'
+          : 'تعذر حذف الحساب الآن. تحقق من اتصالك وحاول مرة أخرى.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message, style: const TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 6),
+        ),
+      );
+    }
   }
 
   @override
