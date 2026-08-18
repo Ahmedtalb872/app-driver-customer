@@ -8,24 +8,49 @@ import '../auth/app_role.dart';
 /// constant (`const bool.fromEnvironment('dart.vm.product')`). Because of
 /// that, [demoAccounts] below is a const conditional expression: in a
 /// `flutter build ... --release` binary the compiler resolves [isEnabled]
-/// to `false` at compile time and dead-code-eliminates the `true` branch -
-/// including every demo phone number/code literal - out of the build
-/// entirely. They never ship in a production artifact. In debug/profile
-/// builds (`flutter run`, `flutter run --profile`) the real map is present
-/// and the fixed codes work.
+/// to `false` at compile time and dead-code-eliminates the QA branch -
+/// including every QA phone number/code literal - out of the build
+/// entirely.
 ///
-/// This is the only file that needs to change to add/remove a demo
-/// account or to flip demo mode off entirely.
+/// **One deliberate exception: [reviewerPhone].** App Store and Play Store
+/// reviewers have to be able to sign in, and this app's only sign-in path
+/// is an SMS OTP to a Mauritanian number - which a reviewer sitting in
+/// another country cannot receive. Apple rejects submissions it cannot log
+/// into (guideline 2.1), so that single account keeps its fixed code in
+/// release builds too. It is a plain customer account with no elevated
+/// role, no wallet balance and no admin surface, so the worst case if the
+/// number and code leak is that someone browses the app as an empty demo
+/// customer.
+///
+/// This is the only file that needs to change to add/remove an account or
+/// to flip demo mode off entirely.
 class DemoModeConfig {
   DemoModeConfig._();
 
   static const bool isEnabled = !kReleaseMode;
 
-  static const Map<String, DemoAccount> demoAccounts = isEnabled
-      ? _demoAccounts
-      : <String, DemoAccount>{};
+  /// Store-reviewer account. Ships in every build - see the class doc.
+  static const String reviewerPhone = '+22222441037';
 
-  static const Map<String, DemoAccount> _demoAccounts = {
+  static const DemoAccount _reviewerAccount = DemoAccount(
+    code: '451037',
+    fullName: 'حساب المراجعة',
+    role: AppRole.customer,
+    internalPassword: 'hudhud_reviewer_22441037_a7f3c91e4b2d',
+  );
+
+  /// Debug/profile builds get the full QA set; release builds get only the
+  /// store-reviewer account.
+  static const Map<String, DemoAccount> demoAccounts = isEnabled
+      ? _qaAccounts
+      : _reviewerOnly;
+
+  static const Map<String, DemoAccount> _reviewerOnly = {
+    reviewerPhone: _reviewerAccount,
+  };
+
+  static const Map<String, DemoAccount> _qaAccounts = {
+    reviewerPhone: _reviewerAccount,
     '+22240000001': DemoAccount(
       code: '111111',
       fullName: 'زبون تجريبي',
@@ -46,11 +71,13 @@ class DemoModeConfig {
     ),
   };
 
-  static bool isDemoPhone(String phone) =>
-      isEnabled && demoAccounts.containsKey(phone);
+  /// Deliberately not gated on [isEnabled] - [demoAccounts] is already the
+  /// right set for this build, and in a release build it still holds the
+  /// store-reviewer account, which must keep working.
+  static bool isDemoPhone(String phone) => demoAccounts.containsKey(phone);
 
   static bool verifyCode(String phone, String code) =>
-      isEnabled && demoAccounts[phone]?.code == code;
+      demoAccounts[phone]?.code == code;
 }
 
 class DemoAccount {
