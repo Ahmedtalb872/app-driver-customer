@@ -8,6 +8,7 @@ import '../screens/auth/unauthorized_screen.dart';
 import '../screens/captains/admin_captains_screen.dart';
 import '../screens/dashboard/admin_dashboard_screen.dart';
 import '../screens/dispatch/operator_dispatch_screen.dart';
+import '../screens/finance/finance_reports_screen.dart';
 import '../screens/finance/finance_wallets_screen.dart';
 import '../screens/finance/recharge_requests_screen.dart';
 import '../screens/finance/subscription_disputes_screen.dart';
@@ -32,6 +33,7 @@ const Map<String, String> _routeTitles = {
   '/admin/trips': 'الرحلات',
   '/admin/live-operations': 'العمليات المباشرة',
   '/admin/dispatch': 'إرسال طلب يدوي',
+  '/admin/finance/reports': 'المالية - التقارير',
   '/admin/finance/wallets': 'المحافظ والمالية',
   '/admin/finance/recharge': 'طلبات الشحن',
   '/admin/finance/withdrawal': 'طلبات السحب',
@@ -111,6 +113,10 @@ GoRouter buildAdminRouter(AdminSession session) {
           GoRoute(
             path: '/admin/dispatch',
             builder: (context, state) => const OperatorDispatchScreen(),
+          ),
+          GoRoute(
+            path: '/admin/finance/reports',
+            builder: (context, state) => const FinanceReportsScreen(),
           ),
           GoRoute(
             path: '/admin/finance/wallets',
