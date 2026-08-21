@@ -236,6 +236,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               controller: _identifierController,
               decoration: const InputDecoration(
                 labelText: 'رقم الهاتف أو البريد الإلكتروني',
+                helperText: 'رقم الهاتف بدون +222 (مثال: 20522064)',
               ),
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? 'مطلوب' : null,
