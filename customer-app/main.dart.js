@@ -150446,7 +150446,7 @@ l=new A.azz()
 s.m(0,l,m)
 A.oW(l,m,!0)
 $.bMo=l
-$.bMk.m(0,"flutter-fire-fcm","16.5.0")
+$.bMk.m(0,"flutter-fire-fcm","16.6.0")
 A.bMl("messaging")
 l=A.bMn(null)
 A.oW(l,$.bum(),!0)
