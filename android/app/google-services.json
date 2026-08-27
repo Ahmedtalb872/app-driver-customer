@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "375534953939",
+    "project_id": "alhoudhoud-captain",
+    "storage_bucket": "alhoudhoud-captain.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:375534953939:android:8aa6d8a0526ae400157b26",
+        "android_client_info": {
+          "package_name": "com.alhudhud.captain"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDCb4fVyvaLX_ALFbKehajZcciFZ2JK6FM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

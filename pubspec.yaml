@@ -47,6 +47,18 @@ dependencies:
   # the Maps JS API script tag in web/index.html).
   google_maps_flutter: ^2.10.0
   geolocator: ^11.0.0
+  # Pinned directly (captain side): the captain app depends on this exact
+  # Android geolocator implementation - carried over verbatim when the two
+  # apps were unified so the driver location behaviour is byte-for-byte
+  # unchanged.
+  geolocator_android: ^4.6.2
+  # Captain side: runtime permission prompts (background location,
+  # notifications) the driver flow requests explicitly.
+  permission_handler: ^11.3.1
+  # Captain side: motivation_notifications schedules local notifications at
+  # specific local times, which flutter_local_notifications requires a
+  # timezone database to resolve.
+  timezone: ^0.10.1
   http: ^1.2.1
   supabase_flutter: ^2.8.0
   flutter_dotenv: ^5.2.1
@@ -151,6 +163,13 @@ flutter:
     - assets/audio/hudhud_ride_request.wav
     - assets/geo/nouakchott_districts.geojson
     - assets/data/places.json
+    # Captain-side assets, carried over when the two apps were unified.
+    - assets/images/logo.jpg
+    - assets/images/logo.png
+    - assets/images/logo_splash.png
+    - assets/images/logo_icon.png
+    - assets/images/bankily_logo_transparent.png
+    - assets/sounds/new_trip_chime.wav
     - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see

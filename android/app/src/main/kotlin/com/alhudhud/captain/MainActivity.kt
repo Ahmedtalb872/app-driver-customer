@@ -1,4 +1,4 @@
-package com.alhudhud.customerapp
+package com.alhudhud.captain
 
 import android.content.Intent
 import android.os.Build

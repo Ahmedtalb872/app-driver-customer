@@ -1,4 +1,4 @@
-package com.alhudhud.customerapp
+package com.alhudhud.captain
 
 import android.app.Notification
 import android.app.NotificationChannel
