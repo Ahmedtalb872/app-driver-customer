@@ -52,6 +52,8 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
 
   List<DestinationSuggestion> _pickupOptions = [];
   List<DestinationSuggestion> _destOptions = [];
+  bool _pickupSearching = false;
+  bool _destSearching = false;
   Timer? _pickupSearchDebounce;
   Timer? _destSearchDebounce;
   Timer? _pickupGeocodeDebounce;
@@ -322,49 +324,85 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
     setState(() => controller.text = address);
   }
 
-  Future<void> _searchPickup(String query) async {
+  /// Debounced, called on every keystroke - kept so a fast typist still
+  /// gets suggestions without pressing anything. [_searchPickupNow] is the
+  /// same search fired immediately, for the explicit "بحث" button.
+  void _searchPickup(String query) {
     _pickupSearchDebounce?.cancel();
-    _pickupSearchDebounce = Timer(const Duration(milliseconds: 300), () async {
-      try {
-        final results = await _destinationSearchRepository.search(
-          query: query.trim(),
-        );
-        if (mounted) setState(() => _pickupOptions = results);
-      } catch (e) {
-        debugPrint('[OperatorDispatch] pickup suggestion search failed: $e');
-        if (mounted) setState(() => _pickupOptions = []);
-      }
-    });
+    _pickupSearchDebounce = Timer(
+      const Duration(milliseconds: 300),
+      () => _runPickupSearch(query),
+    );
   }
 
-  Future<void> _searchDestination(String query) async {
+  Future<void> _searchPickupNow() {
+    _pickupSearchDebounce?.cancel();
+    return _runPickupSearch(_pickupAddressController.text);
+  }
+
+  Future<void> _runPickupSearch(String query) async {
+    setState(() => _pickupSearching = true);
+    try {
+      final results = await _destinationSearchRepository.search(
+        query: query.trim(),
+      );
+      if (mounted) setState(() => _pickupOptions = results);
+    } catch (e) {
+      debugPrint('[OperatorDispatch] pickup suggestion search failed: $e');
+      if (mounted) setState(() => _pickupOptions = []);
+    } finally {
+      if (mounted) setState(() => _pickupSearching = false);
+    }
+  }
+
+  void _searchDestination(String query) {
     _destSearchDebounce?.cancel();
-    _destSearchDebounce = Timer(const Duration(milliseconds: 300), () async {
-      try {
-        final results = await _destinationSearchRepository.search(
-          query: query.trim(),
-        );
-        if (mounted) setState(() => _destOptions = results);
-      } catch (e) {
-        debugPrint(
-          '[OperatorDispatch] destination suggestion search failed: $e',
-        );
-        if (mounted) setState(() => _destOptions = []);
-      }
-    });
+    _destSearchDebounce = Timer(
+      const Duration(milliseconds: 300),
+      () => _runDestinationSearch(query),
+    );
   }
 
+  Future<void> _searchDestinationNow() {
+    _destSearchDebounce?.cancel();
+    return _runDestinationSearch(_destAddressController.text);
+  }
+
+  Future<void> _runDestinationSearch(String query) async {
+    setState(() => _destSearching = true);
+    try {
+      final results = await _destinationSearchRepository.search(
+        query: query.trim(),
+      );
+      if (mounted) setState(() => _destOptions = results);
+    } catch (e) {
+      debugPrint(
+        '[OperatorDispatch] destination suggestion search failed: $e',
+      );
+      if (mounted) setState(() => _destOptions = []);
+    } finally {
+      if (mounted) setState(() => _destSearching = false);
+    }
+  }
+
+  // Fills the field from the picked suggestion (RawAutocomplete used to do
+  // this automatically; the plain list below doesn't) and clears the
+  // results so the list disappears once a choice is made.
   void _selectPickupSuggestion(DestinationSuggestion suggestion) {
     setState(() {
+      _pickupAddressController.text = suggestion.displayLabel;
       _pickupLat = suggestion.latitude;
       _pickupLng = suggestion.longitude;
+      _pickupOptions = [];
     });
   }
 
   void _selectDestSuggestion(DestinationSuggestion suggestion) {
     setState(() {
+      _destAddressController.text = suggestion.displayLabel;
       _destLat = suggestion.latitude;
       _destLng = suggestion.longitude;
+      _destOptions = [];
     });
   }
 
@@ -896,12 +934,14 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                 ],
               ),
               const SizedBox(height: 6),
-              _buildAddressAutocomplete(
+              _buildAddressSearchField(
                 controller: _pickupAddressController,
                 focusNode: _pickupFocusNode,
-                hintText: 'وصف نصي لنقطة الانطلاق (أو ابحث/اكتب اسم المكان)',
+                hintText: 'اكتب اسم المكان ثم اضغط بحث',
                 options: _pickupOptions,
+                searching: _pickupSearching,
                 onChanged: _searchPickup,
+                onSearchPressed: _searchPickupNow,
                 onSelected: _selectPickupSuggestion,
               ),
               _buildCoordinatesLabel(_pickupLat, _pickupLng),
@@ -938,14 +978,14 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                   ],
                 ),
                 const SizedBox(height: 6),
-                _buildAddressAutocomplete(
+                _buildAddressSearchField(
                   controller: _destAddressController,
                   focusNode: _destFocusNode,
-                  hintText: _serviceType == 'delivery'
-                      ? 'وصف نصي لنقطة التسليم (أو ابحث/اكتب اسم المكان)'
-                      : 'وصف نصي للوجهة (أو ابحث/اكتب اسم المكان)',
+                  hintText: 'اكتب اسم المكان ثم اضغط بحث',
                   options: _destOptions,
+                  searching: _destSearching,
                   onChanged: _searchDestination,
+                  onSearchPressed: _searchDestinationNow,
                   onSelected: _selectDestSuggestion,
                 ),
                 _buildCoordinatesLabel(_destLat, _destLng),
@@ -1231,75 +1271,100 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
     );
   }
 
-  /// Debounced, bilingual (Arabic/French - both `name_ar`/`name_fr` columns
-  /// are searched server-side by `search_destinations`) autocomplete for a
-  /// pickup/destination address field. Suggestions open immediately on
-  /// focus (via the pickup/dest FocusNode listeners in [initState] loading
-  /// an initial popular-places list) and update from the first typed
-  /// character, debounced 300ms. Selecting an option fills the text field
-  /// (RawAutocomplete's built-in behavior) and, via [onSelected], sets the
-  /// coordinates - which already flows into [RealMapWidget] to move both
-  /// the marker and (for pickup - see the destination auto-recenter fix in
-  /// real_map_widget.dart) the map camera.
-  Widget _buildAddressAutocomplete({
+  /// Pickup/destination address field with an explicit "بحث" button, plus
+  /// the same live-as-you-type search kept underneath (debounced 300ms via
+  /// [onChanged]) for an operator who prefers to just keep typing. Results
+  /// render as a plain, always-visible list directly under the field
+  /// (rather than RawAutocomplete's floating overlay, which some operators
+  /// found easy to miss or lose after the field lost focus) and stay shown
+  /// until a suggestion is tapped or the list is searched again - selecting
+  /// one, via [onSelected], fills the field and sets the coordinates, which
+  /// already flows into [RealMapWidget] to move both the marker and (for
+  /// pickup - see the destination auto-recenter fix in real_map_widget.dart)
+  /// the map camera.
+  Widget _buildAddressSearchField({
     required TextEditingController controller,
     required FocusNode focusNode,
     required String hintText,
     required List<DestinationSuggestion> options,
+    required bool searching,
     required ValueChanged<String> onChanged,
+    required Future<void> Function() onSearchPressed,
     required ValueChanged<DestinationSuggestion> onSelected,
   }) {
-    return RawAutocomplete<DestinationSuggestion>(
-      textEditingController: controller,
-      focusNode: focusNode,
-      displayStringForOption: (option) => option.displayLabel,
-      optionsBuilder: (value) => options,
-      onSelected: onSelected,
-      fieldViewBuilder:
-          (context, fieldController, fieldFocusNode, onFieldSubmitted) {
-            return TextField(
-              controller: fieldController,
-              focusNode: fieldFocusNode,
-              decoration: InputDecoration(
-                hintText: hintText,
-                isDense: true,
-                border: const OutlineInputBorder(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: TextField(
+                controller: controller,
+                focusNode: focusNode,
+                decoration: InputDecoration(
+                  hintText: hintText,
+                  isDense: true,
+                  border: const OutlineInputBorder(),
+                ),
+                onChanged: onChanged,
+                onSubmitted: (_) => onSearchPressed(),
               ),
-              onChanged: onChanged,
-            );
-          },
-      optionsViewBuilder: (context, onSelectedOption, optionsToShow) {
-        return Align(
-          alignment: Alignment.topLeft,
-          child: Material(
-            elevation: 4,
-            borderRadius: BorderRadius.circular(10),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 260, minWidth: 300),
-              child: optionsToShow.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: Text(
-                        'لا توجد نتائج',
-                        style: TextStyle(fontFamily: 'Cairo', fontSize: 12),
-                      ),
+            ),
+            const SizedBox(width: 8),
+            FilledButton.icon(
+              onPressed: searching ? null : onSearchPressed,
+              icon: searching
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : ListView.builder(
-                      padding: EdgeInsets.zero,
-                      shrinkWrap: true,
-                      itemCount: optionsToShow.length,
-                      itemBuilder: (context, index) {
-                        final option = optionsToShow.elementAt(index);
-                        return _SuggestionTile(
-                          suggestion: option,
-                          onTap: () => onSelectedOption(option),
-                        );
-                      },
-                    ),
+                  : const Icon(Icons.search_rounded, size: 18),
+              label: const Text(
+                'بحث',
+                style: TextStyle(fontFamily: 'Cairo', fontSize: 13),
+              ),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+              ),
+            ),
+          ],
+        ),
+        if (options.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(top: 8),
+            constraints: const BoxConstraints(maxHeight: 240),
+            decoration: BoxDecoration(
+              border: Border.all(color: AdminColors.border),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: ListView.builder(
+              padding: EdgeInsets.zero,
+              shrinkWrap: true,
+              itemCount: options.length,
+              itemBuilder: (context, index) {
+                final option = options[index];
+                return _SuggestionTile(
+                  suggestion: option,
+                  onTap: () => onSelected(option),
+                );
+              },
+            ),
+          )
+        else if (searching)
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text(
+              'جارٍ البحث...',
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 12,
+                color: AdminColors.textSecondary,
+              ),
             ),
           ),
-        );
-      },
+      ],
     );
   }
 
