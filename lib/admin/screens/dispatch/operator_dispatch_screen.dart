@@ -211,14 +211,23 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
     }
 
     final km = _distanceKm;
-    final minutes = _estimatedDurationMinutes;
-    if (km == null || minutes == null) return null;
+    if (km == null) return null;
 
+    // Mirrors captain_end_trip's normal-trip formula exactly
+    // (20260816000077_restore_completed_trips_count.sql): base_fare covers
+    // every km up to base_distance_km outright, only the km beyond that are
+    // charged, and normal trips are not time-priced at all - price_per_minute
+    // only applies to open trips server-side. This estimate had drifted from
+    // that formula (still multiplying the full distance by price_per_km and
+    // adding a time charge the backend never bills for normal trips),
+    // showing operators a fare inflated well above what the trip will
+    // actually settle for - e.g. 141 quoted for a 1.4km ride the backend
+    // prices at the 100 minimum.
     final pricePerKm = (pricing['price_per_km'] as num?)?.toDouble() ?? 0;
-    final pricePerMinute =
-        (pricing['price_per_minute'] as num?)?.toDouble() ?? 0;
-    final subtotal =
-        (baseFare + (km * pricePerKm) + (minutes * pricePerMinute)) * surge;
+    final baseDistanceKm =
+        (pricing['base_distance_km'] as num?)?.toDouble() ?? 0;
+    final billableKm = km > baseDistanceKm ? km - baseDistanceKm : 0;
+    final subtotal = (baseFare + (billableKm * pricePerKm)) * surge;
     return subtotal < minimumFare ? minimumFare : subtotal;
   }
 
