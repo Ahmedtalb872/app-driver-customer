@@ -42,12 +42,12 @@ const List<AdminSidebarItem> adminSidebarItems = [
     route: '/admin/dispatch',
   ),
   AdminSidebarItem(
-    label: 'المالية',
+    label: 'التقارير المالية',
     icon: Icons.assessment_rounded,
     route: '/admin/finance/reports',
   ),
   AdminSidebarItem(
-    label: 'المحافظ والمالية',
+    label: 'المحافظ',
     icon: Icons.account_balance_wallet_rounded,
     route: '/admin/finance/wallets',
   ),
