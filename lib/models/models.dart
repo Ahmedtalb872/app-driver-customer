@@ -612,6 +612,31 @@ extension DocumentTypeX on DocumentType {
 
 enum DocumentStatus { pending, approved, rejected, expired }
 
+/// State of the best-effort OCR pass (extract-document-text Edge Function,
+/// 20260831000087_captain_document_extraction.sql) that reads the printed
+/// text off a document for the admin dashboard to show as review
+/// assistance - entirely separate from [DocumentStatus], which tracks the
+/// human approve/reject decision this never makes on its own.
+enum ExtractionStatus { notAttempted, pending, done, failed, skipped }
+
+extension ExtractionStatusX on ExtractionStatus {
+  static ExtractionStatus fromDb(String? value) {
+    switch (value) {
+      case 'pending':
+        return ExtractionStatus.pending;
+      case 'done':
+        return ExtractionStatus.done;
+      case 'failed':
+        return ExtractionStatus.failed;
+      case 'skipped':
+        return ExtractionStatus.skipped;
+      case 'not_attempted':
+      default:
+        return ExtractionStatus.notAttempted;
+    }
+  }
+}
+
 extension DocumentStatusX on DocumentStatus {
   String get dbValue {
     switch (this) {
@@ -672,6 +697,9 @@ class CaptainDocument {
   final String? rejectionReason;
   final String? reviewedBy;
   final DateTime? reviewedAt;
+  final String? extractedText;
+  final ExtractionStatus extractionStatus;
+  final DateTime? extractedAt;
 
   const CaptainDocument({
     required this.id,
@@ -687,11 +715,15 @@ class CaptainDocument {
     this.rejectionReason,
     this.reviewedBy,
     this.reviewedAt,
+    this.extractedText,
+    this.extractionStatus = ExtractionStatus.notAttempted,
+    this.extractedAt,
   });
 
   factory CaptainDocument.fromRow(Map<String, dynamic> row) {
     final expiresAtValue = row['expires_at'] as String?;
     final reviewedAtValue = row['reviewed_at'] as String?;
+    final extractedAtValue = row['extracted_at'] as String?;
     return CaptainDocument(
       id: row['id'] as String,
       captainId: row['captain_id'] as String,
@@ -709,6 +741,13 @@ class CaptainDocument {
       reviewedBy: row['reviewed_by'] as String?,
       reviewedAt: reviewedAtValue != null
           ? DateTime.parse(reviewedAtValue).toLocal()
+          : null,
+      extractedText: row['extracted_text'] as String?,
+      extractionStatus: ExtractionStatusX.fromDb(
+        row['extraction_status'] as String?,
+      ),
+      extractedAt: extractedAtValue != null
+          ? DateTime.parse(extractedAtValue).toLocal()
           : null,
     );
   }

@@ -66,10 +66,46 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
         _documents = {for (final d in docs) d.documentType: d};
         _loadingDocuments = false;
       });
+      _triggerMissingExtractions(docs);
     } catch (_) {
       if (!mounted) return;
       setState(() => _loadingDocuments = false);
     }
+  }
+
+  /// Best-effort catch-up for documents uploaded before OCR extraction
+  /// existed (or from a session where the captain-side fire-and-forget call
+  /// never landed) - normally every document already has this done by the
+  /// time an admin opens this panel, since it's triggered right at upload
+  /// time (CaptainDocumentsRepository.uploadDocument). Re-fetches once,
+  /// after a short delay, so freshly-extracted text shows up without the
+  /// admin needing to close and reopen the panel.
+  void _triggerMissingExtractions(List<CaptainDocument> docs) {
+    final pending = docs.where(
+      (d) => d.extractionStatus == ExtractionStatus.notAttempted,
+    );
+    if (pending.isEmpty) return;
+    for (final doc in pending) {
+      CaptainDocumentsRepository.instance.triggerExtraction(doc.id);
+    }
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) _loadDocuments();
+    });
+  }
+
+  void _rescanDocument(CaptainDocument doc) {
+    CaptainDocumentsRepository.instance.triggerExtraction(doc.id);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'جارٍ إعادة فحص المستند...',
+          style: TextStyle(fontFamily: 'Cairo'),
+        ),
+      ),
+    );
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) _loadDocuments();
+    });
   }
 
   Future<void> _saveNotes() async {
@@ -382,6 +418,9 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
                       onSetAsAvatar: _documents[type] == null
                           ? null
                           : () => _setAsAvatar(_documents[type]!),
+                      onRescan: _documents[type] == null
+                          ? null
+                          : () => _rescanDocument(_documents[type]!),
                     ),
                   ),
                 ),
@@ -544,6 +583,7 @@ class _AdminDocumentCard extends StatelessWidget {
   final VoidCallback? onReject;
   final VoidCallback? onRequestReplacement;
   final VoidCallback? onSetAsAvatar;
+  final VoidCallback? onRescan;
 
   const _AdminDocumentCard({
     required this.documentType,
@@ -552,6 +592,7 @@ class _AdminDocumentCard extends StatelessWidget {
     required this.onReject,
     required this.onRequestReplacement,
     required this.onSetAsAvatar,
+    required this.onRescan,
   });
 
   @override
@@ -650,6 +691,7 @@ class _AdminDocumentCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                  _buildExtractionBlock(doc),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 6,
@@ -676,6 +718,13 @@ class _AdminDocumentCard extends StatelessWidget {
                         AdminColors.textSecondary,
                         () => _openDocument(context, doc),
                       ),
+                      if (doc.extractionStatus != ExtractionStatus.skipped &&
+                          doc.extractionStatus != ExtractionStatus.pending)
+                        _actionChip(
+                          'إعادة الفحص الآلي',
+                          AdminColors.textSecondary,
+                          onRescan,
+                        ),
                     ],
                   ),
                 ] else
@@ -696,6 +745,103 @@ class _AdminDocumentCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// Shows the printed text Vision OCR read off the document (or a status
+  /// line while that's still running/failed) right under the review chips
+  /// - see extract-document-text and
+  /// 20260831000087_captain_document_extraction.sql. Purely informational:
+  /// the reviewer still has to look at the thumbnail above and click
+  /// اعتماد/رفض themselves, this only saves them from squinting at a
+  /// photographed ID card to read small print.
+  Widget _buildExtractionBlock(CaptainDocument doc) {
+    switch (doc.extractionStatus) {
+      case ExtractionStatus.done:
+        final text = doc.extractedText;
+        if (text == null || text.trim().isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.only(top: 6),
+            child: Text(
+              'لم يُعثر على نص مقروء في هذا المستند.',
+              style: TextStyle(
+                fontSize: 11,
+                color: AdminColors.textSecondary,
+                fontFamily: 'Cairo',
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          );
+        }
+        return Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AdminColors.surface,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AdminColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'النص المستخرج آلياً من المستند (للمراجعة فقط):',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.bold,
+                    color: AdminColors.textSecondary,
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+                const SizedBox(height: 4),
+                SelectableText(
+                  text,
+                  style: const TextStyle(fontSize: 11.5, fontFamily: 'Cairo'),
+                ),
+              ],
+            ),
+          ),
+        );
+      case ExtractionStatus.pending:
+        return const Padding(
+          padding: EdgeInsets.only(top: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              SizedBox(width: 6),
+              Text(
+                'جارٍ فحص المستند آلياً...',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AdminColors.textSecondary,
+                  fontFamily: 'Cairo',
+                ),
+              ),
+            ],
+          ),
+        );
+      case ExtractionStatus.failed:
+        return const Padding(
+          padding: EdgeInsets.only(top: 6),
+          child: Text(
+            'تعذّر الفحص الآلي لهذا المستند - راجعه يدوياً من الصورة أعلاه.',
+            style: TextStyle(
+              fontSize: 11,
+              color: AdminColors.warning,
+              fontFamily: 'Cairo',
+            ),
+          ),
+        );
+      case ExtractionStatus.notAttempted:
+      case ExtractionStatus.skipped:
+        return const SizedBox.shrink();
+    }
   }
 
   Widget _actionChip(String label, Color color, VoidCallback? onTap) {
