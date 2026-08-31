@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 
+import '../config/supabase_config.dart';
 import '../constants/nouakchott_bounds.dart';
 import 'google_api_android_headers.dart';
 import '../../features/destinations/data/models/destination_suggestion.dart';
@@ -19,15 +20,21 @@ import '../../features/destinations/data/models/destination_suggestion.dart';
 /// never-block-the-primary-source pattern [GoogleDirectionsRouteEstimator]
 /// already uses for routing.
 ///
-/// Never attempts the call on web: like the Directions API, Google's Places
-/// API sends no CORS headers, so a browser-side request would just fail
-/// after a real network round trip for nothing.
+/// On mobile this calls Google directly, reusing the same
+/// Android-restricted Maps SDK key already used natively (see
+/// android/app/build.gradle.kts and google_api_android_headers.dart) - no
+/// separate Places-specific key needed, only "Places API" added to the
+/// same key's API restrictions in Google Cloud Console.
 ///
-/// Reuses the same Android-restricted Maps SDK key already used natively
-/// (see android/app/build.gradle.kts and google_api_android_headers.dart)
-/// for this direct REST call too - no separate Places-specific key needed,
-/// only "Places API" added to the same key's API restrictions in Google
-/// Cloud Console.
+/// On web (the admin dashboard - this is what
+/// operator_dispatch_screen.dart's address search runs under) a direct
+/// browser call is impossible: Google's Places REST API sends no CORS
+/// headers, so the request would just fail after a real network round
+/// trip for nothing, which is exactly why this used to return empty on
+/// web unconditionally and the dashboard's search only ever found this
+/// app's own registered places. Routed instead through the
+/// `places-search` Supabase Edge Function, which makes the same Google
+/// call server-side (no CORS between two servers) and returns plain JSON.
 class GooglePlacesSearchService {
   const GooglePlacesSearchService({required this.apiKey});
 
@@ -40,7 +47,9 @@ class GooglePlacesSearchService {
     required String query,
     int limit = 8,
   }) async {
-    if (kIsWeb || apiKey.isEmpty || query.trim().isEmpty) return const [];
+    if (query.trim().isEmpty) return const [];
+    if (kIsWeb) return _searchViaEdgeFunction(query: query, limit: limit);
+    if (apiKey.isEmpty) return const [];
 
     try {
       final uri = Uri.https(
@@ -92,6 +101,45 @@ class GooglePlacesSearchService {
           ),
         );
         if (suggestions.length >= limit) break;
+      }
+      return suggestions;
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<List<DestinationSuggestion>> _searchViaEdgeFunction({
+    required String query,
+    required int limit,
+  }) async {
+    try {
+      final response = await SupabaseConfig.client.functions.invoke(
+        'places-search',
+        body: {'query': query, 'limit': limit},
+      );
+      final data = response.data;
+      if (data is! Map || data['results'] is! List) return const [];
+
+      final suggestions = <DestinationSuggestion>[];
+      for (final row in data['results'] as List) {
+        if (row is! Map) continue;
+        final lat = (row['latitude'] as num?)?.toDouble();
+        final lng = (row['longitude'] as num?)?.toDouble();
+        final id = row['id'] as String?;
+        final title = row['title'] as String?;
+        if (lat == null || lng == null || id == null || title == null) {
+          continue;
+        }
+        suggestions.add(
+          DestinationSuggestion(
+            resultType: DestinationResultType.place,
+            id: id,
+            title: title,
+            subtitle: row['subtitle'] as String?,
+            latitude: lat,
+            longitude: lng,
+          ),
+        );
       }
       return suggestions;
     } catch (_) {
