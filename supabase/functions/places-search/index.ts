@@ -87,10 +87,20 @@ Deno.serve(async (req: Request) => {
     url.searchParams.set("key", GOOGLE_PLACES_SERVER_API_KEY);
 
     const response = await fetch(url.toString());
-    if (!response.ok) return json({ results: [] });
+    if (!response.ok) {
+      console.error(`places-search: HTTP ${response.status} from Google for query "${query}"`);
+      return json({ results: [] });
+    }
 
     const data = await response.json();
-    if (data.status !== "OK") return json({ results: [] });
+    if (data.status !== "OK") {
+      console.error(
+        `places-search: Google status "${data.status}" for query "${query}"` +
+          (data.error_message ? ` - ${data.error_message}` : ""),
+      );
+      return json({ results: [] });
+    }
+    console.log(`places-search: query "${query}" -> ${data.results?.length ?? 0} raw results from Google`);
 
     const results = [];
     for (const row of data.results ?? []) {
