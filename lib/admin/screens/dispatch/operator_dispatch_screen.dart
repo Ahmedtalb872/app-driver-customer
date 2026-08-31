@@ -414,9 +414,19 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
   // Fills the field from the picked suggestion (RawAutocomplete used to do
   // this automatically; the plain list below doesn't) and clears the
   // results so the list disappears once a choice is made.
+  //
+  // Deliberately uses the suggestion's title only, not displayLabel (which
+  // appends subtitle - a Google-formatted address, or a district/
+  // neighborhood name guessed by places-search's nearest_place_area match).
+  // That guess is only as good as this app's own districts/neighborhoods
+  // registry, which has known bad entries (a neighborhood's coordinates
+  // pointing at the wrong real-world area) - auto-filling it straight into
+  // the address the captain sees would carry that error into a live trip.
+  // The field stays a plain editable TextField, so the operator can still
+  // type a district/neighborhood in by hand when they want one.
   void _selectPickupSuggestion(DestinationSuggestion suggestion) {
     setState(() {
-      _pickupAddressController.text = suggestion.displayLabel;
+      _pickupAddressController.text = suggestion.title;
       _pickupLat = suggestion.latitude;
       _pickupLng = suggestion.longitude;
       _pickupOptions = [];
@@ -426,7 +436,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
 
   void _selectDestSuggestion(DestinationSuggestion suggestion) {
     setState(() {
-      _destAddressController.text = suggestion.displayLabel;
+      _destAddressController.text = suggestion.title;
       _destLat = suggestion.latitude;
       _destLng = suggestion.longitude;
       _destOptions = [];
