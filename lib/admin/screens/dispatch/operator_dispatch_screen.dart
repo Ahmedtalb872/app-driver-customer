@@ -54,6 +54,12 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
   List<DestinationSuggestion> _destOptions = [];
   bool _pickupSearching = false;
   bool _destSearching = false;
+  // False until a search has actually completed at least once - lets the
+  // UI tell "never searched yet" apart from "searched, found nothing",
+  // which used to render identically (nothing at all), leaving an
+  // operator with no way to know whether the button did anything.
+  bool _pickupSearched = false;
+  bool _destSearched = false;
   Timer? _pickupSearchDebounce;
   Timer? _destSearchDebounce;
   Timer? _pickupGeocodeDebounce;
@@ -346,10 +352,20 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
       final results = await _destinationSearchRepository.search(
         query: query.trim(),
       );
-      if (mounted) setState(() => _pickupOptions = results);
+      if (mounted) {
+        setState(() {
+          _pickupOptions = results;
+          _pickupSearched = true;
+        });
+      }
     } catch (e) {
       debugPrint('[OperatorDispatch] pickup suggestion search failed: $e');
-      if (mounted) setState(() => _pickupOptions = []);
+      if (mounted) {
+        setState(() {
+          _pickupOptions = [];
+          _pickupSearched = true;
+        });
+      }
     } finally {
       if (mounted) setState(() => _pickupSearching = false);
     }
@@ -374,12 +390,22 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
       final results = await _destinationSearchRepository.search(
         query: query.trim(),
       );
-      if (mounted) setState(() => _destOptions = results);
+      if (mounted) {
+        setState(() {
+          _destOptions = results;
+          _destSearched = true;
+        });
+      }
     } catch (e) {
       debugPrint(
         '[OperatorDispatch] destination suggestion search failed: $e',
       );
-      if (mounted) setState(() => _destOptions = []);
+      if (mounted) {
+        setState(() {
+          _destOptions = [];
+          _destSearched = true;
+        });
+      }
     } finally {
       if (mounted) setState(() => _destSearching = false);
     }
@@ -394,6 +420,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
       _pickupLat = suggestion.latitude;
       _pickupLng = suggestion.longitude;
       _pickupOptions = [];
+      _pickupSearched = false;
     });
   }
 
@@ -403,6 +430,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
       _destLat = suggestion.latitude;
       _destLng = suggestion.longitude;
       _destOptions = [];
+      _destSearched = false;
     });
   }
 
@@ -940,6 +968,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                 hintText: 'اكتب اسم المكان ثم اضغط بحث',
                 options: _pickupOptions,
                 searching: _pickupSearching,
+                searched: _pickupSearched,
                 onChanged: _searchPickup,
                 onSearchPressed: _searchPickupNow,
                 onSelected: _selectPickupSuggestion,
@@ -984,6 +1013,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                   hintText: 'اكتب اسم المكان ثم اضغط بحث',
                   options: _destOptions,
                   searching: _destSearching,
+                  searched: _destSearched,
                   onChanged: _searchDestination,
                   onSearchPressed: _searchDestinationNow,
                   onSelected: _selectDestSuggestion,
@@ -1288,6 +1318,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
     required String hintText,
     required List<DestinationSuggestion> options,
     required bool searching,
+    required bool searched,
     required ValueChanged<String> onChanged,
     required Future<void> Function() onSearchPressed,
     required ValueChanged<DestinationSuggestion> onSelected,
@@ -1357,6 +1388,24 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
             padding: EdgeInsets.only(top: 8),
             child: Text(
               'جارٍ البحث...',
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 12,
+                color: AdminColors.textSecondary,
+              ),
+            ),
+          )
+        else if (searched)
+          // Distinguishes "searched, found literally nothing" from "never
+          // pressed بحث yet" - both used to render as an empty, silent
+          // gap with no way to tell them apart, which read as "the button
+          // does nothing" even when a search genuinely ran and came back
+          // empty (e.g. the map-search half failing while the registry
+          // half also has no match for this query).
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text(
+              'لا توجد نتائج لهذا البحث',
               style: TextStyle(
                 fontFamily: 'Cairo',
                 fontSize: 12,
