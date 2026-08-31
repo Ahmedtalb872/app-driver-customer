@@ -13,7 +13,7 @@ import 'core/network/doh_fallback_http_overrides.dart';
 import 'core/services/push_notifications.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/app_state_provider.dart';
-import 'role/role_gate.dart';
+import 'features/onboarding/splash_screen.dart';
 
 /// Release builds normally swallow a widget build exception into a small,
 /// easy-to-miss blank/gray box instead of the loud red debug screen - which
@@ -105,10 +105,7 @@ class MyApp extends StatelessWidget {
       ],
       locale: const Locale('ar', ''), // Set Arabic as default language
 
-      // Unified entry: the role gate decides between the customer side, the
-      // captain side, or the first-run chooser. Both sides keep their own
-      // splash/login flow unchanged from here.
-      home: const RoleGate(),
+      home: const SplashScreen(),
     );
   }
 }
