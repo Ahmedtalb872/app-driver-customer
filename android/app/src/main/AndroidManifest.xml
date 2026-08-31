@@ -27,20 +27,8 @@
          location is never tracked during a trip, only the captain's). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-    <!-- Captain side (unified app): the open-ride live-tracking screen runs
-         as a location foreground service so Android doesn't kill the app
-         (losing the fare meter) mid-trip. -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
-    <!-- Captain side: in-app camera for document/photo capture during
-         registration (image_picker). -->
-    <uses-permission android:name="android.permission.CAMERA" />
-    <!-- Captain side: lets the new-trip-request alert pop the app to the
-         foreground over the lock screen (like an incoming call) instead of
-         waiting for the notification shade. -->
-    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
-    <uses-feature android:name="android.hardware.camera" android:required="false" />
     <application
-        android:label="الهدهد"
+        android:label="الهدهد Customer"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <!-- Google Maps SDK API key for the destination map picker (Phase 2).
@@ -49,14 +37,6 @@
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="${mapsApiKey}" />
-        <!-- Captain side (unified app): google_maps_flutter's native map is
-             a PlatformView, which Flutter's Impeller renderer has known
-             blank-map compositing bugs with on some Android GPUs even when
-             the key/billing are fine. Falling back to Skia is the standard
-             fix and is safe for the customer map screens too. -->
-        <meta-data
-            android:name="io.flutter.embedding.android.EnableImpeller"
-            android:value="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -65,9 +45,7 @@
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
-            android:windowSoftInputMode="adjustResize"
-            android:showWhenLocked="true"
-            android:turnScreenOn="true">
+            android:windowSoftInputMode="adjustResize">
             <!-- Specifies an Android theme to apply to this Activity as soon as
                  the Android process has started. This theme is visible to the user
                  while the Flutter UI initializes. After that, this theme continues
@@ -110,16 +88,6 @@
         <intent>
             <action android:name="android.intent.action.VIEW"/>
             <data android:scheme="tel"/>
-        </intent>
-        <!-- Captain side (unified app): so url_launcher can open the
-             WhatsApp support link (https) and the phone dialer (tel/DIAL). -->
-        <intent>
-            <action android:name="android.intent.action.VIEW" />
-            <data android:scheme="https" />
-        </intent>
-        <intent>
-            <action android:name="android.intent.action.DIAL" />
-            <data android:scheme="tel" />
         </intent>
     </queries>
 </manifest>

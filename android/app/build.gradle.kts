@@ -5,9 +5,6 @@ plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
-    // Reads android/app/google-services.json to configure Firebase Cloud
-    // Messaging - carried over from the captain app when the apps merged.
-    id("com.google.gms.google-services")
 }
 
 // Optional Google Maps SDK API key for the Phase 2 destination map picker.
@@ -35,7 +32,7 @@ if (hasReleaseSigning) {
 }
 
 android {
-    namespace = "com.alhudhud.captain"
+    namespace = "com.alhudhud.customerapp"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -55,7 +52,7 @@ android {
         // GitHub Actions runner has no ~/.android/debug.keystore, so every
         // CI build was self-signing with a brand new, different key, and
         // installing over a previous download hit the same conflict.
-        applicationId = "com.alhudhud.captain"
+        applicationId = "com.alhudhud.customerapp"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
