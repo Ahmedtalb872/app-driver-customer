@@ -21,9 +21,33 @@
 // Called by any signed-in admin (not gated further - Places search
 // results aren't sensitive), same trust level as the destination search
 // screens already open to any admin session.
+//
+// Google's formatted_address is often just a Plus Code or "Unnamed Road"
+// in Nouakchott's less-mapped areas, so each result's coordinates are also
+// matched against this app's own districts/neighborhoods registry via the
+// nearest_place_area() function (20260831000086) and the match appended to
+// the subtitle - this app's data knows the area's real name even when
+// Google's doesn't.
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const GOOGLE_PLACES_SERVER_API_KEY =
   Deno.env.get("GOOGLE_PLACES_SERVER_API_KEY") ?? "";
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+async function nearestArea(
+  lat: number,
+  lng: number,
+): Promise<{ district_name: string | null; neighborhood_name: string | null }> {
+  const { data, error } = await supabase
+    .rpc("nearest_place_area", { p_lat: lat, p_lng: lng })
+    .maybeSingle();
+  if (error || !data) return { district_name: null, neighborhood_name: null };
+  return data;
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -102,7 +126,7 @@ Deno.serve(async (req: Request) => {
     }
     console.log(`places-search: query "${query}" -> ${data.results?.length ?? 0} raw results from Google`);
 
-    const results = [];
+    const candidates = [];
     for (const row of data.results ?? []) {
       const lat = row.geometry?.location?.lat;
       const lng = row.geometry?.location?.lng;
@@ -117,15 +141,31 @@ Deno.serve(async (req: Request) => {
       ) {
         continue;
       }
-      results.push({
+      candidates.push({
         id: `google_${placeId}`,
         title: name,
-        subtitle: row.formatted_address ?? null,
+        subtitle: row.formatted_address as string | null ?? null,
         latitude: lat,
         longitude: lng,
       });
-      if (results.length >= limit) break;
+      if (candidates.length >= limit) break;
     }
+
+    const areas = await Promise.all(
+      candidates.map((c) => nearestArea(c.latitude, c.longitude)),
+    );
+    const results = candidates.map((c, i) => {
+      const area = areas[i];
+      let subtitle = c.subtitle;
+      if (area.neighborhood_name) {
+        subtitle = subtitle
+          ? `${subtitle} - حي ${area.neighborhood_name}`
+          : `حي ${area.neighborhood_name}`;
+      } else if (area.district_name) {
+        subtitle = subtitle ? `${subtitle} - ${area.district_name}` : area.district_name;
+      }
+      return { ...c, subtitle };
+    });
 
     return json({ results });
   } catch (_e) {
