@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 import '../../../core/constants/colors.dart';
+import '../../../core/widgets/real_map_widget.dart';
 import '../data/models/destination_suggestion.dart';
 import '../data/models/place_category.dart';
 import '../data/repositories/categories_repository.dart';
@@ -137,6 +138,17 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
       if (mounted) setState(() => _isListening = false);
       return;
     }
+    if (!_speechAvailable) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'الإدخال الصوتي غير متاح على هذا الجهاز.',
+            style: TextStyle(fontFamily: 'Cairo'),
+          ),
+        ),
+      );
+      return;
+    }
     setState(() => _isListening = true);
     await _speech.listen(
       localeId: 'ar',
@@ -260,42 +272,108 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _controller,
-              autofocus: true,
-              onChanged: _onQueryChanged,
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                hintText: 'ابحث عن حي، مكان، أو عنوان...',
-                prefixIcon: const Icon(
-                  Icons.search_rounded,
-                  color: AppColors.secondaryText,
-                ),
-                suffixIcon: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_controller.text.isNotEmpty)
-                      IconButton(
-                        icon: const Icon(Icons.clear_rounded),
-                        onPressed: () {
-                          _controller.clear();
-                          _onQueryChanged('');
-                        },
-                      ),
-                    if (_speechAvailable)
-                      IconButton(
-                        icon: Icon(
-                          _isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
-                          color: _isListening
-                              ? AppColors.error
-                              : AppColors.secondaryText,
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: GestureDetector(
+              onTap: _pickFromMap,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: SizedBox(
+                      height: 140,
+                      width: double.infinity,
+                      child: IgnorePointer(
+                        child: RealMapWidget(
+                          interactive: false,
+                          pickupLat: widget.nearLat,
+                          pickupLng: widget.nearLng,
                         ),
-                        onPressed: _toggleListening,
                       ),
-                  ],
-                ),
+                    ),
+                  ),
+                  const Icon(
+                    Icons.location_on_rounded,
+                    color: AppColors.error,
+                    size: 34,
+                  ),
+                  Positioned(
+                    bottom: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.6),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        'اضغط لاختيار الموقع من الخريطة',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    autofocus: true,
+                    onChanged: _onQueryChanged,
+                    textInputAction: TextInputAction.search,
+                    decoration: InputDecoration(
+                      hintText: 'ابحث عن حي، مكان، أو عنوان...',
+                      prefixIcon: const Icon(
+                        Icons.search_rounded,
+                        color: AppColors.secondaryText,
+                      ),
+                      suffixIcon: _controller.text.isEmpty
+                          ? null
+                          : IconButton(
+                              icon: const Icon(Icons.clear_rounded),
+                              onPressed: () {
+                                _controller.clear();
+                                _onQueryChanged('');
+                              },
+                            ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                // Always visible (not conditioned on _speechAvailable, which
+                // only resolves after an async _speech.initialize() call
+                // completes) - unavailable-on-tap now says so via a snackbar
+                // instead of the button silently never appearing, see
+                // _toggleListening.
+                Material(
+                  color: _isListening ? AppColors.error : AppColors.primary,
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: _toggleListening,
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Icon(
+                        _isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           if (_isListening)
@@ -311,19 +389,6 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
                 ),
               ),
             ),
-          ListTile(
-            leading: const Icon(Icons.map_rounded, color: AppColors.primary),
-            title: const Text(
-              'اختر من الخريطة',
-              style: TextStyle(
-                fontFamily: 'Cairo',
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-                color: AppColors.darkText,
-              ),
-            ),
-            onTap: _pickFromMap,
-          ),
           const Divider(height: 1),
           if (_isLoading) const LinearProgressIndicator(minHeight: 2),
           Expanded(child: _buildBody()),
