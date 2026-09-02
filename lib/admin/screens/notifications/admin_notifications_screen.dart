@@ -16,9 +16,16 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
   final _repository = AdminNotificationsRepository();
   final _titleController = TextEditingController();
   final _bodyController = TextEditingController();
+  String _audience = 'customers';
   bool _sending = false;
   bool _loadingHistory = true;
   List<Map<String, dynamic>> _history = [];
+
+  static const _audienceLabels = {
+    'customers': 'الزبائن',
+    'captains': 'الكباتن',
+    'both': 'الجميع (زبائن وكباتن)',
+  };
 
   @override
   void initState() {
@@ -50,17 +57,21 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
 
     final ok = await showConfirmDialog(
       context,
-      title: 'إرسال إشعار لجميع الزبائن',
+      title: 'إرسال إشعار جماعي',
       message:
-          'سيصل هذا الإشعار فوراً لكل زبون لديه التطبيق مثبتاً على هاتفه. '
-          'هل تريد المتابعة؟',
+          'سيصل هذا الإشعار فوراً لكل "${_audienceLabels[_audience]}" لديه '
+          'التطبيق مثبتاً على هاتفه. هل تريد المتابعة؟',
       confirmLabel: 'إرسال',
     );
     if (!ok) return;
 
     setState(() => _sending = true);
     try {
-      final sent = await _repository.sendBroadcast(title: title, body: body);
+      final sent = await _repository.sendBroadcast(
+        title: title,
+        body: body,
+        audience: _audience,
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -102,7 +113,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'إرسال إشعار جماعي لكل الزبائن',
+                    'إرسال إشعار جماعي',
                     style: TextStyle(
                       fontFamily: 'Cairo',
                       fontWeight: FontWeight.bold,
@@ -118,6 +129,38 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
                       fontSize: 12,
                       color: Colors.grey,
                     ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'إرسال إلى',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(
+                        value: 'customers',
+                        label: Text('الزبائن', style: TextStyle(fontFamily: 'Cairo')),
+                        icon: Icon(Icons.groups_rounded),
+                      ),
+                      ButtonSegment(
+                        value: 'captains',
+                        label: Text('الكباتن', style: TextStyle(fontFamily: 'Cairo')),
+                        icon: Icon(Icons.local_taxi_rounded),
+                      ),
+                      ButtonSegment(
+                        value: 'both',
+                        label: Text('الجميع', style: TextStyle(fontFamily: 'Cairo')),
+                        icon: Icon(Icons.diversity_3_rounded),
+                      ),
+                    ],
+                    selected: {_audience},
+                    onSelectionChanged: (selection) =>
+                        setState(() => _audience = selection.first),
                   ),
                   const SizedBox(height: 16),
                   TextField(
@@ -175,6 +218,8 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
     final sentAt = row['sent_at'] == null
         ? null
         : DateTime.tryParse(row['sent_at'] as String);
+    final audienceLabel =
+        _audienceLabels[row['audience'] as String?] ?? _audienceLabels['customers'];
     return Card(
       child: ListTile(
         title: Text(
@@ -182,9 +227,10 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
           style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
         ),
         subtitle: Text(
-          row['body'] as String? ?? '',
+          '${row['body'] as String? ?? ''}\n$audienceLabel',
           style: const TextStyle(fontFamily: 'Cairo'),
         ),
+        isThreeLine: true,
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,

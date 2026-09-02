@@ -1,8 +1,15 @@
-// Sends a real FCM *notification* (not data-only) to every customer with a
-// saved fcm_token, so the OS shows it in the system tray even if the app
-// is backgrounded or fully killed - no custom Dart background handler
-// needed on the client for this, unlike send-trip-push's data-only
-// new-trip alert (which needs custom ringing/full-screen logic).
+// Sends a real FCM *notification* (not data-only) to every customer and/or
+// captain with a saved fcm_token, so the OS shows it in the system tray
+// even if the app is backgrounded or fully killed - no custom Dart
+// background handler needed on the client for this, unlike
+// send-trip-push's data-only new-trip alert (which needs custom
+// ringing/full-screen logic).
+//
+// `audience` in the request body picks who gets it: "customers" (default,
+// public.customers.fcm_token), "captains" (public.captains.fcm_token - the
+// same column send-trip-push already reads for new-trip alerts, mirrored
+// onto customers by 20260817000080_customer_push_broadcasts.sql), or
+// "both".
 //
 // Called directly from the admin dashboard (an authenticated admin
 // session), not from a Postgres trigger - so this checks the caller's own
@@ -125,26 +132,42 @@ Deno.serve(async (req: Request) => {
     });
     if (!isAdmin) return json({ error: "forbidden" }, 403);
 
-    const { title, body } = await req.json();
+    const { title, body, audience: rawAudience } = await req.json();
     if (!title || !body) return json({ error: "missing_title_or_body" }, 400);
+    const audience = ["customers", "captains", "both"].includes(rawAudience)
+      ? rawAudience
+      : "customers";
 
     const serviceAccount = JSON.parse(FIREBASE_SERVICE_ACCOUNT_JSON);
-    const { data: customers, error: customersError } = await supabase
-      .from("customers")
-      .select("id, fcm_token")
-      .not("fcm_token", "is", null);
-    if (customersError) return json({ error: customersError.message }, 500);
+    const tokens: string[] = [];
+
+    if (audience === "customers" || audience === "both") {
+      const { data: customers, error: customersError } = await supabase
+        .from("customers")
+        .select("id, fcm_token")
+        .not("fcm_token", "is", null);
+      if (customersError) return json({ error: customersError.message }, 500);
+      tokens.push(...(customers ?? []).map((c) => c.fcm_token as string).filter(Boolean));
+    }
+
+    if (audience === "captains" || audience === "both") {
+      const { data: captains, error: captainsError } = await supabase
+        .from("captains")
+        .select("id, fcm_token")
+        .not("fcm_token", "is", null);
+      if (captainsError) return json({ error: captainsError.message }, 500);
+      tokens.push(...(captains ?? []).map((c) => c.fcm_token as string).filter(Boolean));
+    }
 
     const results = await Promise.allSettled(
-      (customers ?? [])
-        .filter((c) => !!c.fcm_token)
-        .map((c) => sendPush(c.fcm_token as string, serviceAccount.project_id, title, body)),
+      tokens.map((token) => sendPush(token, serviceAccount.project_id, title, body)),
     );
     const sent = results.filter((r) => r.status === "fulfilled").length;
 
     await supabase.from("notification_broadcasts").insert({
       title,
       body,
+      audience,
       recipient_count: sent,
       sent_by: userData.user.id,
     });
