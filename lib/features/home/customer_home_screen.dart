@@ -251,35 +251,63 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
   }
 
   Widget _buildDashboardView() {
-    return SafeArea(
-      child: SingleChildScrollView(
-        child: Column(
+    return SingleChildScrollView(
+      child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // Full-bleed brand header - extends behind the status bar (hence
+          // SafeArea below is `top: false`, this Container handles that
+          // inset itself) so the gold reaches the very top edge instead of
+          // stopping short of it.
+          Container(
+            width: double.infinity,
+            color: AppColors.accent,
+            padding: EdgeInsets.only(
+              top: MediaQuery.of(context).padding.top + 14,
+              bottom: 14,
+            ),
+            child: const Text(
+              'Al-hudhud-lizeboun',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Colors.white,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          SafeArea(
+            top: false,
+            child: Column(
               children: [
-                const _LogoBadge(),
-                _CircleIconButton(
-                  icon: _isLocating
-                      ? Icons.hourglass_empty
-                      : Icons.my_location_rounded,
-                  onTap: _isLocating ? null : _determinePickup,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const _LogoBadge(),
+                      _CircleIconButton(
+                        icon: _isLocating
+                            ? Icons.hourglass_empty
+                            : Icons.my_location_rounded,
+                        onTap: _isLocating ? null : _determinePickup,
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                  child: _buildLocationBar(),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  child: _buildServiceCards(),
                 ),
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-            child: _buildLocationBar(),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            child: _buildServiceCards(),
-          ),
         ],
-        ),
       ),
     );
   }
