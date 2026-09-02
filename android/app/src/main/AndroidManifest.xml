@@ -28,7 +28,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <application
-        android:label="الهدهد Customer"
+        android:label="al hudhud -lizeboun"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <!-- Google Maps SDK API key for the destination map picker (Phase 2).

@@ -160,29 +160,45 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
   /// Parcel delivery entry point, separate from [TripPlannerScreen] (a
   /// delivery isn't a "trip type" - it always has a destination and
   /// collects a recipient/package instead of a passenger count, see
-  /// [DeliveryRequestScreen]). Reuses the same destination search screen.
+  /// [DeliveryRequestScreen]). Reuses the same destination search screen,
+  /// now asking for BOTH the pickup (where the package is collected from)
+  /// and the destination explicitly - each with the same map/voice search
+  /// the normal ride's pickup/destination pickers already offer (see
+  /// TripPlannerScreen._pickNormalPickup/_pickNormalDestination) - rather
+  /// than silently locking pickup to the customer's detected GPS location
+  /// with no way to change it, which is wrong whenever the parcel isn't
+  /// actually being picked up from wherever the customer is standing.
   Future<void> _startDeliveryRequest() async {
-    if (_pickupLat == null || _pickupLng == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'الرجاء تفعيل خدمة الموقع الجغرافي لتتمكن من طلب توصيل.',
-            style: TextStyle(fontFamily: 'Cairo'),
-          ),
+    final pickup = await Navigator.of(context).push<DestinationSuggestion>(
+      MaterialPageRoute(
+        builder: (context) => DestinationSearchScreen(
+          title: 'نقطة استلام الطرد',
+          mapPickerTitle: 'اختر نقطة الاستلام من الخريطة',
+          nearLat: _pickupLat,
+          nearLng: _pickupLng,
         ),
-      );
-      return;
-    }
+      ),
+    );
+    if (pickup == null || !mounted) return;
+
     final destination = await Navigator.of(context).push<DestinationSuggestion>(
-      MaterialPageRoute(builder: (context) => const DestinationSearchScreen()),
+      MaterialPageRoute(
+        builder: (context) => DestinationSearchScreen(
+          title: 'نقطة تسليم الطرد',
+          mapPickerTitle: 'اختر نقطة التسليم من الخريطة',
+          nearLat: pickup.latitude,
+          nearLng: pickup.longitude,
+        ),
+      ),
     );
     if (destination == null || !mounted) return;
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => DeliveryRequestScreen(
-          pickupLat: _pickupLat!,
-          pickupLng: _pickupLng!,
-          pickupAddress: _pickupAddress,
+          pickupLat: pickup.latitude,
+          pickupLng: pickup.longitude,
+          pickupAddress: pickup.title,
           destination: destination,
         ),
       ),
