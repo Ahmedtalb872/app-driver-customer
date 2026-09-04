@@ -1,22 +1,24 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/constants/colors.dart';
 import '../../models/models.dart';
 import '../destinations/data/models/destination_suggestion.dart';
-import '../destinations/presentation/destination_search_screen.dart';
+import '../destinations/data/repositories/destination_search_repository.dart';
+import '../destinations/presentation/destination_map_picker_screen.dart';
 import 'request_ride_screen.dart';
 import 'voice_ride_request_sheet.dart';
 
 /// Shown after tapping "إلى أين تريد الذهاب؟" on the home screen - two
 /// independent sections, one per [TripType]: a normal ride needs both a
 /// pickup and a destination point, an open ride only a pickup. Each point
-/// is picked via [DestinationSearchScreen] (which itself offers a text/
-/// voice search or a full-screen map picker), pre-filled with the GPS
-/// location detected on the home screen but freely changeable here. A
-/// normal ride can also fill both points at once by speaking them together
-/// - see [VoiceRideRequestSheet] - since there's a well-formed "من X إلى Y"
-/// sentence to parse; an open ride only ever has one point, so it keeps the
-/// per-field voice search inside [DestinationSearchScreen] instead.
+/// is picked inline, right on this screen, via [_LocationSearchField] (type
+/// to search, or the map icon for a full-screen map picker), pre-filled
+/// with the GPS location detected on the home screen but freely changeable
+/// here. A normal ride can also fill both points at once by speaking them
+/// together - see [VoiceRideRequestSheet] - since there's a well-formed "من
+/// X إلى Y" sentence to parse.
 class TripPlannerScreen extends StatefulWidget {
   const TripPlannerScreen({
     super.key,
@@ -47,18 +49,7 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
       ? null
       : widget.initialPickupAddress;
 
-  Future<void> _pickNormalPickup() async {
-    final result = await Navigator.of(context).push<DestinationSuggestion>(
-      MaterialPageRoute(
-        builder: (context) => DestinationSearchScreen(
-          title: 'نقطة الانطلاق',
-          mapPickerTitle: 'اختر نقطة الانطلاق من الخريطة',
-          nearLat: _normalPickupLat,
-          nearLng: _normalPickupLng,
-        ),
-      ),
-    );
-    if (result == null || !mounted) return;
+  void _selectNormalPickup(DestinationSuggestion result) {
     setState(() {
       _normalPickupLat = result.latitude;
       _normalPickupLng = result.longitude;
@@ -66,20 +57,46 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
     });
   }
 
-  Future<void> _pickNormalDestination() async {
+  void _selectNormalDestination(DestinationSuggestion result) {
+    setState(() => _normalDestination = result);
+  }
+
+  void _selectOpenPickup(DestinationSuggestion result) {
+    setState(() {
+      _openPickupLat = result.latitude;
+      _openPickupLng = result.longitude;
+      _openPickupAddress = result.title;
+    });
+  }
+
+  Future<void> _pickNormalPickupFromMap() async {
     final result = await Navigator.of(context).push<DestinationSuggestion>(
       MaterialPageRoute(
-        builder: (context) => DestinationSearchScreen(
-          mapPickerTitle: 'اختر الوجهة من الخريطة',
-          // Biased toward the pickup point already chosen, if any - the
-          // best "near" signal available before a destination is picked.
-          nearLat: _normalPickupLat,
-          nearLng: _normalPickupLng,
-        ),
+        builder: (context) =>
+            const DestinationMapPickerScreen(title: 'اختر نقطة الانطلاق من الخريطة'),
       ),
     );
-    if (result == null || !mounted) return;
-    setState(() => _normalDestination = result);
+    if (result != null && mounted) _selectNormalPickup(result);
+  }
+
+  Future<void> _pickNormalDestinationFromMap() async {
+    final result = await Navigator.of(context).push<DestinationSuggestion>(
+      MaterialPageRoute(
+        builder: (context) =>
+            const DestinationMapPickerScreen(title: 'اختر الوجهة من الخريطة'),
+      ),
+    );
+    if (result != null && mounted) _selectNormalDestination(result);
+  }
+
+  Future<void> _pickOpenPickupFromMap() async {
+    final result = await Navigator.of(context).push<DestinationSuggestion>(
+      MaterialPageRoute(
+        builder: (context) =>
+            const DestinationMapPickerScreen(title: 'اختر نقطة الانطلاق من الخريطة'),
+      ),
+    );
+    if (result != null && mounted) _selectOpenPickup(result);
   }
 
   /// Lets the customer say pickup and destination in one sentence instead
@@ -113,25 +130,6 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
       _normalDestination = result.destination;
     });
     _continueNormal();
-  }
-
-  Future<void> _pickOpenPickup() async {
-    final result = await Navigator.of(context).push<DestinationSuggestion>(
-      MaterialPageRoute(
-        builder: (context) => DestinationSearchScreen(
-          title: 'نقطة الانطلاق',
-          mapPickerTitle: 'اختر نقطة الانطلاق من الخريطة',
-          nearLat: _openPickupLat,
-          nearLng: _openPickupLng,
-        ),
-      ),
-    );
-    if (result == null || !mounted) return;
-    setState(() {
-      _openPickupLat = result.latitude;
-      _openPickupLng = result.longitude;
-      _openPickupAddress = result.title;
-    });
   }
 
   void _continueNormal() {
@@ -199,20 +197,26 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
                 ),
               ),
               const SizedBox(height: 14),
-              _buildLocationRow(
+              _LocationSearchField(
                 icon: Icons.radio_button_checked_rounded,
                 iconColor: AppColors.success,
                 label: 'نقطة الانطلاق',
-                value: _normalPickupAddress,
-                onTap: _pickNormalPickup,
+                initialText: _normalPickupAddress,
+                nearLat: _normalPickupLat,
+                nearLng: _normalPickupLng,
+                onSelected: _selectNormalPickup,
+                onPickFromMap: _pickNormalPickupFromMap,
               ),
               const SizedBox(height: 10),
-              _buildLocationRow(
+              _LocationSearchField(
                 icon: Icons.location_on_rounded,
                 iconColor: AppColors.error,
                 label: 'نقطة الوصول',
-                value: _normalDestination?.title,
-                onTap: _pickNormalDestination,
+                initialText: _normalDestination?.title,
+                nearLat: _normalPickupLat,
+                nearLng: _normalPickupLng,
+                onSelected: _selectNormalDestination,
+                onPickFromMap: _pickNormalDestinationFromMap,
               ),
               const SizedBox(height: 16),
               ElevatedButton(
@@ -234,12 +238,15 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
             title: 'مشوار مفتوح',
             subtitle: 'بدون وجهة محددة - السائق تحت تصرفك، تحدد نقطة الانطلاق فقط',
             children: [
-              _buildLocationRow(
+              _LocationSearchField(
                 icon: Icons.radio_button_checked_rounded,
                 iconColor: AppColors.success,
                 label: 'نقطة الانطلاق',
-                value: _openPickupAddress,
-                onTap: _pickOpenPickup,
+                initialText: _openPickupAddress,
+                nearLat: _openPickupLat,
+                nearLng: _openPickupLng,
+                onSelected: _selectOpenPickup,
+                onPickFromMap: _pickOpenPickupFromMap,
               ),
               const SizedBox(height: 16),
               ElevatedButton(
@@ -319,64 +326,224 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
       ),
     );
   }
+}
 
-  Widget _buildLocationRow({
-    required IconData icon,
-    required Color iconColor,
-    required String label,
-    required String? value,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.background,
-          borderRadius: BorderRadius.circular(12),
+/// A pickup/destination field you type directly into, right on
+/// [TripPlannerScreen] - no navigating to a separate screen just to search.
+/// Debounced live search as you type, plus an explicit "بحث" button for an
+/// immediate search, both backed by the same [DestinationSearchRepository]
+/// [DestinationSearchScreen] itself uses (this app's own places/districts/
+/// neighborhoods merged with Google Places). The map icon still opens
+/// [DestinationMapPickerScreen] directly as a fallback for picking a point
+/// with no name to search for.
+class _LocationSearchField extends StatefulWidget {
+  const _LocationSearchField({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.onSelected,
+    required this.onPickFromMap,
+    this.initialText,
+    this.nearLat,
+    this.nearLng,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final String? initialText;
+  final double? nearLat;
+  final double? nearLng;
+  final ValueChanged<DestinationSuggestion> onSelected;
+  final VoidCallback onPickFromMap;
+
+  @override
+  State<_LocationSearchField> createState() => _LocationSearchFieldState();
+}
+
+class _LocationSearchFieldState extends State<_LocationSearchField> {
+  final _repository = DestinationSearchRepository();
+  late final _controller = TextEditingController(text: widget.initialText ?? '');
+  Timer? _debounce;
+  List<DestinationSuggestion> _options = [];
+  bool _searching = false;
+  bool _searched = false;
+
+  @override
+  void didUpdateWidget(covariant _LocationSearchField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Keeps the field in sync when a point is set some other way (voice
+    // request, map picker) while this field isn't the one driving the
+    // change - e.g. picking the destination from the map still needs the
+    // pickup field's already-typed text left alone, but a fresh
+    // initialText (voice sheet filling both at once) must actually show.
+    if (widget.initialText != oldWidget.initialText &&
+        widget.initialText != _controller.text) {
+      _controller.text = widget.initialText ?? '';
+    }
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onChanged(String value) {
+    _debounce?.cancel();
+    if (value.trim().length < 2) {
+      setState(() {
+        _options = [];
+        _searched = false;
+      });
+      return;
+    }
+    _debounce = Timer(const Duration(milliseconds: 400), () => _runSearch(value));
+  }
+
+  Future<void> _runSearch(String query) async {
+    if (query.trim().length < 2) return;
+    _debounce?.cancel();
+    setState(() => _searching = true);
+    try {
+      final results = await _repository.search(
+        query: query,
+        nearLat: widget.nearLat,
+        nearLng: widget.nearLng,
+      );
+      if (!mounted) return;
+      setState(() {
+        _options = results;
+        _searching = false;
+        _searched = true;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _options = [];
+        _searching = false;
+        _searched = true;
+      });
+    }
+  }
+
+  void _select(DestinationSuggestion suggestion) {
+    _controller.text = suggestion.title;
+    setState(() {
+      _options = [];
+      _searched = false;
+    });
+    FocusScope.of(context).unfocus();
+    widget.onSelected(suggestion);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          widget.label,
+          style: const TextStyle(
+            fontFamily: 'Cairo',
+            fontSize: 10.5,
+            color: AppColors.secondaryText,
+          ),
         ),
-        child: Row(
+        const SizedBox(height: 4),
+        Row(
           children: [
-            Icon(icon, color: iconColor, size: 20),
-            const SizedBox(width: 10),
+            Icon(widget.icon, color: widget.iconColor, size: 20),
+            const SizedBox(width: 8),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 10.5,
-                      color: AppColors.secondaryText,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    value ?? 'اضغط للاختيار',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                      color: value == null
-                          ? AppColors.secondaryText
-                          : AppColors.darkText,
-                    ),
-                  ),
-                ],
+              child: TextField(
+                controller: _controller,
+                onChanged: _onChanged,
+                textInputAction: TextInputAction.search,
+                onSubmitted: _runSearch,
+                style: const TextStyle(fontFamily: 'Cairo', fontSize: 13),
+                decoration: const InputDecoration(
+                  isDense: true,
+                  hintText: 'اكتب اسم المكان...',
+                  contentPadding: EdgeInsets.symmetric(vertical: 8),
+                ),
               ),
             ),
-            const Icon(
-              Icons.arrow_forward_ios_rounded,
-              size: 12,
+            const SizedBox(width: 6),
+            SizedBox(
+              height: 34,
+              child: FilledButton(
+                onPressed: () => _runSearch(_controller.text),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  minimumSize: Size.zero,
+                ),
+                child: const Text(
+                  'بحث',
+                  style: TextStyle(fontFamily: 'Cairo', fontSize: 12),
+                ),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.map_outlined, size: 20),
               color: AppColors.secondaryText,
+              onPressed: widget.onPickFromMap,
+              tooltip: 'اختر من الخريطة',
             ),
           ],
         ),
-      ),
+        if (_searching)
+          const Padding(
+            padding: EdgeInsets.only(top: 6),
+            child: LinearProgressIndicator(minHeight: 2),
+          )
+        else if (_options.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(top: 6),
+            constraints: const BoxConstraints(maxHeight: 220),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: AppColors.border),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              padding: EdgeInsets.zero,
+              itemCount: _options.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final option = _options[index];
+                return ListTile(
+                  dense: true,
+                  title: Text(
+                    option.title,
+                    style: const TextStyle(fontFamily: 'Cairo', fontSize: 13),
+                  ),
+                  subtitle: option.subtitle == null
+                      ? null
+                      : Text(
+                          option.subtitle!,
+                          style: const TextStyle(fontFamily: 'Cairo', fontSize: 11),
+                        ),
+                  onTap: () => _select(option),
+                );
+              },
+            ),
+          )
+        else if (_searched)
+          const Padding(
+            padding: EdgeInsets.only(top: 6),
+            child: Text(
+              'لا توجد نتائج لهذا البحث',
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 11.5,
+                color: AppColors.secondaryText,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
