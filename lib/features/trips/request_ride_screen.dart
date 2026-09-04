@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/constants/colors.dart';
 import '../../core/services/google_directions_route_estimator.dart';
+import '../../core/widgets/real_map_widget.dart';
 import '../../core/services/route_estimator.dart';
 import '../../core/services/captain_subscription_repository.dart';
 import '../../core/services/ride_repository.dart';
@@ -292,6 +293,8 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _buildRouteMap(),
+            const SizedBox(height: 12),
             _buildRouteSummary(),
             if (_canOfferSubscription) ...[
               const SizedBox(height: 16),
@@ -336,6 +339,30 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
         ),
       ),
       bottomNavigationBar: _buildBottomBar(),
+    );
+  }
+
+  /// A small, read-only map showing exactly the pickup pin (and destination
+  /// pin + route line, for a normal ride) this request is about to be sent
+  /// with - so the customer can visually confirm both points before
+  /// committing, not just read their text addresses in
+  /// [_buildRouteSummary] below.
+  Widget _buildRouteMap() {
+    final destination = widget.destination;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: SizedBox(
+        height: 190,
+        child: RealMapWidget(
+          interactive: false,
+          pickupLat: widget.pickupLat,
+          pickupLng: widget.pickupLng,
+          destLat: destination?.latitude,
+          destLng: destination?.longitude,
+          showRoute: destination != null,
+          routePolyline: _route?.polyline,
+        ),
+      ),
     );
   }
 

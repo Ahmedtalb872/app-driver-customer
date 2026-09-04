@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../../core/constants/colors.dart';
+import '../../core/services/geocoding_service.dart';
 import '../../models/models.dart';
 import '../destinations/data/models/destination_suggestion.dart';
 import '../destinations/data/repositories/destination_search_repository.dart';
@@ -206,6 +208,7 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
                 nearLng: _normalPickupLng,
                 onSelected: _selectNormalPickup,
                 onPickFromMap: _pickNormalPickupFromMap,
+                showCurrentLocation: true,
               ),
               const SizedBox(height: 10),
               _LocationSearchField(
@@ -247,6 +250,7 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
                 nearLng: _openPickupLng,
                 onSelected: _selectOpenPickup,
                 onPickFromMap: _pickOpenPickupFromMap,
+                showCurrentLocation: true,
               ),
               const SizedBox(height: 16),
               ElevatedButton(
@@ -346,6 +350,7 @@ class _LocationSearchField extends StatefulWidget {
     this.initialText,
     this.nearLat,
     this.nearLng,
+    this.showCurrentLocation = false,
   });
 
   final IconData icon;
@@ -356,6 +361,13 @@ class _LocationSearchField extends StatefulWidget {
   final double? nearLng;
   final ValueChanged<DestinationSuggestion> onSelected;
   final VoidCallback onPickFromMap;
+
+  /// Shows an extra "استخدام موقعي الحالي" button that fetches a fresh GPS
+  /// fix and fills the field with it directly - a pickup point (unlike a
+  /// destination) is overwhelmingly "right where the customer is standing",
+  /// so it shouldn't require typing/searching at all. Off by default;
+  /// pickup fields turn it on explicitly.
+  final bool showCurrentLocation;
 
   @override
   State<_LocationSearchField> createState() => _LocationSearchFieldState();
@@ -368,6 +380,7 @@ class _LocationSearchFieldState extends State<_LocationSearchField> {
   List<DestinationSuggestion> _options = [];
   bool _searching = false;
   bool _searched = false;
+  bool _locating = false;
 
   @override
   void didUpdateWidget(covariant _LocationSearchField oldWidget) {
@@ -438,6 +451,51 @@ class _LocationSearchFieldState extends State<_LocationSearchField> {
     widget.onSelected(suggestion);
   }
 
+  Future<void> _useCurrentLocation() async {
+    setState(() => _locating = true);
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return;
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition();
+      final address = await GeocodingService.instance.reverseGeocode(
+        position.latitude,
+        position.longitude,
+      );
+      if (!mounted) return;
+      _select(
+        DestinationSuggestion(
+          resultType: DestinationResultType.place,
+          id: 'current_location',
+          title: address ?? 'موقعي الحالي',
+          latitude: position.latitude,
+          longitude: position.longitude,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'تعذر تحديد موقعك الحالي - تحقق من تفعيل خدمة الموقع.',
+            style: TextStyle(fontFamily: 'Cairo'),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -491,6 +549,19 @@ class _LocationSearchFieldState extends State<_LocationSearchField> {
               onPressed: widget.onPickFromMap,
               tooltip: 'اختر من الخريطة',
             ),
+            if (widget.showCurrentLocation)
+              IconButton(
+                icon: _locating
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.my_location_rounded, size: 20),
+                color: AppColors.primary,
+                onPressed: _locating ? null : _useCurrentLocation,
+                tooltip: 'استخدام موقعي الحالي',
+              ),
           ],
         ),
         if (_searching)
