@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/config/supabase_config.dart';
@@ -149,6 +150,51 @@ class AdminCaptainsRepository {
     );
   }
 
+  /// Copies an approved "profile_photo" document (private captain-documents
+  /// bucket, owner-or-admin only) into the public captain-avatars bucket and
+  /// points captains.avatar_url at it - the customer-facing trip-tracking
+  /// screen only ever reads that column, which has otherwise never had
+  /// anything write to it (see 20260812000054_captain_avatar_url.sql /
+  /// 20260813000069_captain_avatar_from_profile_photo.sql). A no-op for any
+  /// other document type. Best-effort by design - callers should treat a
+  /// failure here as separate from the document approval itself succeeding.
+  Future<void> syncApprovedProfilePhotoToAvatar(CaptainDocument doc) async {
+    if (doc.documentType != DocumentType.profilePhoto) return;
+
+    final signedUrl = await _client.storage
+        .from('captain-documents')
+        .createSignedUrl(doc.filePath, 300);
+    final response = await http.get(Uri.parse(signedUrl));
+    if (response.statusCode != 200) {
+      throw StateError(
+        'Failed to download profile photo (${response.statusCode})',
+      );
+    }
+
+    final contentType = response.headers['content-type'] ?? 'image/jpeg';
+    final extension = contentType.contains('png')
+        ? 'png'
+        : contentType.contains('webp')
+        ? 'webp'
+        : 'jpg';
+    final path =
+        'captains/${doc.captainId}/${DateTime.now().millisecondsSinceEpoch}.$extension';
+
+    await _client.storage
+        .from('captain-avatars')
+        .uploadBinary(
+          path,
+          response.bodyBytes,
+          fileOptions: FileOptions(contentType: contentType, upsert: false),
+        );
+
+    final publicUrl = _client.storage.from('captain-avatars').getPublicUrl(path);
+    await _client
+        .from('captains')
+        .update({'avatar_url': publicUrl})
+        .eq('id', doc.captainId);
+  }
+
   Future<void> setSuspended(
     String captainId,
     bool suspended, {
@@ -162,6 +208,28 @@ class AdminCaptainsRepository {
         'p_reason': reason,
       },
     );
+  }
+
+  /// Deletes the captain's profile (see
+  /// 20260802000050_admin_delete_captain.sql) - the uploaded document
+  /// *rows* cascade-delete with it, but the underlying files stay in
+  /// Storage (no admin DELETE policy exists on that bucket, and it's the
+  /// captain's own account either way - see the migration's comment for why
+  /// a full account/file wipe isn't in scope here). Throws
+  /// [CaptainHasTripHistoryException] when the captain was ever assigned a
+  /// trip - the database itself refuses the delete in that case.
+  Future<void> delete(String captainId, String reason) async {
+    try {
+      await _client.rpc(
+        'admin_delete_captain',
+        params: {'p_captain_id': captainId, 'p_reason': reason},
+      );
+    } on PostgrestException catch (e) {
+      if (e.message.contains('CAPTAIN_HAS_TRIP_HISTORY')) {
+        throw CaptainHasTripHistoryException();
+      }
+      rethrow;
+    }
   }
 
   /// Live version of [loadCaptains](onlineFilter: true): emits the online
@@ -203,3 +271,7 @@ class CaptainDocumentsIncompleteException implements Exception {
 
   const CaptainDocumentsIncompleteException(this.rawMessage);
 }
+
+/// Thrown when `admin_delete_captain` refuses because the captain has trip
+/// history - suspend the account instead of deleting it.
+class CaptainHasTripHistoryException implements Exception {}

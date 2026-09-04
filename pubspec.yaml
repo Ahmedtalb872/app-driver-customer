@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 1.1.1+1
 
 environment:
   sdk: ^3.12.2
@@ -42,6 +42,10 @@ dependencies:
     sdk: flutter
   flutter_map: ^6.1.0
   latlong2: ^0.9.0
+  # Real Google Maps SDK - see real_map_widget.dart. Android/iOS via the
+  # native platform channels, web via google_maps_flutter_web (requires
+  # the Maps JS API script tag in web/index.html).
+  google_maps_flutter: ^2.10.0
   geolocator: ^11.0.0
   http: ^1.2.1
   supabase_flutter: ^2.8.0
@@ -54,8 +58,35 @@ dependencies:
   flutter_local_notifications: ^18.0.1
   shared_preferences: ^2.3.3
   image_picker: ^1.1.2
-  file_picker: ^8.1.6
   url_launcher: ^6.3.1
+  speech_to_text: ^7.0.0
+  # In-app voice calling between customer and captain over a trip - see
+  # lib/core/services/call_service.dart. Signaling rides on a Supabase
+  # Realtime broadcast channel (call_signaling_service.dart), no new
+  # backend/TURN server needed; audio only, STUN-only NAT traversal.
+  flutter_webrtc: ^1.6.0
+  # Broadcast push notifications sent from the admin dashboard - see
+  # lib/core/services/push_notifications.dart and
+  # supabase/functions/send-broadcast-push. Same Firebase project as the
+  # captain app (aihoudhoud), just a second Android app registered under
+  # it - versions matched to aihoudhoud's pubspec.yaml to avoid pulling in
+  # two different generated Firebase plugin registrations across the two
+  # apps' shared backend.
+  firebase_core: ^4.13.0
+  firebase_messaging: ^16.5.0
+  cronet_http: ^1.9.0
+  # Pinned as a direct dependency (would otherwise resolve transitively,
+  # e.g. via speech_to_text/geolocator_android): 12.4.0 generates an
+  # Android plugin registration referencing
+  # dev.fluttercommunity.plus.device_info.DeviceInfoPlusPlugin, a class
+  # that doesn't exist in that resolved version's actual Android sources -
+  # "error: cannot find symbol" on every build. 13.x's registration matches
+  # its real Android implementation.
+  device_info_plus: ^13.2.0
+  # Reads the real installed build's version name/number for the About
+  # screen - it used to show a hardcoded "1.0.0+1" string that never
+  # reflected what was actually installed.
+  package_info_plus: ^10.2.1
   flutter_web_plugins:
     sdk: flutter
 
@@ -93,10 +124,10 @@ flutter_launcher_icons:
 
 flutter_native_splash:
   color: "#ffffff"
-  image: "assets/images/al-houdhoud-logo.png"
+  image: "assets/images/al-houdhoud-logo-mark.png"
   android_12:
     color: "#ffffff"
-    image: "assets/images/al-houdhoud-logo.png"
+    image: "assets/images/al-houdhoud-logo-mark.png"
   web: true
 
 # For information on the generic Dart part of this file, see the
@@ -116,8 +147,10 @@ flutter:
   #   - images/a_dot_ham.jpeg
   assets:
     - assets/images/al-houdhoud-logo.png
+    - assets/images/al-houdhoud-logo-mark.png
     - assets/audio/hudhud_ride_request.wav
     - assets/geo/nouakchott_districts.geojson
+    - assets/data/places.json
     - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see

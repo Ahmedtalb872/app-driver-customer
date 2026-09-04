@@ -24,6 +24,8 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
   bool _maintenanceMode = false;
   bool _forceUpdate = false;
   bool _captainRegistrationEnabled = true;
+  bool _selefliPromoEnabled = false;
+  late final TextEditingController _selefliPromoCapController;
 
   @override
   void initState() {
@@ -34,6 +36,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     _privacyUrlController = TextEditingController();
     _termsUrlController = TextEditingController();
     _minVersionController = TextEditingController();
+    _selefliPromoCapController = TextEditingController();
     _load();
   }
 
@@ -45,6 +48,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     _privacyUrlController.dispose();
     _termsUrlController.dispose();
     _minVersionController.dispose();
+    _selefliPromoCapController.dispose();
     super.dispose();
   }
 
@@ -66,6 +70,10 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       _forceUpdate = settings['force_update'] as bool? ?? false;
       _captainRegistrationEnabled =
           settings['captain_registration_enabled'] as bool? ?? true;
+      _selefliPromoEnabled =
+          settings['selefli_promo_enabled'] as bool? ?? false;
+      _selefliPromoCapController.text =
+          (settings['selefli_promo_cap'] as num?)?.toString() ?? '100';
       _loading = false;
     });
   }
@@ -88,6 +96,9 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       'maintenance_mode': _maintenanceMode,
       'force_update': _forceUpdate,
       'captain_registration_enabled': _captainRegistrationEnabled,
+      'selefli_promo_enabled': _selefliPromoEnabled,
+      'selefli_promo_cap':
+          double.tryParse(_selefliPromoCapController.text.trim()) ?? 100,
     };
     await _repository.update(_settings, payload);
     if (mounted) {
@@ -180,6 +191,35 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                     onChanged: (v) =>
                         setState(() => _captainRegistrationEnabled = v),
                   ),
+                  const Divider(height: 32),
+                  SwitchListTile(
+                    title: const Text(
+                      'عرض ترويجي: سلفلي للجميع',
+                      style: TextStyle(fontFamily: 'Cairo'),
+                    ),
+                    subtitle: const Text(
+                      'عند التفعيل، يصبح كل زبون مؤهلاً لسلفلي فوراً بغض '
+                      'النظر عن عدد مشاويره - تحفيز لتنزيل التطبيق. أوقفه '
+                      'لإعادة العمل بالشروط العادية (حسب عدد المشاوير '
+                      'المكتملة).',
+                      style: TextStyle(fontFamily: 'Cairo', fontSize: 12),
+                    ),
+                    isThreeLine: true,
+                    value: _selefliPromoEnabled,
+                    onChanged: (v) => setState(() => _selefliPromoEnabled = v),
+                  ),
+                  if (_selefliPromoEnabled) ...[
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _selefliPromoCapController,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'الحد الأقصى لكل زبون أثناء العرض (أوقية)',
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   Align(
                     alignment: Alignment.centerLeft,

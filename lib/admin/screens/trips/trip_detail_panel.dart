@@ -1,5 +1,9 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
 
+import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
+
+import '../../../core/services/geocoding_service.dart';
 import '../../../core/widgets/real_map_widget.dart';
 import '../../core/admin_colors.dart';
 import '../../repositories/admin_trips_repository.dart';
@@ -24,17 +28,42 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
   final _repository = AdminTripsRepository();
   late final TextEditingController _notesController;
 
+  bool _editingRoute = false;
+  bool _savingRoute = false;
+  late double? _pickupLat;
+  late double? _pickupLng;
+  late double? _destLat;
+  late double? _destLng;
+  late final TextEditingController _pickupAddressController;
+  late final TextEditingController _destAddressController;
+  Timer? _pickupGeocodeDebounce;
+  Timer? _destGeocodeDebounce;
+
   @override
   void initState() {
     super.initState();
     _notesController = TextEditingController(
       text: widget.trip['admin_notes'] as String? ?? '',
     );
+    _pickupLat = (widget.trip['pickup_lat'] as num?)?.toDouble();
+    _pickupLng = (widget.trip['pickup_lng'] as num?)?.toDouble();
+    _destLat = (widget.trip['destination_lat'] as num?)?.toDouble();
+    _destLng = (widget.trip['destination_lng'] as num?)?.toDouble();
+    _pickupAddressController = TextEditingController(
+      text: widget.trip['pickup_address'] as String? ?? '',
+    );
+    _destAddressController = TextEditingController(
+      text: widget.trip['destination_address'] as String? ?? '',
+    );
   }
 
   @override
   void dispose() {
     _notesController.dispose();
+    _pickupAddressController.dispose();
+    _destAddressController.dispose();
+    _pickupGeocodeDebounce?.cancel();
+    _destGeocodeDebounce?.cancel();
     super.dispose();
   }
 
@@ -57,6 +86,98 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
       _assignableStatuses.contains(widget.trip['status'] as String?);
 
   bool get _canBoard => (widget.trip['status'] as String?) == 'arrived';
+
+  /// Correcting a wrong pickup/destination only makes sense before or
+  /// during the ride - once it's over, the fare/distance were already
+  /// computed against the original points, so editing them retroactively
+  /// would be misleading rather than a real fix.
+  bool get _canEditRoute => _canCancel;
+
+  bool get _hasDestination => _destLat != null && _destLng != null;
+
+  void _toggleEditRoute() {
+    setState(() => _editingRoute = !_editingRoute);
+  }
+
+  // Shared by tap-to-place and marker dragging, mirroring
+  // OperatorDispatchScreen's pattern - dragging fires this repeatedly while
+  // the marker moves, so the actual reverse-geocode network call is
+  // debounced to fire once after the admin stops moving it. Unlike that
+  // screen (which only ever seeds an empty field), this always overwrites
+  // the address text on drag: the whole point of dragging here is
+  // correcting a wrong point *and* its address together.
+  void _setPickup(LatLng point) {
+    setState(() {
+      _pickupLat = point.latitude;
+      _pickupLng = point.longitude;
+    });
+    _pickupGeocodeDebounce?.cancel();
+    _pickupGeocodeDebounce = Timer(const Duration(milliseconds: 700), () {
+      _reverseGeocode(
+        lat: point.latitude,
+        lng: point.longitude,
+        controller: _pickupAddressController,
+      );
+    });
+  }
+
+  void _setDestination(LatLng point) {
+    setState(() {
+      _destLat = point.latitude;
+      _destLng = point.longitude;
+    });
+    _destGeocodeDebounce?.cancel();
+    _destGeocodeDebounce = Timer(const Duration(milliseconds: 700), () {
+      _reverseGeocode(
+        lat: point.latitude,
+        lng: point.longitude,
+        controller: _destAddressController,
+      );
+    });
+  }
+
+  Future<void> _reverseGeocode({
+    required double lat,
+    required double lng,
+    required TextEditingController controller,
+  }) async {
+    final address = await GeocodingService.instance.reverseGeocode(lat, lng);
+    if (address == null || !mounted) return;
+    controller.text = address;
+  }
+
+  Future<void> _saveRoute() async {
+    if (_pickupLat == null || _pickupLng == null) return;
+    setState(() => _savingRoute = true);
+    try {
+      await _repository.updateRoute(
+        widget.trip['id'] as String,
+        pickupAddress: _pickupAddressController.text.trim(),
+        pickupLat: _pickupLat!,
+        pickupLng: _pickupLng!,
+        destinationAddress: _hasDestination
+            ? _destAddressController.text.trim()
+            : null,
+        destinationLat: _hasDestination ? _destLat : null,
+        destinationLng: _hasDestination ? _destLng : null,
+      );
+      widget.onChanged();
+      if (mounted) Navigator.of(context).pop();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'تعذر حفظ التعديل على المسار.',
+              style: TextStyle(fontFamily: 'Cairo'),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _savingRoute = false);
+    }
+  }
 
   /// The `customers` join is only present when this panel was opened from
   /// a screen that fetched it (Live Operations); when opened from the plain
@@ -161,11 +282,6 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
   @override
   Widget build(BuildContext context) {
     final trip = widget.trip;
-    final pickupLat = (trip['pickup_lat'] as num?)?.toDouble();
-    final pickupLng = (trip['pickup_lng'] as num?)?.toDouble();
-    final destLat = (trip['destination_lat'] as num?)?.toDouble();
-    final destLng = (trip['destination_lng'] as num?)?.toDouble();
-    final hasCoordinates = pickupLat != null && pickupLng != null;
 
     return DraggableScrollableSheet(
       initialChildSize: 0.9,
@@ -190,26 +306,18 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
                 ),
               ),
               const SizedBox(height: 16),
-              if (hasCoordinates)
-                SizedBox(
-                  height: 220,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: RealMapWidget(
-                      pickupLat: pickupLat,
-                      pickupLng: pickupLng,
-                      destLat: destLat,
-                      destLng: destLng,
-                      showRoute: destLat != null,
-                      interactive: false,
-                    ),
-                  ),
-                ),
+              _buildRouteSection(),
               const SizedBox(height: 16),
               Wrap(
                 spacing: 24,
                 runSpacing: 12,
                 children: [
+                  _infoTile(
+                    'نوع الطلب',
+                    (trip['service_type'] as String?) == 'delivery'
+                        ? 'توصيل طرد'
+                        : 'مشوار ركاب',
+                  ),
                   _infoTile('الزبون', _customerLabel),
                   _infoTile('الحالة', trip['status'] as String? ?? '-'),
                   _infoTile(
@@ -237,16 +345,32 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              _infoTile(
-                'نقطة الانطلاق',
-                trip['pickup_address'] as String? ?? '-',
-              ),
-              const SizedBox(height: 8),
-              _infoTile(
-                'الوجهة',
-                trip['destination_address'] as String? ?? '-',
-              ),
+              if ((trip['service_type'] as String?) == 'delivery') ...[
+                const SizedBox(height: 16),
+                const Text(
+                  'بيانات المستلم',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 24,
+                  runSpacing: 12,
+                  children: [
+                    _infoTile(
+                      'اسم المستلم',
+                      trip['recipient_name'] as String? ?? '-',
+                    ),
+                    _infoTile(
+                      'هاتف المستلم',
+                      trip['recipient_phone'] as String? ?? '-',
+                    ),
+                    _infoTile(
+                      'وصف الطرد',
+                      trip['package_description'] as String? ?? '-',
+                    ),
+                  ],
+                ),
+              ],
               if (trip['cancellation_reason'] != null) ...[
                 const SizedBox(height: 8),
                 _infoTile('سبب الإلغاء', trip['cancellation_reason'] as String),
@@ -301,6 +425,100 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildRouteSection() {
+    final hasCoordinates = _pickupLat != null && _pickupLng != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'المسار',
+              style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+            ),
+            if (_canEditRoute && hasCoordinates)
+              TextButton.icon(
+                onPressed: _toggleEditRoute,
+                icon: Icon(
+                  _editingRoute ? Icons.close_rounded : Icons.edit_location_alt_outlined,
+                  size: 18,
+                ),
+                label: Text(_editingRoute ? 'إلغاء التعديل' : 'تعديل المسار'),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (hasCoordinates)
+          SizedBox(
+            height: 220,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: RealMapWidget(
+                pickupLat: _pickupLat,
+                pickupLng: _pickupLng,
+                destLat: _destLat,
+                destLng: _destLng,
+                showRoute: _hasDestination,
+                interactive: _editingRoute,
+                pickupDraggable: _editingRoute,
+                destDraggable: _editingRoute && _hasDestination,
+                onPickupDragged: _editingRoute ? _setPickup : null,
+                onDestDragged: _editingRoute && _hasDestination
+                    ? _setDestination
+                    : null,
+              ),
+            ),
+          )
+        else
+          const Text(
+            'لا توجد إحداثيات مسجّلة لهذه الرحلة.',
+            style: TextStyle(fontFamily: 'Cairo', color: AdminColors.textSecondary),
+          ),
+        const SizedBox(height: 12),
+        if (_editingRoute) ...[
+          const Text(
+            'اسحب العلامة لتصحيح الموقع - العنوان يتحدّث تلقائياً ويمكن تعديله يدوياً.',
+            style: TextStyle(
+              fontSize: 11,
+              fontFamily: 'Cairo',
+              color: AdminColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _pickupAddressController,
+            decoration: const InputDecoration(labelText: 'نقطة الانطلاق'),
+          ),
+          if (_hasDestination) ...[
+            const SizedBox(height: 8),
+            TextField(
+              controller: _destAddressController,
+              decoration: const InputDecoration(labelText: 'الوجهة'),
+            ),
+          ],
+          const SizedBox(height: 8),
+          ElevatedButton.icon(
+            onPressed: _savingRoute ? null : _saveRoute,
+            icon: _savingRoute
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.save_outlined, size: 18),
+            label: const Text('حفظ المسار'),
+          ),
+        ] else ...[
+          _infoTile('نقطة الانطلاق', _pickupAddressController.text.isEmpty ? '-' : _pickupAddressController.text),
+          const SizedBox(height: 8),
+          _infoTile('الوجهة', _destAddressController.text.isEmpty ? '-' : _destAddressController.text),
+        ],
+      ],
     );
   }
 
