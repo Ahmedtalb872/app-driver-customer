@@ -32,9 +32,7 @@
 
   "myCurrentLocation": "Ma position actuelle",
   "checkActiveTripError": "Impossible de vérifier une course en cours : {error}",
-  "deliveryPickupTitle": "Point de collecte du colis",
   "deliveryPickupMapPicker": "Choisir le point de collecte sur la carte",
-  "deliveryDestTitle": "Point de livraison du colis",
   "deliveryDestMapPicker": "Choisir le point de livraison sur la carte",
   "currentLocationLabel": "Votre position actuelle",
   "locatingInProgress": "Localisation en cours...",
@@ -49,5 +47,17 @@
   "navHome": "Accueil",
   "navTrips": "Mes courses",
   "navWallet": "Portefeuille",
-  "navProfile": "Mon compte"
+  "navProfile": "Mon compte",
+
+  "locateMeError": "Impossible de déterminer votre position actuelle - vérifiez que le service de localisation est activé.",
+  "typePlaceNameHint": "Tapez le nom d'un lieu...",
+  "searchButton": "Rechercher",
+  "pickFromMapTooltip": "Choisir sur la carte",
+  "useCurrentLocationTooltip": "Utiliser ma position actuelle",
+  "noSearchResults": "Aucun résultat pour cette recherche",
+
+  "deliveryLocationsTitle": "Livraison de colis",
+  "deliveryPickupFieldLabel": "Point de collecte",
+  "deliveryDestFieldLabel": "Point de livraison",
+  "continueButton": "Continuer"
 }

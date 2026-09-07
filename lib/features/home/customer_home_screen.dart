@@ -9,11 +9,9 @@ import '../../core/services/ride_repository.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/models.dart';
 import '../../providers/app_state_provider.dart';
-import '../destinations/data/models/destination_suggestion.dart';
-import '../destinations/presentation/destination_search_screen.dart';
 import '../profile/profile_screen.dart';
 import '../subscription/captains_browse_screen.dart';
-import '../trips/delivery_request_screen.dart';
+import '../trips/delivery_locations_screen.dart';
 import '../trips/my_trips_screen.dart';
 import '../trips/trip_planner_screen.dart';
 import '../trips/trip_tracking_screen.dart';
@@ -170,47 +168,21 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
   /// Parcel delivery entry point, separate from [TripPlannerScreen] (a
   /// delivery isn't a "trip type" - it always has a destination and
   /// collects a recipient/package instead of a passenger count, see
-  /// [DeliveryRequestScreen]). Reuses the same destination search screen,
-  /// now asking for BOTH the pickup (where the package is collected from)
-  /// and the destination explicitly - each with the same map/voice search
-  /// the normal ride's pickup/destination pickers already offer (see
-  /// TripPlannerScreen._pickNormalPickup/_pickNormalDestination) - rather
-  /// than silently locking pickup to the customer's detected GPS location
-  /// with no way to change it, which is wrong whenever the parcel isn't
-  /// actually being picked up from wherever the customer is standing.
-  Future<void> _startDeliveryRequest() async {
-    final l10n = AppLocalizations.of(context)!;
-    final pickup = await Navigator.of(context).push<DestinationSuggestion>(
-      MaterialPageRoute(
-        builder: (context) => DestinationSearchScreen(
-          title: l10n.deliveryPickupTitle,
-          mapPickerTitle: l10n.deliveryPickupMapPicker,
-          nearLat: _pickupLat,
-          nearLng: _pickupLng,
-        ),
-      ),
-    );
-    if (pickup == null || !mounted) return;
-
-    final destination = await Navigator.of(context).push<DestinationSuggestion>(
-      MaterialPageRoute(
-        builder: (context) => DestinationSearchScreen(
-          title: l10n.deliveryDestTitle,
-          mapPickerTitle: l10n.deliveryDestMapPicker,
-          nearLat: pickup.latitude,
-          nearLng: pickup.longitude,
-        ),
-      ),
-    );
-    if (destination == null || !mounted) return;
-
+  /// DeliveryRequestScreen). Opens [DeliveryLocationsScreen], which asks
+  /// for BOTH the pickup (where the package is collected from) and the
+  /// destination inline on one screen - the same LocationSearchField
+  /// type-to-search-or-pick-from-map pattern the normal ride's
+  /// pickup/destination fields use - rather than silently locking pickup to
+  /// the customer's detected GPS location with no way to change it, which is
+  /// wrong whenever the parcel isn't actually being picked up from wherever
+  /// the customer is standing.
+  void _startDeliveryRequest() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => DeliveryRequestScreen(
-          pickupLat: pickup.latitude,
-          pickupLng: pickup.longitude,
-          pickupAddress: pickup.title,
-          destination: destination,
+        builder: (context) => DeliveryLocationsScreen(
+          initialPickupLat: _pickupLat,
+          initialPickupLng: _pickupLng,
+          initialPickupAddress: _pickupAddress,
         ),
       ),
     );

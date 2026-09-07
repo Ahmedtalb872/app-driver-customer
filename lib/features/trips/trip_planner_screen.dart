@@ -1,21 +1,17 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 
 import '../../core/constants/colors.dart';
-import '../../core/services/geocoding_service.dart';
 import '../../models/models.dart';
 import '../destinations/data/models/destination_suggestion.dart';
-import '../destinations/data/repositories/destination_search_repository.dart';
 import '../destinations/presentation/destination_map_picker_screen.dart';
+import '../destinations/presentation/location_search_field.dart';
 import 'request_ride_screen.dart';
 import 'voice_ride_request_sheet.dart';
 
 /// Shown after tapping "إلى أين تريد الذهاب؟" on the home screen - two
 /// independent sections, one per [TripType]: a normal ride needs both a
 /// pickup and a destination point, an open ride only a pickup. Each point
-/// is picked inline, right on this screen, via [_LocationSearchField] (type
+/// is picked inline, right on this screen, via [LocationSearchField] (type
 /// to search, or the map icon for a full-screen map picker), pre-filled
 /// with the GPS location detected on the home screen but freely changeable
 /// here. A normal ride can also fill both points at once by speaking them
@@ -199,7 +195,7 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
                 ),
               ),
               const SizedBox(height: 14),
-              _LocationSearchField(
+              LocationSearchField(
                 icon: Icons.radio_button_checked_rounded,
                 iconColor: AppColors.success,
                 label: 'نقطة الانطلاق',
@@ -211,7 +207,7 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
                 showCurrentLocation: true,
               ),
               const SizedBox(height: 10),
-              _LocationSearchField(
+              LocationSearchField(
                 icon: Icons.location_on_rounded,
                 iconColor: AppColors.error,
                 label: 'نقطة الوصول',
@@ -241,7 +237,7 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
             title: 'مشوار مفتوح',
             subtitle: 'بدون وجهة محددة - السائق تحت تصرفك، تحدد نقطة الانطلاق فقط',
             children: [
-              _LocationSearchField(
+              LocationSearchField(
                 icon: Icons.radio_button_checked_rounded,
                 iconColor: AppColors.success,
                 label: 'نقطة الانطلاق',
@@ -328,293 +324,6 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
           ...children,
         ],
       ),
-    );
-  }
-}
-
-/// A pickup/destination field you type directly into, right on
-/// [TripPlannerScreen] - no navigating to a separate screen just to search.
-/// Debounced live search as you type, plus an explicit "بحث" button for an
-/// immediate search, both backed by the same [DestinationSearchRepository]
-/// [DestinationSearchScreen] itself uses (this app's own places/districts/
-/// neighborhoods merged with Google Places). The map icon still opens
-/// [DestinationMapPickerScreen] directly as a fallback for picking a point
-/// with no name to search for.
-class _LocationSearchField extends StatefulWidget {
-  const _LocationSearchField({
-    required this.icon,
-    required this.iconColor,
-    required this.label,
-    required this.onSelected,
-    required this.onPickFromMap,
-    this.initialText,
-    this.nearLat,
-    this.nearLng,
-    this.showCurrentLocation = false,
-  });
-
-  final IconData icon;
-  final Color iconColor;
-  final String label;
-  final String? initialText;
-  final double? nearLat;
-  final double? nearLng;
-  final ValueChanged<DestinationSuggestion> onSelected;
-  final VoidCallback onPickFromMap;
-
-  /// Shows an extra "استخدام موقعي الحالي" button that fetches a fresh GPS
-  /// fix and fills the field with it directly - a pickup point (unlike a
-  /// destination) is overwhelmingly "right where the customer is standing",
-  /// so it shouldn't require typing/searching at all. Off by default;
-  /// pickup fields turn it on explicitly.
-  final bool showCurrentLocation;
-
-  @override
-  State<_LocationSearchField> createState() => _LocationSearchFieldState();
-}
-
-class _LocationSearchFieldState extends State<_LocationSearchField> {
-  final _repository = DestinationSearchRepository();
-  late final _controller = TextEditingController(text: widget.initialText ?? '');
-  Timer? _debounce;
-  List<DestinationSuggestion> _options = [];
-  bool _searching = false;
-  bool _searched = false;
-  bool _locating = false;
-
-  @override
-  void didUpdateWidget(covariant _LocationSearchField oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Keeps the field in sync when a point is set some other way (voice
-    // request, map picker) while this field isn't the one driving the
-    // change - e.g. picking the destination from the map still needs the
-    // pickup field's already-typed text left alone, but a fresh
-    // initialText (voice sheet filling both at once) must actually show.
-    if (widget.initialText != oldWidget.initialText &&
-        widget.initialText != _controller.text) {
-      _controller.text = widget.initialText ?? '';
-    }
-  }
-
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _onChanged(String value) {
-    _debounce?.cancel();
-    if (value.trim().length < 2) {
-      setState(() {
-        _options = [];
-        _searched = false;
-      });
-      return;
-    }
-    _debounce = Timer(const Duration(milliseconds: 400), () => _runSearch(value));
-  }
-
-  Future<void> _runSearch(String query) async {
-    if (query.trim().length < 2) return;
-    _debounce?.cancel();
-    setState(() => _searching = true);
-    try {
-      final results = await _repository.search(
-        query: query,
-        nearLat: widget.nearLat,
-        nearLng: widget.nearLng,
-      );
-      if (!mounted) return;
-      setState(() {
-        _options = results;
-        _searching = false;
-        _searched = true;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _options = [];
-        _searching = false;
-        _searched = true;
-      });
-    }
-  }
-
-  void _select(DestinationSuggestion suggestion) {
-    _controller.text = suggestion.title;
-    setState(() {
-      _options = [];
-      _searched = false;
-    });
-    FocusScope.of(context).unfocus();
-    widget.onSelected(suggestion);
-  }
-
-  Future<void> _useCurrentLocation() async {
-    setState(() => _locating = true);
-    try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return;
-
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        return;
-      }
-
-      final position = await Geolocator.getCurrentPosition();
-      final address = await GeocodingService.instance.reverseGeocode(
-        position.latitude,
-        position.longitude,
-      );
-      if (!mounted) return;
-      _select(
-        DestinationSuggestion(
-          resultType: DestinationResultType.place,
-          id: 'current_location',
-          title: address ?? 'موقعي الحالي',
-          latitude: position.latitude,
-          longitude: position.longitude,
-        ),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'تعذر تحديد موقعك الحالي - تحقق من تفعيل خدمة الموقع.',
-            style: TextStyle(fontFamily: 'Cairo'),
-          ),
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _locating = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          widget.label,
-          style: const TextStyle(
-            fontFamily: 'Cairo',
-            fontSize: 10.5,
-            color: AppColors.secondaryText,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            Icon(widget.icon, color: widget.iconColor, size: 20),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextField(
-                controller: _controller,
-                onChanged: _onChanged,
-                textInputAction: TextInputAction.search,
-                onSubmitted: _runSearch,
-                style: const TextStyle(fontFamily: 'Cairo', fontSize: 13),
-                decoration: const InputDecoration(
-                  isDense: true,
-                  hintText: 'اكتب اسم المكان...',
-                  contentPadding: EdgeInsets.symmetric(vertical: 8),
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            SizedBox(
-              height: 34,
-              child: FilledButton(
-                onPressed: () => _runSearch(_controller.text),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  minimumSize: Size.zero,
-                ),
-                child: const Text(
-                  'بحث',
-                  style: TextStyle(fontFamily: 'Cairo', fontSize: 12),
-                ),
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.map_outlined, size: 20),
-              color: AppColors.secondaryText,
-              onPressed: widget.onPickFromMap,
-              tooltip: 'اختر من الخريطة',
-            ),
-            if (widget.showCurrentLocation)
-              IconButton(
-                icon: _locating
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.my_location_rounded, size: 20),
-                color: AppColors.primary,
-                onPressed: _locating ? null : _useCurrentLocation,
-                tooltip: 'استخدام موقعي الحالي',
-              ),
-          ],
-        ),
-        if (_searching)
-          const Padding(
-            padding: EdgeInsets.only(top: 6),
-            child: LinearProgressIndicator(minHeight: 2),
-          )
-        else if (_options.isNotEmpty)
-          Container(
-            margin: const EdgeInsets.only(top: 6),
-            constraints: const BoxConstraints(maxHeight: 220),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: ListView.separated(
-              shrinkWrap: true,
-              padding: EdgeInsets.zero,
-              itemCount: _options.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
-              itemBuilder: (context, index) {
-                final option = _options[index];
-                return ListTile(
-                  dense: true,
-                  title: Text(
-                    option.title,
-                    style: const TextStyle(fontFamily: 'Cairo', fontSize: 13),
-                  ),
-                  subtitle: option.subtitle == null
-                      ? null
-                      : Text(
-                          option.subtitle!,
-                          style: const TextStyle(fontFamily: 'Cairo', fontSize: 11),
-                        ),
-                  onTap: () => _select(option),
-                );
-              },
-            ),
-          )
-        else if (_searched)
-          const Padding(
-            padding: EdgeInsets.only(top: 6),
-            child: Text(
-              'لا توجد نتائج لهذا البحث',
-              style: TextStyle(
-                fontFamily: 'Cairo',
-                fontSize: 11.5,
-                color: AppColors.secondaryText,
-              ),
-            ),
-          ),
-      ],
     );
   }
 }

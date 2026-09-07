@@ -35,9 +35,7 @@
   "@checkActiveTripError": {
     "placeholders": { "error": { "type": "String" } }
   },
-  "deliveryPickupTitle": "نقطة استلام الطرد",
   "deliveryPickupMapPicker": "اختر نقطة الاستلام من الخريطة",
-  "deliveryDestTitle": "نقطة تسليم الطرد",
   "deliveryDestMapPicker": "اختر نقطة التسليم من الخريطة",
   "currentLocationLabel": "موقعك الحالي",
   "locatingInProgress": "جارٍ تحديد الموقع...",
@@ -52,5 +50,17 @@
   "navHome": "الرئيسية",
   "navTrips": "رحلاتي",
   "navWallet": "المحفظة",
-  "navProfile": "حسابي"
+  "navProfile": "حسابي",
+
+  "locateMeError": "تعذر تحديد موقعك الحالي - تحقق من تفعيل خدمة الموقع.",
+  "typePlaceNameHint": "اكتب اسم المكان...",
+  "searchButton": "بحث",
+  "pickFromMapTooltip": "اختر من الخريطة",
+  "useCurrentLocationTooltip": "استخدام موقعي الحالي",
+  "noSearchResults": "لا توجد نتائج لهذا البحث",
+
+  "deliveryLocationsTitle": "توصيل طرد",
+  "deliveryPickupFieldLabel": "نقطة الاستلام",
+  "deliveryDestFieldLabel": "نقطة التسليم",
+  "continueButton": "متابعة"
 }
