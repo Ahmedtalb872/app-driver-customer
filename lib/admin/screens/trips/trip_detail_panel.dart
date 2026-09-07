@@ -3,12 +3,21 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../core/config/supabase_config.dart';
 import '../../../core/services/geocoding_service.dart';
 import '../../../core/widgets/real_map_widget.dart';
 import '../../core/admin_colors.dart';
 import '../../repositories/admin_trips_repository.dart';
 import '../../widgets/captain_picker_dialog.dart';
 import '../../widgets/confirm_dialog.dart';
+
+/// Trip statuses a captain is actually en route/on-scene for, matching
+/// captain_locations' own RLS policy (a trip's customer can only read that
+/// captain's row while status is one of these) - captain_locations.aihoudhoud
+/// migration 0022. Live-tracking outside this window (e.g. 'searching',
+/// before any captain is even assigned, or 'completed') has nothing
+/// meaningful to show.
+const _trackableStatuses = {'accepted', 'arrived', 'in_progress', 'boarded'};
 
 class TripDetailPanel extends StatefulWidget {
   final Map<String, dynamic> trip;
@@ -39,6 +48,10 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
   Timer? _pickupGeocodeDebounce;
   Timer? _destGeocodeDebounce;
 
+  double? _captainLat;
+  double? _captainLng;
+  StreamSubscription<List<Map<String, dynamic>>>? _captainLocationSub;
+
   @override
   void initState() {
     super.initState();
@@ -55,6 +68,32 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
     _destAddressController = TextEditingController(
       text: widget.trip['destination_address'] as String? ?? '',
     );
+    _startCaptainLocationTracking();
+  }
+
+  /// Live captain position while a trip is actually in progress - the same
+  /// captain_locations row the captain app's own foreground location
+  /// service keeps fresh (aihoudhoud's AppStateProvider), which a customer
+  /// tracking their own trip already reads under the same RLS condition.
+  /// Not started at all outside [_trackableStatuses] (e.g. no captain
+  /// assigned yet, or the trip already ended) - there's nothing to
+  /// subscribe to, and captain_id may not even be a real row's owner yet.
+  void _startCaptainLocationTracking() {
+    final captainId = widget.trip['captain_id'] as String?;
+    final status = widget.trip['status'] as String?;
+    if (captainId == null || !_trackableStatuses.contains(status)) return;
+    _captainLocationSub = SupabaseConfig.client
+        .from('captain_locations')
+        .stream(primaryKey: ['captain_id'])
+        .eq('captain_id', captainId)
+        .listen((rows) {
+          if (rows.isEmpty || !mounted) return;
+          final row = rows.first;
+          setState(() {
+            _captainLat = (row['lat'] as num?)?.toDouble();
+            _captainLng = (row['lng'] as num?)?.toDouble();
+          });
+        });
   }
 
   @override
@@ -64,6 +103,7 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
     _destAddressController.dispose();
     _pickupGeocodeDebounce?.cancel();
     _destGeocodeDebounce?.cancel();
+    _captainLocationSub?.cancel();
     super.dispose();
   }
 
@@ -437,9 +477,26 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'المسار',
-              style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+            Row(
+              children: [
+                const Text(
+                  'المسار',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                ),
+                if (_captainLat != null && _captainLng != null) ...[
+                  const SizedBox(width: 8),
+                  const Icon(Icons.circle, size: 8, color: AdminColors.success),
+                  const SizedBox(width: 4),
+                  const Text(
+                    'موقع الكابتن مباشر',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontFamily: 'Cairo',
+                      color: AdminColors.success,
+                    ),
+                  ),
+                ],
+              ],
             ),
             if (_canEditRoute && hasCoordinates)
               TextButton.icon(
@@ -463,6 +520,8 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
                 pickupLng: _pickupLng,
                 destLat: _destLat,
                 destLng: _destLng,
+                carLat: _captainLat,
+                carLng: _captainLng,
                 showRoute: _hasDestination,
                 interactive: _editingRoute,
                 pickupDraggable: _editingRoute,
