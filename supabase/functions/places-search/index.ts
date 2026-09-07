@@ -18,9 +18,13 @@
 //     the mobile apps carry - that one would fail here for the same
 //     reason.
 //
-// Called by any signed-in admin (not gated further - Places search
-// results aren't sensitive), same trust level as the destination search
-// screens already open to any admin session.
+// Called by any signed-in user (admin dashboard, and the customer web
+// preview's own destination search - both route web builds through this
+// function instead of a direct maps.googleapis.com call, see
+// google_places_search_service.dart) - gated to a valid session only, not
+// admin-only. Places search results aren't sensitive, but the call itself
+// spends this project's Google Places quota/billing, so it must not be
+// reachable with no credentials at all.
 //
 // Google's formatted_address is often just a Plus Code or "Unnamed Road"
 // in Nouakchott's less-mapped areas, so each result's coordinates are also
@@ -34,6 +38,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const GOOGLE_PLACES_SERVER_API_KEY =
   Deno.env.get("GOOGLE_PLACES_SERVER_API_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -84,6 +89,20 @@ Deno.serve(async (req: Request) => {
   if (!GOOGLE_PLACES_SERVER_API_KEY) {
     return json({ error: "GOOGLE_PLACES_SERVER_API_KEY not configured" }, 500);
   }
+
+  // Any signed-in user, not admin-only: the admin dashboard's dispatch
+  // screen was this function's original caller, but the customer web
+  // preview's own destination search (kIsWeb routes through the same
+  // GooglePlacesSearchService._searchViaEdgeFunction) calls it too now.
+  // Still gated to *some* real session - previously this had no auth check
+  // at all, so anyone on the internet could burn the project's Google
+  // Places quota/billing with no credentials.
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const callerClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data: userData, error: userError } = await callerClient.auth.getUser();
+  if (userError || !userData?.user) return json({ error: "unauthorized" }, 401);
 
   let query = "";
   let limit = 8;
