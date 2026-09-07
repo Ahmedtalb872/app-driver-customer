@@ -464,6 +464,11 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
             controller: _phoneController,
             keyboardType: TextInputType.phone,
             textAlign: TextAlign.left,
+            maxLength: 8,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(8),
+            ],
             style: const TextStyle(
               fontSize: 16,
               letterSpacing: 1.5,
@@ -471,6 +476,7 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
             ),
             decoration: InputDecoration(
               hintText: '36 00 00 00',
+              counterText: '',
               hintStyle: const TextStyle(
                 letterSpacing: 1.0,
                 fontWeight: FontWeight.normal,
@@ -500,8 +506,8 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
               if (value == null || value.isEmpty) {
                 return 'الرجاء إدخال رقم الهاتف';
               }
-              if (value.length < 8) {
-                return 'رقم الهاتف يجب أن يتكون من 8 أرقام على الأقل';
+              if (value.length != 8) {
+                return 'رقم الهاتف يجب أن يتكون من 8 أرقام بالضبط';
               }
               return null;
             },
@@ -795,6 +801,11 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
             controller: _phoneController,
             keyboardType: TextInputType.phone,
             textAlign: TextAlign.left,
+            maxLength: 8,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(8),
+            ],
             style: const TextStyle(
               fontSize: 16,
               letterSpacing: 1.5,
@@ -802,6 +813,7 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
             ),
             decoration: InputDecoration(
               hintText: '36 00 00 00',
+              counterText: '',
               hintStyle: const TextStyle(
                 letterSpacing: 1.0,
                 fontWeight: FontWeight.normal,
@@ -831,8 +843,8 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
               if (value == null || value.isEmpty) {
                 return 'الرجاء إدخال رقم الهاتف';
               }
-              if (value.length < 8) {
-                return 'رقم الهاتف يجب أن يتكون من 8 أرقام على الأقل';
+              if (value.length != 8) {
+                return 'رقم الهاتف يجب أن يتكون من 8 أرقام بالضبط';
               }
               return null;
             },
