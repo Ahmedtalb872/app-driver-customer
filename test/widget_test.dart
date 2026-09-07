@@ -12,6 +12,7 @@ import 'package:alhudhud/features/authentication/auth_welcome_screen.dart';
 import 'package:alhudhud/features/authentication/phone_code_login_screen.dart';
 import 'package:alhudhud/main.dart';
 import 'package:alhudhud/providers/app_state_provider.dart';
+import 'package:alhudhud/providers/locale_provider.dart';
 
 void main() {
   // Mirrors main()'s MultiProvider wiring without calling
@@ -19,7 +20,10 @@ void main() {
   // touches directly - only screens reached via user actions do.
   Widget wrappedApp() {
     return MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => AppStateProvider())],
+      providers: [
+        ChangeNotifierProvider(create: (_) => AppStateProvider()),
+        ChangeNotifierProvider(create: (_) => LocaleProvider()),
+      ],
       child: const MyApp(),
     );
   }

@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'core/config/supabase_config.dart';
 import 'providers/app_state_provider.dart';
+import 'providers/locale_provider.dart';
 import 'main.dart' show MyApp, installVisibleErrorWidget;
 
 /// Alternate web entrypoint that always serves the customer app, instead of
@@ -21,7 +22,10 @@ Future<void> main() async {
 
   runApp(
     MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => AppStateProvider())],
+      providers: [
+        ChangeNotifierProvider(create: (_) => AppStateProvider()),
+        ChangeNotifierProvider(create: (_) => LocaleProvider()),
+      ],
       child: const MyApp(),
     ),
   );

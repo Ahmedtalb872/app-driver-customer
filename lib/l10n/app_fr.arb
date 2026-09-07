@@ -1,0 +1,32 @@
+{
+  "@@locale": "fr",
+
+  "appTitle": "Al Hudhud",
+
+  "welcomeTitle": "Bienvenue sur Al Hudhud",
+  "welcomeSubtitle": "Transport rapide, sûr et facile",
+  "createAccount": "Créer un nouveau compte",
+  "haveAccount": "J'ai déjà un compte",
+  "loginTitle": "Connexion",
+  "loginSubtitle": "Entrez votre numéro de téléphone pour recevoir un code de vérification, afin de pouvoir demander vos courses.",
+
+  "settingsTitle": "Paramètres généraux",
+  "appLanguage": "Langue de l'application",
+  "enableNotifications": "Activer les notifications",
+  "notificationsSubtitle": "Recevoir les mises à jour des courses et des offres disponibles.",
+  "darkMode": "Mode sombre (Dark Mode)",
+  "darkModeSubtitle": "Activer une apparence reposante pour les yeux la nuit (expérimental).",
+  "darkModeSnack": "Le mode sombre sera entièrement pris en charge dans les prochaines mises à jour.",
+  "shareLocation": "Partager la position géographique",
+  "shareLocationSubtitle": "Autoriser l'application à partager votre position pour faciliter la rencontre avec le capitaine.",
+  "securityAndAccount": "Sécurité et compte",
+  "deleteAccount": "Supprimer définitivement le compte",
+  "aboutApp": "À propos de l'application",
+  "logout": "Déconnexion",
+  "deleteAccountDialogContent": "Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est définitive et irréversible, vous perdrez toutes vos données et le solde de votre portefeuille.",
+  "deleteAccountConfirm": "Oui, supprimer le compte",
+  "cancel": "Annuler",
+  "deleteAccountErrorActiveTrip": "Impossible de supprimer le compte pendant une course en cours. Terminez la course puis réessayez.",
+  "deleteAccountErrorDebt": "Impossible de supprimer le compte avant de régler la dette Selefli en cours.",
+  "deleteAccountErrorGeneric": "Impossible de supprimer le compte pour le moment. Vérifiez votre connexion et réessayez."
+}

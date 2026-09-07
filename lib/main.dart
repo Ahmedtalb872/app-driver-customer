@@ -12,7 +12,9 @@ import 'core/navigation/app_navigator.dart';
 import 'core/network/doh_fallback_http_overrides.dart';
 import 'core/services/push_notifications.dart';
 import 'core/theme/app_theme.dart';
+import 'l10n/app_localizations.dart';
 import 'providers/app_state_provider.dart';
+import 'providers/locale_provider.dart';
 import 'features/onboarding/splash_screen.dart';
 
 /// Release builds normally swallow a widget build exception into a small,
@@ -77,7 +79,10 @@ Future<void> main() async {
 
   runApp(
     MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => AppStateProvider())],
+      providers: [
+        ChangeNotifierProvider(create: (_) => AppStateProvider()),
+        ChangeNotifierProvider(create: (_) => LocaleProvider()),
+      ],
       child: const MyApp(),
     ),
   );
@@ -88,22 +93,23 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localeProvider = context.watch<LocaleProvider>();
     return MaterialApp(
       title: 'الهدهد',
       debugShowCheckedModeBanner: false,
       navigatorKey: AppNavigator.key,
       theme: AppTheme.lightTheme,
 
-      // Arabic RTL Localization configuration
+      // Arabic (default) and French - see SettingsScreen's language
+      // dropdown, backed by LocaleProvider.
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('ar', ''), // Arabic
-      ],
-      locale: const Locale('ar', ''), // Set Arabic as default language
+      supportedLocales: const [Locale('ar', ''), Locale('fr', '')],
+      locale: localeProvider.locale,
 
       home: const SplashScreen(),
     );

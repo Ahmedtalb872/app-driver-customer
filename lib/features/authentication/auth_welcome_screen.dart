@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/constants/colors.dart';
+import '../../l10n/app_localizations.dart';
 import '../home/customer_home_screen.dart';
 import 'phone_code_login_screen.dart';
 
@@ -19,12 +20,12 @@ class AuthWelcomeScreen extends StatelessWidget {
   const AuthWelcomeScreen({super.key});
 
   void _goToPhoneLogin(BuildContext context, {required bool returningUser}) {
+    final l10n = AppLocalizations.of(context)!;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => PhoneCodeLoginScreen(
-          title: 'تسجيل الدخول',
-          subtitle:
-              'أدخل رقم هاتفك لإرسال رمز التحقق إليه، لتتمكن من طلب مشاويرك.',
+          title: l10n.loginTitle,
+          subtitle: l10n.loginSubtitle,
           startAsReturningUser: returningUser,
           onSignedIn: () {
             Navigator.of(context).pushAndRemoveUntil(
@@ -39,6 +40,7 @@ class AuthWelcomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(
@@ -91,9 +93,9 @@ class AuthWelcomeScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  const Text(
-                    'مرحباً بك في الهدهد',
-                    style: TextStyle(
+                  Text(
+                    l10n.welcomeTitle,
+                    style: const TextStyle(
                       fontFamily: 'Cairo',
                       fontWeight: FontWeight.bold,
                       fontSize: 22,
@@ -101,10 +103,10 @@ class AuthWelcomeScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'نقل سريع، آمن وأسهل',
+                  Text(
+                    l10n.welcomeSubtitle,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontFamily: 'Cairo',
                       fontSize: 14,
                       color: AppColors.secondaryText,
@@ -114,13 +116,13 @@ class AuthWelcomeScreen extends StatelessWidget {
                   ElevatedButton(
                     onPressed: () =>
                         _goToPhoneLogin(context, returningUser: false),
-                    child: const Text('إنشاء حساب جديد'),
+                    child: Text(l10n.createAccount),
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton(
                     onPressed: () =>
                         _goToPhoneLogin(context, returningUser: true),
-                    child: const Text('لدي حساب بالفعل'),
+                    child: Text(l10n.haveAccount),
                   ),
                   const SizedBox(height: 12),
                 ],

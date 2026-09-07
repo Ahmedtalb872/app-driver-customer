@@ -1,0 +1,32 @@
+{
+  "@@locale": "ar",
+
+  "appTitle": "الهدهد",
+
+  "welcomeTitle": "مرحباً بك في الهدهد",
+  "welcomeSubtitle": "نقل سريع، آمن وأسهل",
+  "createAccount": "إنشاء حساب جديد",
+  "haveAccount": "لدي حساب بالفعل",
+  "loginTitle": "تسجيل الدخول",
+  "loginSubtitle": "أدخل رقم هاتفك لإرسال رمز التحقق إليه، لتتمكن من طلب مشاويرك.",
+
+  "settingsTitle": "الإعدادات العامة",
+  "appLanguage": "لغة التطبيق",
+  "enableNotifications": "تفعيل الإشعارات",
+  "notificationsSubtitle": "استلام تحديثات الرحلات والعروض المتاحة.",
+  "darkMode": "الوضع الداكن (Dark Mode)",
+  "darkModeSubtitle": "تفعيل مظهر مريح للعينين ليلاً (تجريبي).",
+  "darkModeSnack": "الوضع الداكن سيتم دعمه بشكل كامل في التحديثات القادمة.",
+  "shareLocation": "مشاركة الموقع الجغرافي",
+  "shareLocationSubtitle": "السماح للتطبيق بمشاركة موقعك لتسهيل الالتقاء بالكابتن.",
+  "securityAndAccount": "الأمان والحساب",
+  "deleteAccount": "حذف الحساب نهائياً",
+  "aboutApp": "عن التطبيق",
+  "logout": "تسجيل الخروج",
+  "deleteAccountDialogContent": "هل أنت متأكد من رغبتك في حذف حسابك؟ هذا الإجراء نهائي ولا يمكن الرجوع عنه وستفقد جميع بياناتك وأرصدة محفظتك.",
+  "deleteAccountConfirm": "نعم، احذف الحساب",
+  "cancel": "إلغاء",
+  "deleteAccountErrorActiveTrip": "لا يمكن حذف الحساب أثناء وجود مشوار جارٍ. أنهِ المشوار أولاً ثم حاول مرة أخرى.",
+  "deleteAccountErrorDebt": "لا يمكن حذف الحساب قبل تسديد دين سلفلي المستحق عليك.",
+  "deleteAccountErrorGeneric": "تعذر حذف الحساب الآن. تحقق من اتصالك وحاول مرة أخرى."
+}
