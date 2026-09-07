@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../core/services/geocoding_service.dart';
 import '../../core/services/ride_repository.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/models.dart';
 import '../../providers/app_state_provider.dart';
 import '../destinations/data/models/destination_suggestion.dart';
@@ -32,7 +33,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
 
   double? _pickupLat;
   double? _pickupLng;
-  String _pickupAddress = 'موقعي الحالي';
+  String? _pickupAddress;
   bool _isLocating = false;
 
   @override
@@ -41,6 +42,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
     WidgetsBinding.instance.addObserver(this);
     _determinePickup();
     _resumeActiveTripIfAny();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _pickupAddress ??= AppLocalizations.of(context)!.myCurrentLocation;
   }
 
   @override
@@ -99,7 +106,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('تعذر التحقق من مشوار جارٍ: $e'),
+              content: Text(
+                AppLocalizations.of(context)!.checkActiveTripError('$e'),
+              ),
               duration: const Duration(seconds: 8),
             ),
           );
@@ -151,7 +160,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
         builder: (context) => TripPlannerScreen(
           initialPickupLat: _pickupLat,
           initialPickupLng: _pickupLng,
-          initialPickupAddress: _pickupAddress,
+          initialPickupAddress:
+              _pickupAddress ?? AppLocalizations.of(context)!.myCurrentLocation,
         ),
       ),
     );
@@ -169,11 +179,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
   /// with no way to change it, which is wrong whenever the parcel isn't
   /// actually being picked up from wherever the customer is standing.
   Future<void> _startDeliveryRequest() async {
+    final l10n = AppLocalizations.of(context)!;
     final pickup = await Navigator.of(context).push<DestinationSuggestion>(
       MaterialPageRoute(
         builder: (context) => DestinationSearchScreen(
-          title: 'نقطة استلام الطرد',
-          mapPickerTitle: 'اختر نقطة الاستلام من الخريطة',
+          title: l10n.deliveryPickupTitle,
+          mapPickerTitle: l10n.deliveryPickupMapPicker,
           nearLat: _pickupLat,
           nearLng: _pickupLng,
         ),
@@ -184,8 +195,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
     final destination = await Navigator.of(context).push<DestinationSuggestion>(
       MaterialPageRoute(
         builder: (context) => DestinationSearchScreen(
-          title: 'نقطة تسليم الطرد',
-          mapPickerTitle: 'اختر نقطة التسليم من الخريطة',
+          title: l10n.deliveryDestTitle,
+          mapPickerTitle: l10n.deliveryDestMapPicker,
           nearLat: pickup.latitude,
           nearLng: pickup.longitude,
         ),
@@ -335,6 +346,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
   /// home screen that actually shows *where* the app currently thinks the
   /// customer is before they ever open the trip planner.
   Widget _buildLocationBar() {
+    final l10n = AppLocalizations.of(context)!;
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(16),
@@ -358,9 +370,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'موقعك الحالي',
-                      style: TextStyle(
+                    Text(
+                      l10n.currentLocationLabel,
+                      style: const TextStyle(
                         fontFamily: 'Cairo',
                         fontSize: 10.5,
                         color: AppColors.secondaryText,
@@ -368,7 +380,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      _isLocating ? 'جارٍ تحديد الموقع...' : _pickupAddress,
+                      _isLocating
+                          ? l10n.locatingInProgress
+                          : (_pickupAddress ?? l10n.myCurrentLocation),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -405,51 +419,53 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
   /// scan and matches the spaced-card style used elsewhere in the app
   /// (e.g. WalletScreen's Selefli/subscription banners).
   Widget _buildServiceCards() {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         _ServiceCard(
           onTap: _openTripPlanner,
           leadingColor: AppColors.accent,
           leadingIcon: Icons.search_rounded,
-          title: 'إلى أين تريد الذهاب؟',
-          subtitle: 'مشوار عادي أو مفتوح',
+          title: l10n.whereToTitle,
+          subtitle: l10n.whereToSubtitle,
         ),
         const SizedBox(height: 12),
         _ServiceCard(
           onTap: _startDeliveryRequest,
           leadingColor: AppColors.accent,
           leadingIcon: Icons.local_shipping_rounded,
-          title: 'توصيل طرد',
-          subtitle: 'أريد توصيل طرد بدل ركوب مشوار',
+          title: l10n.deliveryServiceTitle,
+          subtitle: l10n.deliveryServiceSubtitle,
         ),
         const SizedBox(height: 12),
         _ServiceCard(
           onTap: _openCaptainsBrowse,
           leadingColor: AppColors.accent,
           leadingIcon: Icons.handshake_rounded,
-          title: 'اشتراك شهري مع كابتن',
-          subtitle: 'مشاوير بلا مقابل إضافي',
+          title: l10n.subscriptionTitle,
+          subtitle: l10n.subscriptionSubtitle,
         ),
         const SizedBox(height: 12),
         _ServiceCard(
           onTap: _openSelefli,
           leadingColor: AppColors.accent,
           leadingIcon: Icons.payments_rounded,
-          title: 'سلفلي',
-          subtitle: 'اطلب مشوارك الآن وادفع لاحقاً',
+          title: l10n.selefliTitle,
+          subtitle: l10n.selefliSubtitle,
         ),
       ],
     );
   }
 
-  static const List<_NavItemData> _navItems = [
-    _NavItemData(Icons.home_rounded, 'الرئيسية'),
-    _NavItemData(Icons.history_rounded, 'رحلاتي'),
-    _NavItemData(Icons.wallet_rounded, 'المحفظة'),
-    _NavItemData(Icons.person_rounded, 'حسابي'),
+  List<_NavItemData> _navItems(AppLocalizations l10n) => [
+    _NavItemData(Icons.home_rounded, l10n.navHome),
+    _NavItemData(Icons.history_rounded, l10n.navTrips),
+    _NavItemData(Icons.wallet_rounded, l10n.navWallet),
+    _NavItemData(Icons.person_rounded, l10n.navProfile),
   ];
 
   Widget _buildBottomNavigationBar() {
+    final navItems = _navItems(AppLocalizations.of(context)!);
     return SafeArea(
       top: false,
       minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -470,9 +486,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              for (var i = 0; i < _navItems.length; i++)
+              for (var i = 0; i < navItems.length; i++)
                 _NavItem(
-                  data: _navItems[i],
+                  data: navItems[i],
                   selected: _currentIndex == i,
                   onTap: () => setState(() => _currentIndex = i),
                 ),

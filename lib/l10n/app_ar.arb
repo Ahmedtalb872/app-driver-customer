@@ -28,5 +28,29 @@
   "cancel": "إلغاء",
   "deleteAccountErrorActiveTrip": "لا يمكن حذف الحساب أثناء وجود مشوار جارٍ. أنهِ المشوار أولاً ثم حاول مرة أخرى.",
   "deleteAccountErrorDebt": "لا يمكن حذف الحساب قبل تسديد دين سلفلي المستحق عليك.",
-  "deleteAccountErrorGeneric": "تعذر حذف الحساب الآن. تحقق من اتصالك وحاول مرة أخرى."
+  "deleteAccountErrorGeneric": "تعذر حذف الحساب الآن. تحقق من اتصالك وحاول مرة أخرى.",
+
+  "myCurrentLocation": "موقعي الحالي",
+  "checkActiveTripError": "تعذر التحقق من مشوار جارٍ: {error}",
+  "@checkActiveTripError": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "deliveryPickupTitle": "نقطة استلام الطرد",
+  "deliveryPickupMapPicker": "اختر نقطة الاستلام من الخريطة",
+  "deliveryDestTitle": "نقطة تسليم الطرد",
+  "deliveryDestMapPicker": "اختر نقطة التسليم من الخريطة",
+  "currentLocationLabel": "موقعك الحالي",
+  "locatingInProgress": "جارٍ تحديد الموقع...",
+  "whereToTitle": "إلى أين تريد الذهاب؟",
+  "whereToSubtitle": "مشوار عادي أو مفتوح",
+  "deliveryServiceTitle": "توصيل طرد",
+  "deliveryServiceSubtitle": "أريد توصيل طرد بدل ركوب مشوار",
+  "subscriptionTitle": "اشتراك شهري مع كابتن",
+  "subscriptionSubtitle": "مشاوير بلا مقابل إضافي",
+  "selefliTitle": "سلفلي",
+  "selefliSubtitle": "اطلب مشوارك الآن وادفع لاحقاً",
+  "navHome": "الرئيسية",
+  "navTrips": "رحلاتي",
+  "navWallet": "المحفظة",
+  "navProfile": "حسابي"
 }

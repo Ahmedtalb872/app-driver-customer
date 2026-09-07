@@ -28,5 +28,26 @@
   "cancel": "Annuler",
   "deleteAccountErrorActiveTrip": "Impossible de supprimer le compte pendant une course en cours. Terminez la course puis réessayez.",
   "deleteAccountErrorDebt": "Impossible de supprimer le compte avant de régler la dette Selefli en cours.",
-  "deleteAccountErrorGeneric": "Impossible de supprimer le compte pour le moment. Vérifiez votre connexion et réessayez."
+  "deleteAccountErrorGeneric": "Impossible de supprimer le compte pour le moment. Vérifiez votre connexion et réessayez.",
+
+  "myCurrentLocation": "Ma position actuelle",
+  "checkActiveTripError": "Impossible de vérifier une course en cours : {error}",
+  "deliveryPickupTitle": "Point de collecte du colis",
+  "deliveryPickupMapPicker": "Choisir le point de collecte sur la carte",
+  "deliveryDestTitle": "Point de livraison du colis",
+  "deliveryDestMapPicker": "Choisir le point de livraison sur la carte",
+  "currentLocationLabel": "Votre position actuelle",
+  "locatingInProgress": "Localisation en cours...",
+  "whereToTitle": "Où voulez-vous aller ?",
+  "whereToSubtitle": "Course normale ou ouverte",
+  "deliveryServiceTitle": "Livraison de colis",
+  "deliveryServiceSubtitle": "Je veux livrer un colis au lieu de prendre une course",
+  "subscriptionTitle": "Abonnement mensuel avec un capitaine",
+  "subscriptionSubtitle": "Des courses sans frais supplémentaires",
+  "selefliTitle": "Selefli",
+  "selefliSubtitle": "Demandez votre course maintenant et payez plus tard",
+  "navHome": "Accueil",
+  "navTrips": "Mes courses",
+  "navWallet": "Portefeuille",
+  "navProfile": "Mon compte"
 }
