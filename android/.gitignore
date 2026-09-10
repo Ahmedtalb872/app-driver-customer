@@ -12,3 +12,9 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# Exception: debug.keystore is checked in on purpose - see build.gradle.kts.
+# It's a debug-only signing key (never used for a real release/Play Store
+# build), committed so every CI run and every developer machine signs
+# release APKs identically instead of each generating its own throwaway key.
+!debug.keystore

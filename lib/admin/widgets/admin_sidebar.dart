@@ -37,12 +37,17 @@ const List<AdminSidebarItem> adminSidebarItems = [
     route: '/admin/live-operations',
   ),
   AdminSidebarItem(
-    label: 'إرسال مشوار يدوي',
+    label: 'إرسال طلب يدوي',
     icon: Icons.add_location_alt_rounded,
     route: '/admin/dispatch',
   ),
   AdminSidebarItem(
-    label: 'المحافظ والمالية',
+    label: 'التقارير المالية',
+    icon: Icons.assessment_rounded,
+    route: '/admin/finance/reports',
+  ),
+  AdminSidebarItem(
+    label: 'المحافظ',
     icon: Icons.account_balance_wallet_rounded,
     route: '/admin/finance/wallets',
   ),
@@ -55,6 +60,11 @@ const List<AdminSidebarItem> adminSidebarItems = [
     label: 'طلبات السحب',
     icon: Icons.outbond_rounded,
     route: '/admin/finance/withdrawal',
+  ),
+  AdminSidebarItem(
+    label: 'مراجعة الاشتراكات الشهرية',
+    icon: Icons.gpp_maybe_rounded,
+    route: '/admin/finance/subscription-disputes',
   ),
   AdminSidebarItem(
     label: 'وسائل الدفع',
@@ -128,8 +138,11 @@ class AdminSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AdminColors.sidebarBackground,
       width: collapsed ? 76 : 260,
+      decoration: const BoxDecoration(
+        color: AdminColors.sidebarBackground,
+        border: Border(left: BorderSide(color: AdminColors.border)),
+      ),
       child: Column(
         children: [
           const SizedBox(height: 20),
@@ -141,7 +154,7 @@ class AdminSidebar extends StatelessWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
                   child: Image.asset(
-                    'assets/images/al-houdhoud-logo.png',
+                    'assets/images/al-houdhoud-logo-mark.png',
                     width: 40,
                     height: 40,
                     fit: BoxFit.cover,
@@ -153,7 +166,7 @@ class AdminSidebar extends StatelessWidget {
                     child: Text(
                       'الهدهد',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AdminColors.textPrimary,
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
                         fontFamily: 'Cairo',
@@ -164,7 +177,9 @@ class AdminSidebar extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: AdminColors.border),
+          const SizedBox(height: 8),
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(vertical: 4),
@@ -218,7 +233,9 @@ class _SidebarTile extends StatelessWidget {
         dense: true,
         leading: Icon(
           item.icon,
-          color: selected ? AdminColors.accentLight : Colors.white70,
+          color: selected
+              ? AdminColors.sidebarSelectedText
+              : AdminColors.sidebarText,
           size: 20,
         ),
         title: collapsed
@@ -228,7 +245,9 @@ class _SidebarTile extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: selected ? Colors.white : Colors.white70,
+                  color: selected
+                      ? AdminColors.sidebarSelectedText
+                      : AdminColors.sidebarText,
                   fontWeight: selected ? FontWeight.bold : FontWeight.normal,
                   fontSize: 13,
                   fontFamily: 'Cairo',

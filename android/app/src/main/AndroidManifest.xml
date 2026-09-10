@@ -1,4 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required for every network call the app makes (Supabase, Google
+         Maps tiles, ...). The debug/profile manifests get this for free
+         from Flutter's own debug.xml, but a release build only merges
+         this main manifest - without it, release builds silently freeze
+         on the native splash screen forever since the unhandled network
+         failure during main() happens before runApp() ever draws a frame. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!-- Captain incoming-ride-request alerts: local notification (Android
@@ -9,8 +16,19 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- Voice search on the district/place map picker (speech_to_text). -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- TripForegroundService: keeps the process alive (with a persistent
+         notification, Android's own requirement for this) while a trip is
+         active, so the OS can't kill the app in the background and
+         silently break trip tracking/realtime updates. FOREGROUND_SERVICE
+         is required on Android 9+ for any foreground service at all;
+         FOREGROUND_SERVICE_DATA_SYNC specifically on Android 14+, matching
+         the service's declared foregroundServiceType below (this keeps a
+         realtime/network connection alive, not GPS - the customer's own
+         location is never tracked during a trip, only the captain's). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <application
-        android:label="alhudhud"
+        android:label="al hudhud -lizeboun"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <!-- Google Maps SDK API key for the destination map picker (Phase 2).
@@ -46,6 +64,10 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <service
+            android:name=".TripForegroundService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
@@ -56,6 +78,16 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- Android 11+ (API 30+) package-visibility: without this,
+             url_launcher's canLaunchUrl(Uri(scheme: 'tel', ...)) - which
+             resolves via ACTION_VIEW - can never see any dialer app and
+             always returns false, so TripTrackingScreen._callCaptain
+             silently does nothing when tapped: no error, no dialer, no
+             feedback. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="tel"/>
         </intent>
     </queries>
 </manifest>

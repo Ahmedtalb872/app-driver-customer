@@ -3,12 +3,11 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import 'package:alhudhud/core/services/captain_session.dart';
 import 'package:alhudhud/core/theme/app_theme.dart';
 import 'package:alhudhud/providers/app_state_provider.dart';
 
-/// Wraps [child] the same way `main.dart`'s `MyApp` does for the captain
-/// mobile flow - Arabic RTL `MaterialApp` plus the app-wide providers -
+/// Wraps [child] the same way `main.dart`'s `MyApp` does for the customer
+/// mobile flow - Arabic RTL `MaterialApp` plus the app-wide provider -
 /// without booting the real `main()` entrypoint (which calls
 /// `SupabaseConfig.initialize()`). These tests deliberately stay hermetic
 /// and offline: they exercise the local/dummy-data code paths, not the
@@ -24,7 +23,6 @@ Future<void> pumpApp(
         ChangeNotifierProvider<AppStateProvider>(
           create: (_) => appState ?? AppStateProvider(),
         ),
-        ChangeNotifierProvider(create: (_) => CaptainSession()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

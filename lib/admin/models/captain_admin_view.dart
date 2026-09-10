@@ -19,6 +19,8 @@ class CaptainAdminView {
   final double walletBalance;
   final DateTime? createdAt;
   final DateTime? dateOfBirth;
+  final String? payoutMethod;
+  final String? payoutPhone;
 
   const CaptainAdminView({
     required this.id,
@@ -41,6 +43,8 @@ class CaptainAdminView {
     this.walletBalance = 0,
     this.createdAt,
     this.dateOfBirth,
+    this.payoutMethod,
+    this.payoutPhone,
   });
 
   factory CaptainAdminView.fromJson(
@@ -73,8 +77,22 @@ class CaptainAdminView {
       dateOfBirth: json['date_of_birth'] == null
           ? null
           : DateTime.parse(json['date_of_birth'] as String),
+      payoutMethod: json['payout_method'] as String?,
+      payoutPhone: json['payout_phone'] as String?,
     );
   }
+
+  static const Map<String, String> payoutMethodLabels = {
+    'bankily': 'Bankily',
+    'masrvi': 'Masrvi',
+    'sedad': 'Sedad',
+    'banky': 'بنكي',
+    'other': 'أخرى',
+  };
+
+  String? get payoutMethodLabel => payoutMethod == null
+      ? null
+      : payoutMethodLabels[payoutMethod] ?? payoutMethod;
 
   bool get isPending => status == 'pending';
   bool get isApproved => status == 'approved';

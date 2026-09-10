@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -92,7 +93,37 @@ class CaptainDocumentsRepository {
         'p_expires_at': expiresAt?.toUtc().toIso8601String(),
       },
     );
-    return CaptainDocument.fromRow(Map<String, dynamic>.from(row as Map));
+    final document = CaptainDocument.fromRow(
+      Map<String, dynamic>.from(row as Map),
+    );
+    // Best-effort, never awaited: the captain's upload is already done and
+    // successful by this point, and a slow/failed OCR pass must never turn
+    // into a failed/blocked upload for them.
+    triggerExtraction(document.id);
+    return document;
+  }
+
+  /// Fires the extract-document-text Edge Function for one document
+  /// (reads its printed text via Google Cloud Vision, for the admin
+  /// dashboard to show as review assistance - see
+  /// 20260831000087_captain_document_extraction.sql). Fire-and-forget by
+  /// design: called right after [uploadDocument] above, and again by the
+  /// admin dashboard for any older row still un-extracted or to manually
+  /// retry a failed one - none of those callers should ever block on or
+  /// surface a Vision-side failure.
+  void triggerExtraction(String documentId) {
+    unawaited(_invokeExtraction(documentId));
+  }
+
+  Future<void> _invokeExtraction(String documentId) async {
+    try {
+      await _client.functions.invoke(
+        'extract-document-text',
+        body: {'document_id': documentId},
+      );
+    } catch (_) {
+      // Best-effort - see triggerExtraction's doc comment.
+    }
   }
 
   /// Short-lived signed URL for previewing/downloading a private document.

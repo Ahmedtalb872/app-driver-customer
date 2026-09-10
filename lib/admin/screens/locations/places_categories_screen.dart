@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 
+import '../../../core/constants/nouakchott_bounds.dart';
+import '../../../core/services/geocoding_service.dart';
+import '../../../core/widgets/real_map_widget.dart';
 import '../../../features/destinations/data/models/district.dart';
 import '../../../features/destinations/data/models/place.dart';
 import '../../../features/destinations/data/models/place_category.dart';
@@ -91,88 +95,179 @@ class _PlacesCategoriesScreenState extends State<PlacesCategoriesScreen>
         existing?.categoryId ??
         (_categories.isNotEmpty ? _categories.first.id : null);
     var isPopular = existing?.isPopular ?? false;
+    LatLng? pickedPoint = existing != null
+        ? LatLng(existing.latitude, existing.longitude)
+        : null;
+    var isGeocoding = false;
+    String? boundsError;
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(existing == null ? 'إضافة مكان' : 'تعديل المكان'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<String>(
-                  initialValue: districtId,
-                  decoration: const InputDecoration(labelText: 'المقاطعة'),
-                  items: _districts
-                      .map(
-                        (d) => DropdownMenuItem(
-                          value: d.id,
-                          child: Text(d.nameAr),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) => setDialogState(() => districtId = v),
-                ),
-                DropdownButtonFormField<String>(
-                  initialValue: categoryId,
-                  decoration: const InputDecoration(labelText: 'الفئة'),
-                  items: _categories
-                      .map(
-                        (c) => DropdownMenuItem(
-                          value: c.id,
-                          child: Text(c.nameAr),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) => setDialogState(() => categoryId = v),
-                ),
-                TextField(
-                  controller: nameArController,
-                  decoration: const InputDecoration(
-                    labelText: 'الاسم بالعربية',
+        builder: (context, setDialogState) {
+          Future<void> handlePick(LatLng point) async {
+            setDialogState(() {
+              pickedPoint = point;
+              latController.text = point.latitude.toStringAsFixed(6);
+              lngController.text = point.longitude.toStringAsFixed(6);
+              boundsError = isWithinNouakchott(point.latitude, point.longitude)
+                  ? null
+                  : 'هذه النقطة خارج نطاق أنواكشوط - اختر نقطة داخل المدينة.';
+            });
+            if (addressArController.text.trim().isNotEmpty) return;
+            setDialogState(() => isGeocoding = true);
+            final address = await GeocodingService.instance.reverseGeocode(
+              point.latitude,
+              point.longitude,
+            );
+            if (address != null) addressArController.text = address;
+            setDialogState(() => isGeocoding = false);
+          }
+
+          return AlertDialog(
+            title: Text(existing == null ? 'إضافة مكان' : 'تعديل المكان'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<String>(
+                    initialValue: districtId,
+                    decoration: const InputDecoration(labelText: 'المقاطعة'),
+                    items: _districts
+                        .map(
+                          (d) => DropdownMenuItem(
+                            value: d.id,
+                            child: Text(d.nameAr),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setDialogState(() => districtId = v),
                   ),
-                ),
-                TextField(
-                  controller: nameFrController,
-                  decoration: const InputDecoration(
-                    labelText: 'الاسم بالفرنسية',
+                  DropdownButtonFormField<String>(
+                    initialValue: categoryId,
+                    decoration: const InputDecoration(labelText: 'الفئة'),
+                    items: _categories
+                        .map(
+                          (c) => DropdownMenuItem(
+                            value: c.id,
+                            child: Text(c.nameAr),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setDialogState(() => categoryId = v),
                   ),
-                ),
-                TextField(
-                  controller: addressArController,
-                  decoration: const InputDecoration(labelText: 'العنوان'),
-                ),
-                TextField(
-                  controller: latController,
-                  decoration: const InputDecoration(labelText: 'خط العرض'),
-                  keyboardType: TextInputType.number,
-                ),
-                TextField(
-                  controller: lngController,
-                  decoration: const InputDecoration(labelText: 'خط الطول'),
-                  keyboardType: TextInputType.number,
-                ),
-                CheckboxListTile(
-                  value: isPopular,
-                  title: const Text('مكان شائع'),
-                  onChanged: (v) =>
-                      setDialogState(() => isPopular = v ?? false),
-                ),
-              ],
+                  TextField(
+                    controller: nameArController,
+                    decoration: const InputDecoration(
+                      labelText: 'الاسم بالعربية',
+                    ),
+                  ),
+                  TextField(
+                    controller: nameFrController,
+                    decoration: const InputDecoration(
+                      labelText: 'الاسم بالفرنسية',
+                    ),
+                  ),
+                  TextField(
+                    controller: addressArController,
+                    decoration: const InputDecoration(labelText: 'العنوان'),
+                  ),
+                  const SizedBox(height: 12),
+                  const Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      'اضغط على الخريطة لتحديد الموقع، أو عدّل الإحداثيات يدوياً بالأسفل',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: SizedBox(
+                      height: 260,
+                      child: RealMapWidget(
+                        interactive: true,
+                        destLat: pickedPoint?.latitude,
+                        destLng: pickedPoint?.longitude,
+                        destDraggable: true,
+                        onMapTap: handlePick,
+                        onDestDragged: handlePick,
+                      ),
+                    ),
+                  ),
+                  if (isGeocoding)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 4),
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          'جارٍ تحديد العنوان...',
+                          style: TextStyle(fontSize: 11),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: latController,
+                    decoration: const InputDecoration(labelText: 'خط العرض'),
+                    keyboardType: TextInputType.number,
+                    onChanged: (_) => setDialogState(() => boundsError = null),
+                  ),
+                  TextField(
+                    controller: lngController,
+                    decoration: const InputDecoration(labelText: 'خط الطول'),
+                    keyboardType: TextInputType.number,
+                    onChanged: (_) => setDialogState(() => boundsError = null),
+                  ),
+                  if (boundsError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        boundsError!,
+                        style: const TextStyle(
+                          color: AdminColors.error,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  CheckboxListTile(
+                    value: isPopular,
+                    title: const Text('مكان شائع'),
+                    onChanged: (v) =>
+                        setDialogState(() => isPopular = v ?? false),
+                  ),
+                ],
+              ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('إلغاء'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('حفظ'),
-            ),
-          ],
-        ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('إلغاء'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  final lat = double.tryParse(latController.text);
+                  final lng = double.tryParse(lngController.text);
+                  if (lat == null || lng == null) {
+                    setDialogState(
+                      () => boundsError = 'أدخل إحداثيات صحيحة أو اختر نقطة من الخريطة.',
+                    );
+                    return;
+                  }
+                  if (!isWithinNouakchott(lat, lng)) {
+                    setDialogState(
+                      () => boundsError =
+                          'هذه النقطة خارج نطاق أنواكشوط - اختر نقطة داخل المدينة.',
+                    );
+                    return;
+                  }
+                  Navigator.pop(context, true);
+                },
+                child: const Text('حفظ'),
+              ),
+            ],
+          );
+        },
       ),
     );
     if (confirmed != true || districtId == null || categoryId == null) return;

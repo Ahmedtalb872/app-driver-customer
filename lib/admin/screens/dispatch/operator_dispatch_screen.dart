@@ -44,18 +44,37 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
   final _pickupAddressController = TextEditingController();
   final _destAddressController = TextEditingController();
   final _noteController = TextEditingController();
+  final _recipientNameController = TextEditingController();
+  final _recipientPhoneController = TextEditingController();
+  final _packageDescriptionController = TextEditingController();
   final _pickupFocusNode = FocusNode();
   final _destFocusNode = FocusNode();
 
   List<DestinationSuggestion> _pickupOptions = [];
   List<DestinationSuggestion> _destOptions = [];
+  bool _pickupSearching = false;
+  bool _destSearching = false;
+  // False until a search has actually completed at least once - lets the
+  // UI tell "never searched yet" apart from "searched, found nothing",
+  // which used to render identically (nothing at all), leaving an
+  // operator with no way to know whether the button did anything.
+  bool _pickupSearched = false;
+  bool _destSearched = false;
   Timer? _pickupSearchDebounce;
   Timer? _destSearchDebounce;
   Timer? _pickupGeocodeDebounce;
   Timer? _destGeocodeDebounce;
 
+  String _serviceType = 'ride'; // 'ride' | 'delivery'
   String _tripType = 'normal'; // 'normal' | 'open'
   _TapMode _tapMode = _TapMode.pickup;
+
+  /// A delivery always has a fixed drop-off point - there is no "open
+  /// delivery" concept - so the destination section/map pin behaves exactly
+  /// like a normal (non-open) ride whenever it's selected, regardless of
+  /// [_tripType] (which becomes irrelevant and is hidden entirely).
+  bool get _needsDestination =>
+      _serviceType == 'delivery' || _tripType == 'normal';
 
   double? _pickupLat;
   double? _pickupLng;
@@ -112,6 +131,9 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
     _pickupAddressController.dispose();
     _destAddressController.dispose();
     _noteController.dispose();
+    _recipientNameController.dispose();
+    _recipientPhoneController.dispose();
+    _packageDescriptionController.dispose();
     _pickupFocusNode.dispose();
     _destFocusNode.dispose();
     _pickupSearchDebounce?.cancel();
@@ -133,8 +155,8 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
   /// Every phone number elsewhere in this app (login, registration, the
   /// mobile captain/customer flows) is stored and matched as a fixed
   /// `+222` country code plus an 8-digit local number - see
-  /// `captain_login_screen.dart`, `admin_login_screen.dart`,
-  /// `phone_code_login_screen.dart`. This field used to accept free-form
+  /// `admin_login_screen.dart`, `phone_code_login_screen.dart`. This field
+  /// used to accept free-form
   /// text with only a hint suggesting the `+222` prefix, so an operator
   /// typing just the 8 local digits (as trained by every other phone field
   /// in the app) silently never matched `profiles.phone` in the database -
@@ -143,10 +165,20 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
   /// `+222` prefix is applied here, exactly like the rest of the app.
   String get _fullPhone => '+222${_phoneController.text.trim()}';
 
+  /// The RPC always forces 'motorcycle' server-side for a delivery (see
+  /// 20260802000048_admin_dispatch_delivery.sql) regardless of
+  /// [_vehicleType] - which stays whatever car tier was last picked, since
+  /// the vehicle-type chips are simply hidden in delivery mode rather than
+  /// reset. The fare estimate below must price against the same vehicle
+  /// type the server will actually use, or it would show a car fare for a
+  /// motorcycle job.
+  String get _effectiveVehicleType =>
+      _serviceType == 'delivery' ? 'motorcycle' : _vehicleType;
+
   Future<void> _loadPricing() async {
     setState(() => _loadingPricing = true);
     try {
-      _pricing = await _repository.fetchPricingConfig(_vehicleType);
+      _pricing = await _repository.fetchPricingConfig(_effectiveVehicleType);
     } catch (_) {
       _pricing = null;
     } finally {
@@ -180,21 +212,30 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
     final minimumFare = (pricing['minimum_fare'] as num?)?.toDouble() ?? 0;
     final surge = (pricing['surge_multiplier'] as num?)?.toDouble() ?? 1.0;
 
-    if (_tripType == 'open') {
+    if (!_needsDestination) {
       // No destination yet - the honest estimate is just the flat base
       // charge, exactly like the mobile Open Trip request flow shows.
       return minimumFare > baseFare ? minimumFare : baseFare;
     }
 
     final km = _distanceKm;
-    final minutes = _estimatedDurationMinutes;
-    if (km == null || minutes == null) return null;
+    if (km == null) return null;
 
+    // Mirrors captain_end_trip's normal-trip formula exactly
+    // (20260816000077_restore_completed_trips_count.sql): base_fare covers
+    // every km up to base_distance_km outright, only the km beyond that are
+    // charged, and normal trips are not time-priced at all - price_per_minute
+    // only applies to open trips server-side. This estimate had drifted from
+    // that formula (still multiplying the full distance by price_per_km and
+    // adding a time charge the backend never bills for normal trips),
+    // showing operators a fare inflated well above what the trip will
+    // actually settle for - e.g. 141 quoted for a 1.4km ride the backend
+    // prices at the 100 minimum.
     final pricePerKm = (pricing['price_per_km'] as num?)?.toDouble() ?? 0;
-    final pricePerMinute =
-        (pricing['price_per_minute'] as num?)?.toDouble() ?? 0;
-    final subtotal =
-        (baseFare + (km * pricePerKm) + (minutes * pricePerMinute)) * surge;
+    final baseDistanceKm =
+        (pricing['base_distance_km'] as num?)?.toDouble() ?? 0;
+    final billableKm = km > baseDistanceKm ? km - baseDistanceKm : 0;
+    final subtotal = (baseFare + (billableKm * pricePerKm)) * surge;
     return subtotal < minimumFare ? minimumFare : subtotal;
   }
 
@@ -289,49 +330,117 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
     setState(() => controller.text = address);
   }
 
-  Future<void> _searchPickup(String query) async {
+  /// Debounced, called on every keystroke - kept so a fast typist still
+  /// gets suggestions without pressing anything. [_searchPickupNow] is the
+  /// same search fired immediately, for the explicit "بحث" button.
+  void _searchPickup(String query) {
     _pickupSearchDebounce?.cancel();
-    _pickupSearchDebounce = Timer(const Duration(milliseconds: 300), () async {
-      try {
-        final results = await _destinationSearchRepository.search(
-          query: query.trim(),
-        );
-        if (mounted) setState(() => _pickupOptions = results);
-      } catch (e) {
-        debugPrint('[OperatorDispatch] pickup suggestion search failed: $e');
-        if (mounted) setState(() => _pickupOptions = []);
-      }
-    });
+    _pickupSearchDebounce = Timer(
+      const Duration(milliseconds: 300),
+      () => _runPickupSearch(query),
+    );
   }
 
-  Future<void> _searchDestination(String query) async {
+  Future<void> _searchPickupNow() {
+    _pickupSearchDebounce?.cancel();
+    return _runPickupSearch(_pickupAddressController.text);
+  }
+
+  Future<void> _runPickupSearch(String query) async {
+    setState(() => _pickupSearching = true);
+    try {
+      final results = await _destinationSearchRepository.search(
+        query: query.trim(),
+      );
+      if (mounted) {
+        setState(() {
+          _pickupOptions = results;
+          _pickupSearched = true;
+        });
+      }
+    } catch (e) {
+      debugPrint('[OperatorDispatch] pickup suggestion search failed: $e');
+      if (mounted) {
+        setState(() {
+          _pickupOptions = [];
+          _pickupSearched = true;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _pickupSearching = false);
+    }
+  }
+
+  void _searchDestination(String query) {
     _destSearchDebounce?.cancel();
-    _destSearchDebounce = Timer(const Duration(milliseconds: 300), () async {
-      try {
-        final results = await _destinationSearchRepository.search(
-          query: query.trim(),
-        );
-        if (mounted) setState(() => _destOptions = results);
-      } catch (e) {
-        debugPrint(
-          '[OperatorDispatch] destination suggestion search failed: $e',
-        );
-        if (mounted) setState(() => _destOptions = []);
-      }
-    });
+    _destSearchDebounce = Timer(
+      const Duration(milliseconds: 300),
+      () => _runDestinationSearch(query),
+    );
   }
 
+  Future<void> _searchDestinationNow() {
+    _destSearchDebounce?.cancel();
+    return _runDestinationSearch(_destAddressController.text);
+  }
+
+  Future<void> _runDestinationSearch(String query) async {
+    setState(() => _destSearching = true);
+    try {
+      final results = await _destinationSearchRepository.search(
+        query: query.trim(),
+      );
+      if (mounted) {
+        setState(() {
+          _destOptions = results;
+          _destSearched = true;
+        });
+      }
+    } catch (e) {
+      debugPrint(
+        '[OperatorDispatch] destination suggestion search failed: $e',
+      );
+      if (mounted) {
+        setState(() {
+          _destOptions = [];
+          _destSearched = true;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _destSearching = false);
+    }
+  }
+
+  // Fills the field from the picked suggestion (RawAutocomplete used to do
+  // this automatically; the plain list below doesn't) and clears the
+  // results so the list disappears once a choice is made.
+  //
+  // Deliberately uses the suggestion's title only, not displayLabel (which
+  // appends subtitle - a Google-formatted address, or a district/
+  // neighborhood name guessed by places-search's nearest_place_area match).
+  // That guess is only as good as this app's own districts/neighborhoods
+  // registry, which has known bad entries (a neighborhood's coordinates
+  // pointing at the wrong real-world area) - auto-filling it straight into
+  // the address the captain sees would carry that error into a live trip.
+  // The field stays a plain editable TextField, so the operator can still
+  // type a district/neighborhood in by hand when they want one.
   void _selectPickupSuggestion(DestinationSuggestion suggestion) {
     setState(() {
+      _pickupAddressController.text = suggestion.title;
       _pickupLat = suggestion.latitude;
       _pickupLng = suggestion.longitude;
+      _pickupOptions = [];
+      _pickupSearched = false;
     });
   }
 
   void _selectDestSuggestion(DestinationSuggestion suggestion) {
     setState(() {
+      _destAddressController.text = suggestion.title;
       _destLat = suggestion.latitude;
       _destLng = suggestion.longitude;
+      _destOptions = [];
+      _destSearched = false;
     });
   }
 
@@ -387,8 +496,24 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
     if (_pickupLat == null || _pickupLng == null) {
       messages.add('حدد نقطة الانطلاق على الخريطة');
     }
-    if (_tripType == 'normal' && (_destLat == null || _destLng == null)) {
-      messages.add('حدد الوجهة على الخريطة (مطلوبة للمشوار المحدد)');
+    if (_needsDestination && (_destLat == null || _destLng == null)) {
+      messages.add(
+        _serviceType == 'delivery'
+            ? 'حدد نقطة تسليم الطرد على الخريطة'
+            : 'حدد الوجهة على الخريطة (مطلوبة للمشوار المحدد)',
+      );
+    }
+
+    if (_serviceType == 'delivery') {
+      if (_recipientNameController.text.trim().isEmpty) {
+        messages.add('أدخل اسم المستلم');
+      }
+      final recipientDigits = _recipientPhoneController.text.trim();
+      if (recipientDigits.isEmpty) {
+        messages.add('أدخل رقم هاتف المستلم');
+      } else if (recipientDigits.length != 8) {
+        messages.add('رقم هاتف المستلم يجب أن يتكون من 8 أرقام');
+      }
     }
 
     return messages;
@@ -400,6 +525,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
     if (!kDebugMode) return;
     debugPrint(
       '[OperatorDispatch] validation: '
+      'serviceType=$_serviceType '
       'phoneDigits=${_phoneController.text.trim().length} '
       'customerFound=${_foundCustomer != null} '
       'customerLookupFailed=$_customerLookupFailed '
@@ -425,14 +551,14 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
         pickupLat: _pickupLat!,
         pickupLng: _pickupLng!,
         tripType: _tripType,
-        destinationAddress: _tripType == 'open'
+        destinationAddress: !_needsDestination
             ? null
             : (_destAddressController.text.trim().isEmpty
                   ? 'الوجهة (محددة على الخريطة)'
                   : _destAddressController.text.trim()),
-        destinationLat: _tripType == 'open' ? null : _destLat,
-        destinationLng: _tripType == 'open' ? null : _destLng,
-        vehicleType: _vehicleType,
+        destinationLat: !_needsDestination ? null : _destLat,
+        destinationLng: !_needsDestination ? null : _destLng,
+        vehicleType: _effectiveVehicleType,
         paymentMethod: _paymentMethod,
         estimatedPrice: _estimatedFare,
         estimatedDurationMinutes: _estimatedDurationMinutes,
@@ -440,11 +566,27 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
         customerNote: _noteController.text.trim().isEmpty
             ? null
             : _noteController.text.trim(),
+        serviceType: _serviceType,
+        recipientName: _serviceType == 'delivery'
+            ? _recipientNameController.text.trim()
+            : null,
+        recipientPhone: _serviceType == 'delivery'
+            ? '+222${_recipientPhoneController.text.trim()}'
+            : null,
+        packageDescription: _serviceType == 'delivery'
+            ? (_packageDescriptionController.text.trim().isEmpty
+                  ? null
+                  : _packageDescriptionController.text.trim())
+            : null,
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تم إرسال المشوار وبثه للكباتن المتصلين بنجاح'),
+        SnackBar(
+          content: Text(
+            _serviceType == 'delivery'
+                ? 'تم إرسال طلب التوصيل وبثه للكباتن المتصلين بنجاح'
+                : 'تم إرسال المشوار وبثه للكباتن المتصلين بنجاح',
+          ),
           backgroundColor: AdminColors.success,
         ),
       );
@@ -461,7 +603,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('تعذر إرسال المشوار: ${e.message}'),
+            content: Text('تعذر إرسال الطلب: ${e.message}'),
             backgroundColor: AdminColors.error,
           ),
         );
@@ -472,7 +614,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('تعذر إرسال المشوار: $e'),
+            content: Text('تعذر إرسال الطلب: $e'),
             backgroundColor: AdminColors.error,
           ),
         );
@@ -488,6 +630,9 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
       _pickupAddressController.clear();
       _destAddressController.clear();
       _noteController.clear();
+      _recipientNameController.clear();
+      _recipientPhoneController.clear();
+      _packageDescriptionController.clear();
       _pickupLat = null;
       _pickupLng = null;
       _destLat = null;
@@ -556,10 +701,12 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                 ),
                 ButtonSegment(
                   value: _TapMode.destination,
-                  enabled: _tripType == 'normal',
-                  label: const Text(
-                    'نقرة = الوجهة',
-                    style: TextStyle(fontFamily: 'Cairo'),
+                  enabled: _needsDestination,
+                  label: Text(
+                    _serviceType == 'delivery'
+                        ? 'نقرة = نقطة التسليم'
+                        : 'نقرة = الوجهة',
+                    style: const TextStyle(fontFamily: 'Cairo'),
                   ),
                   icon: const Icon(
                     Icons.location_on_rounded,
@@ -579,14 +726,14 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                 child: RealMapWidget(
                   pickupLat: _pickupLat,
                   pickupLng: _pickupLng,
-                  destLat: _tripType == 'normal' ? _destLat : null,
-                  destLng: _tripType == 'normal' ? _destLng : null,
-                  showRoute: _tripType == 'normal',
+                  destLat: _needsDestination ? _destLat : null,
+                  destLng: _needsDestination ? _destLng : null,
+                  showRoute: _needsDestination,
                   onMapTap: _handleMapTap,
                   pickupDraggable: true,
-                  destDraggable: _tripType == 'normal',
+                  destDraggable: _needsDestination,
                   onPickupDragged: _setPickup,
-                  onDestDragged: _tripType == 'normal' ? _setDestination : null,
+                  onDestDragged: _needsDestination ? _setDestination : null,
                 ),
               ),
             ),
@@ -594,7 +741,9 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
             Text(
               _tapMode == _TapMode.pickup
                   ? 'انقر على الخريطة لتحديد نقطة الانطلاق (علامة خضراء)، أو اسحب العلامة لتعديل الموقع بدقة.'
-                  : 'انقر على الخريطة لتحديد الوجهة (علامة حمراء)، أو اسحب العلامة لتعديل الموقع بدقة.',
+                  : (_serviceType == 'delivery'
+                        ? 'انقر على الخريطة لتحديد نقطة تسليم الطرد (علامة حمراء)، أو اسحب العلامة لتعديل الموقع بدقة.'
+                        : 'انقر على الخريطة لتحديد الوجهة (علامة حمراء)، أو اسحب العلامة لتعديل الموقع بدقة.'),
               style: const TextStyle(
                 fontSize: 12,
                 color: AdminColors.textSecondary,
@@ -615,9 +764,9 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'بيانات المشوار',
-                style: TextStyle(
+              Text(
+                _serviceType == 'delivery' ? 'بيانات طلب التوصيل' : 'بيانات المشوار',
+                style: const TextStyle(
                   fontFamily: 'Cairo',
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -626,8 +775,50 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
               const SizedBox(height: 16),
 
               const Text(
-                'رقم هاتف الزبون',
+                'نوع الطلب',
                 style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 6),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(
+                    value: 'ride',
+                    label: Text('ركاب', style: TextStyle(fontFamily: 'Cairo')),
+                    icon: Icon(Icons.local_taxi_rounded),
+                  ),
+                  ButtonSegment(
+                    value: 'delivery',
+                    label: Text(
+                      'توصيل طرد',
+                      style: TextStyle(fontFamily: 'Cairo'),
+                    ),
+                    icon: Icon(Icons.two_wheeler_rounded),
+                  ),
+                ],
+                selected: {_serviceType},
+                onSelectionChanged: (selection) => setState(() {
+                  _serviceType = selection.first;
+                  // A delivery always needs a destination and is always a
+                  // motorcycle job - reset whatever car-trip-only state was
+                  // left over from ride mode so the map/fare/validation
+                  // logic above (all keyed off _needsDestination) sees a
+                  // clean slate rather than a stale 'open' trip type.
+                  if (_serviceType == 'delivery') {
+                    _tripType = 'normal';
+                    _tapMode = _TapMode.pickup;
+                  }
+                  _loadPricing();
+                }),
+              ),
+
+              const SizedBox(height: 18),
+              Text(
+                _serviceType == 'delivery' ? 'رقم هاتف المرسل' : 'رقم هاتف الزبون',
+                style: const TextStyle(
                   fontFamily: 'Cairo',
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
@@ -716,39 +907,41 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                 ),
               ],
 
-              const SizedBox(height: 18),
-              const Text(
-                'نوع المشوار',
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
+              if (_serviceType == 'ride') ...[
+                const SizedBox(height: 18),
+                const Text(
+                  'نوع المشوار',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(
-                    value: 'normal',
-                    label: Text(
-                      'مشوار محدد',
-                      style: TextStyle(fontFamily: 'Cairo'),
+                const SizedBox(height: 6),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(
+                      value: 'normal',
+                      label: Text(
+                        'مشوار محدد',
+                        style: TextStyle(fontFamily: 'Cairo'),
+                      ),
                     ),
-                  ),
-                  ButtonSegment(
-                    value: 'open',
-                    label: Text(
-                      'مشوار مفتوح',
-                      style: TextStyle(fontFamily: 'Cairo'),
+                    ButtonSegment(
+                      value: 'open',
+                      label: Text(
+                        'مشوار مفتوح',
+                        style: TextStyle(fontFamily: 'Cairo'),
+                      ),
                     ),
-                  ),
-                ],
-                selected: {_tripType},
-                onSelectionChanged: (selection) => setState(() {
-                  _tripType = selection.first;
-                  if (_tripType == 'open') _tapMode = _TapMode.pickup;
-                }),
-              ),
+                  ],
+                  selected: {_tripType},
+                  onSelectionChanged: (selection) => setState(() {
+                    _tripType = selection.first;
+                    if (_tripType == 'open') _tapMode = _TapMode.pickup;
+                  }),
+                ),
+              ],
 
               const SizedBox(height: 18),
               Row(
@@ -779,25 +972,30 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                 ],
               ),
               const SizedBox(height: 6),
-              _buildAddressAutocomplete(
+              _buildAddressSearchField(
                 controller: _pickupAddressController,
                 focusNode: _pickupFocusNode,
-                hintText: 'وصف نصي لنقطة الانطلاق (أو ابحث/اكتب اسم المكان)',
+                hintText: 'اكتب اسم المكان ثم اضغط بحث',
                 options: _pickupOptions,
+                searching: _pickupSearching,
+                searched: _pickupSearched,
                 onChanged: _searchPickup,
+                onSearchPressed: _searchPickupNow,
                 onSelected: _selectPickupSuggestion,
               ),
               _buildCoordinatesLabel(_pickupLat, _pickupLng),
 
-              if (_tripType == 'normal') ...[
+              if (_needsDestination) ...[
                 const SizedBox(height: 14),
                 Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'عنوان الوجهة',
+                        _serviceType == 'delivery'
+                            ? 'عنوان نقطة التسليم'
+                            : 'عنوان الوجهة',
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontFamily: 'Cairo',
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
@@ -819,44 +1017,114 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                   ],
                 ),
                 const SizedBox(height: 6),
-                _buildAddressAutocomplete(
+                _buildAddressSearchField(
                   controller: _destAddressController,
                   focusNode: _destFocusNode,
-                  hintText: 'وصف نصي للوجهة (أو ابحث/اكتب اسم المكان)',
+                  hintText: 'اكتب اسم المكان ثم اضغط بحث',
                   options: _destOptions,
+                  searching: _destSearching,
+                  searched: _destSearched,
                   onChanged: _searchDestination,
+                  onSearchPressed: _searchDestinationNow,
                   onSelected: _selectDestSuggestion,
                 ),
                 _buildCoordinatesLabel(_destLat, _destLng),
               ],
 
-              const SizedBox(height: 18),
-              const Text(
-                'نوع السيارة',
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
+              if (_serviceType == 'delivery') ...[
+                const SizedBox(height: 18),
+                const Text(
+                  'بيانات المستلم',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 8,
-                children: _vehicleLabels.entries.map((entry) {
-                  final selected = _vehicleType == entry.key;
-                  return ChoiceChip(
-                    label: Text(
-                      entry.value,
-                      style: const TextStyle(fontFamily: 'Cairo'),
-                    ),
-                    selected: selected,
-                    onSelected: (_) {
-                      setState(() => _vehicleType = entry.key);
-                      _loadPricing();
-                    },
-                  );
-                }).toList(),
-              ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _recipientNameController,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    hintText: 'اسم المستلم',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _recipientPhoneController,
+                  keyboardType: TextInputType.phone,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(8),
+                  ],
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    prefixText: '+222 ',
+                    hintText: 'هاتف المستلم (XXXXXXXX)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _packageDescriptionController,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    hintText: 'وصف الطرد (اختياري)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 18),
+              if (_serviceType == 'delivery') ...[
+                const Text(
+                  'نوع المركبة',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'كل طلبات التوصيل تُبَث للكباتن الذين يقودون دراجة نارية '
+                  'ويقبلون التوصيل، بغض النظر عن أي اختيار آخر.',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 11,
+                    color: AdminColors.textSecondary,
+                  ),
+                ),
+              ] else ...[
+                const Text(
+                  'نوع السيارة',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  children: _vehicleLabels.entries.map((entry) {
+                    final selected = _vehicleType == entry.key;
+                    return ChoiceChip(
+                      label: Text(
+                        entry.value,
+                        style: const TextStyle(fontFamily: 'Cairo'),
+                      ),
+                      selected: selected,
+                      onSelected: (_) {
+                        setState(() => _vehicleType = entry.key);
+                        _loadPricing();
+                      },
+                    );
+                  }).toList(),
+                ),
+              ],
 
               const SizedBox(height: 18),
               const Text(
@@ -936,9 +1204,11 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                           ),
                         )
                       : const Icon(Icons.send_rounded),
-                  label: const Text(
-                    'إرسال المشوار للكباتن',
-                    style: TextStyle(
+                  label: Text(
+                    _serviceType == 'delivery'
+                        ? 'إرسال طلب التوصيل للكباتن'
+                        : 'إرسال المشوار للكباتن',
+                    style: const TextStyle(
                       fontFamily: 'Cairo',
                       fontWeight: FontWeight.bold,
                     ),
@@ -1041,75 +1311,119 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
     );
   }
 
-  /// Debounced, bilingual (Arabic/French - both `name_ar`/`name_fr` columns
-  /// are searched server-side by `search_destinations`) autocomplete for a
-  /// pickup/destination address field. Suggestions open immediately on
-  /// focus (via the pickup/dest FocusNode listeners in [initState] loading
-  /// an initial popular-places list) and update from the first typed
-  /// character, debounced 300ms. Selecting an option fills the text field
-  /// (RawAutocomplete's built-in behavior) and, via [onSelected], sets the
-  /// coordinates - which already flows into [RealMapWidget] to move both
-  /// the marker and (for pickup - see the destination auto-recenter fix in
-  /// real_map_widget.dart) the map camera.
-  Widget _buildAddressAutocomplete({
+  /// Pickup/destination address field with an explicit "بحث" button, plus
+  /// the same live-as-you-type search kept underneath (debounced 300ms via
+  /// [onChanged]) for an operator who prefers to just keep typing. Results
+  /// render as a plain, always-visible list directly under the field
+  /// (rather than RawAutocomplete's floating overlay, which some operators
+  /// found easy to miss or lose after the field lost focus) and stay shown
+  /// until a suggestion is tapped or the list is searched again - selecting
+  /// one, via [onSelected], fills the field and sets the coordinates, which
+  /// already flows into [RealMapWidget] to move both the marker and (for
+  /// pickup - see the destination auto-recenter fix in real_map_widget.dart)
+  /// the map camera.
+  Widget _buildAddressSearchField({
     required TextEditingController controller,
     required FocusNode focusNode,
     required String hintText,
     required List<DestinationSuggestion> options,
+    required bool searching,
+    required bool searched,
     required ValueChanged<String> onChanged,
+    required Future<void> Function() onSearchPressed,
     required ValueChanged<DestinationSuggestion> onSelected,
   }) {
-    return RawAutocomplete<DestinationSuggestion>(
-      textEditingController: controller,
-      focusNode: focusNode,
-      displayStringForOption: (option) => option.displayLabel,
-      optionsBuilder: (value) => options,
-      onSelected: onSelected,
-      fieldViewBuilder:
-          (context, fieldController, fieldFocusNode, onFieldSubmitted) {
-            return TextField(
-              controller: fieldController,
-              focusNode: fieldFocusNode,
-              decoration: InputDecoration(
-                hintText: hintText,
-                isDense: true,
-                border: const OutlineInputBorder(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: TextField(
+                controller: controller,
+                focusNode: focusNode,
+                decoration: InputDecoration(
+                  hintText: hintText,
+                  isDense: true,
+                  border: const OutlineInputBorder(),
+                ),
+                onChanged: onChanged,
+                onSubmitted: (_) => onSearchPressed(),
               ),
-              onChanged: onChanged,
-            );
-          },
-      optionsViewBuilder: (context, onSelectedOption, optionsToShow) {
-        return Align(
-          alignment: Alignment.topLeft,
-          child: Material(
-            elevation: 4,
-            borderRadius: BorderRadius.circular(10),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 260, minWidth: 300),
-              child: optionsToShow.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: Text(
-                        'لا توجد نتائج',
-                        style: TextStyle(fontFamily: 'Cairo', fontSize: 12),
-                      ),
+            ),
+            const SizedBox(width: 8),
+            FilledButton.icon(
+              onPressed: searching ? null : onSearchPressed,
+              icon: searching
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : ListView.builder(
-                      padding: EdgeInsets.zero,
-                      shrinkWrap: true,
-                      itemCount: optionsToShow.length,
-                      itemBuilder: (context, index) {
-                        final option = optionsToShow.elementAt(index);
-                        return _SuggestionTile(
-                          suggestion: option,
-                          onTap: () => onSelectedOption(option),
-                        );
-                      },
-                    ),
+                  : const Icon(Icons.search_rounded, size: 18),
+              label: const Text(
+                'بحث',
+                style: TextStyle(fontFamily: 'Cairo', fontSize: 13),
+              ),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+              ),
+            ),
+          ],
+        ),
+        if (options.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(top: 8),
+            constraints: const BoxConstraints(maxHeight: 240),
+            decoration: BoxDecoration(
+              border: Border.all(color: AdminColors.border),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: ListView.builder(
+              padding: EdgeInsets.zero,
+              shrinkWrap: true,
+              itemCount: options.length,
+              itemBuilder: (context, index) {
+                final option = options[index];
+                return _SuggestionTile(
+                  suggestion: option,
+                  onTap: () => onSelected(option),
+                );
+              },
+            ),
+          )
+        else if (searching)
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text(
+              'جارٍ البحث...',
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 12,
+                color: AdminColors.textSecondary,
+              ),
+            ),
+          )
+        else if (searched)
+          // Distinguishes "searched, found literally nothing" from "never
+          // pressed بحث yet" - both used to render as an empty, silent
+          // gap with no way to tell them apart, which read as "the button
+          // does nothing" even when a search genuinely ran and came back
+          // empty (e.g. the map-search half failing while the registry
+          // half also has no match for this query).
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text(
+              'لا توجد نتائج لهذا البحث',
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 12,
+                color: AdminColors.textSecondary,
+              ),
             ),
           ),
-        );
-      },
+      ],
     );
   }
 
