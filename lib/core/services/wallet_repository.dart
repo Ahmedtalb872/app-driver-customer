@@ -3,15 +3,30 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/models.dart';
 import '../config/supabase_config.dart';
 
+/// Outcome of a live Bpay recharge call - mirrors the three statuses the
+/// customer-bpay-payment Edge Function can resolve to (see
+/// checkTransaction's TS/TF/TA in Bankily's B-PAY spec): success credits
+/// the wallet immediately, pending means the bank is still confirming and
+/// the wallet will be credited automatically once it does, failed means
+/// it didn't go through at all.
+enum BpayRechargeStatus { success, pending, failed }
+
+class BpayRechargeResult {
+  final BpayRechargeStatus status;
+  final String message;
+  const BpayRechargeResult(this.status, this.message);
+}
+
 /// Access to the signed-in user's `wallets`/`wallet_transactions` rows (see
 /// 20260712000005_create_wallets.sql,
 /// 20260712000020_create_wallet_transactions.sql). Balance-changing writes
-/// only ever happen through admin-reviewed SECURITY DEFINER functions
-/// (`admin_approve_recharge`, ...) - the client's only direct write is
-/// [submitRechargeRequest], a plain `recharge_requests` insert RLS already
-/// allows for the row's own owner (`auth.uid() = user_id`,
-/// 20260712000026_admin_rls.sql) - it only ever queues the request, an
-/// admin approving it is what actually moves the balance.
+/// only ever happen through SECURITY DEFINER functions: either an admin
+/// reviewing a queued request (`admin_approve_recharge`, ...) - the
+/// client's only direct write for that path is [submitRechargeRequest], a
+/// plain `recharge_requests` insert RLS already allows for the row's own
+/// owner (`auth.uid() = user_id`, 20260712000026_admin_rls.sql) - or a
+/// live Bpay payment confirmed by the bank, credited immediately with no
+/// admin review via [submitBpayRecharge].
 class WalletRepository {
   WalletRepository._();
 
@@ -51,6 +66,55 @@ class WalletRepository {
       'amount': amount,
       'payment_method': method,
     });
+  }
+
+  /// Live wallet recharge via Bankily's Bpay - calls the
+  /// customer-bpay-payment Edge Function (the customer-app counterpart of
+  /// aihoudhoud/captain app's own bpay-payment), which credits the wallet
+  /// automatically the moment the bank confirms the payment, no admin
+  /// review involved (unlike [submitRechargeRequest] above).
+  Future<BpayRechargeResult> submitBpayRecharge({
+    required double amount,
+    required String payerPhone,
+    required String verificationCode,
+  }) async {
+    if (_client.auth.currentUser == null) {
+      throw StateError('Not signed in');
+    }
+    try {
+      final response = await _client.functions.invoke(
+        'customer-bpay-payment',
+        body: {
+          'amount': amount,
+          'payerPhone': payerPhone,
+          'passcode': verificationCode,
+        },
+      );
+      return _parseBpayResult(response.data);
+    } on FunctionException catch (e) {
+      return _parseBpayResult(e.details);
+    } catch (_) {
+      return const BpayRechargeResult(
+        BpayRechargeStatus.failed,
+        'تعذر الاتصال بخدمة الدفع، حاول مرة أخرى.',
+      );
+    }
+  }
+
+  BpayRechargeResult _parseBpayResult(dynamic data) {
+    if (data is! Map) {
+      return const BpayRechargeResult(
+        BpayRechargeStatus.failed,
+        'تعذر الاتصال بخدمة الدفع، حاول مرة أخرى.',
+      );
+    }
+    final status = BpayRechargeStatus.values.firstWhere(
+      (s) => s.name == data['status'],
+      orElse: () => BpayRechargeStatus.failed,
+    );
+    final message =
+        data['message'] as String? ?? 'تعذر إتمام عملية الدفع، حاول مرة أخرى.';
+    return BpayRechargeResult(status, message);
   }
 
   Future<List<WalletTransaction>> fetchTransactions({int limit = 50}) async {

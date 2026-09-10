@@ -5,6 +5,7 @@ import '../../core/services/selefli_repository.dart';
 import '../../core/services/wallet_repository.dart';
 import '../../models/models.dart';
 import '../../providers/app_state_provider.dart';
+import 'payment/bpay_recharge_screen.dart';
 import 'payment/payment_gateway_screen.dart';
 import 'payment/payment_provider_config.dart';
 
@@ -90,6 +91,8 @@ class _WalletScreenState extends State<WalletScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
+                  _buildBpayTile(sheetContext),
+                  const SizedBox(height: 20),
                   const Text(
                     'المبلغ (أوقية)',
                     style: TextStyle(
@@ -108,7 +111,7 @@ class _WalletScreenState extends State<WalletScreen> {
                   ),
                   const SizedBox(height: 20),
                   const Text(
-                    'اختر وسيلة الدفع',
+                    'وسائل أخرى (تُرسَل للمراجعة اليدوية)',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontFamily: 'Cairo',
@@ -125,6 +128,82 @@ class _WalletScreenState extends State<WalletScreen> {
           },
         );
       },
+    );
+  }
+
+  /// Real, live Bpay recharge - unlike [_buildProviderTile]'s mock
+  /// providers below (which only ever queue a request for manual admin
+  /// review), this credits the wallet automatically the moment the bank
+  /// confirms the payment. Has its own amount field on
+  /// [BpayRechargeScreen], so it doesn't read [_amountController].
+  Widget _buildBpayTile(BuildContext sheetContext) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => _openBpayRecharge(sheetContext),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.bolt_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Bpay (Bankily) - شحن فوري',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        fontFamily: 'Cairo',
+                        color: AppColors.darkText,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'يُضاف الرصيد مباشرة بعد تأكيد البنك، بدون انتظار مراجعة',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontFamily: 'Cairo',
+                        color: AppColors.secondaryText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_left_rounded,
+                color: AppColors.secondaryText,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openBpayRecharge(BuildContext sheetContext) {
+    Navigator.of(sheetContext).pop();
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const BpayRechargeScreen()),
     );
   }
 
