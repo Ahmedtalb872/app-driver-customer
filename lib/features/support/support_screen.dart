@@ -1,9 +1,35 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/colors.dart';
+import '../../core/services/support_ticket_repository.dart';
+import 'support_ticket_chat_screen.dart';
 
 class SupportScreen extends StatelessWidget {
   final bool showAppBar;
   const SupportScreen({super.key, this.showAppBar = false});
+
+  Future<void> _openLiveChat(BuildContext context) async {
+    try {
+      final ticketId = await SupportTicketRepository.instance
+          .getOrCreateMyTicket();
+      if (!context.mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => SupportTicketChatScreen(ticketId: ticketId),
+        ),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'تعذر فتح المحادثة الآن، حاول مرة أخرى.',
+            style: TextStyle(fontFamily: 'Cairo'),
+          ),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,17 +88,7 @@ class SupportScreen extends StatelessWidget {
                           icon: Icons.chat_bubble_outline_rounded,
                           label: 'محادثة مباشرة',
                           color: AppColors.primary,
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'جاري بدء محادثة دعم جديدة...',
-                                  style: TextStyle(fontFamily: 'Cairo'),
-                                ),
-                                backgroundColor: AppColors.primary,
-                              ),
-                            );
-                          },
+                          onTap: () => _openLiveChat(context),
                         ),
                         const SizedBox(width: 12),
                         _buildContactChannel(

@@ -1103,6 +1103,78 @@ class SubscriptionMessage {
   }
 }
 
+/// A support/complaints thread - see SupportTicketRepository (customer
+/// side) and AdminSupportRepository (admin side).
+class SupportTicket {
+  const SupportTicket({
+    required this.id,
+    required this.userId,
+    required this.subject,
+    required this.status,
+    required this.createdAt,
+    required this.updatedAt,
+    this.userFullName,
+    this.userPhone,
+  });
+
+  final String id;
+  final String userId;
+  final String subject;
+  final String status;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final String? userFullName;
+  final String? userPhone;
+
+  bool get isOpen => status == 'open';
+  bool get isInProgress => status == 'in_progress';
+  bool get isResolved => status == 'resolved';
+  bool get isClosed => status == 'closed';
+
+  factory SupportTicket.fromJson(Map<String, dynamic> json) {
+    final profile = json['profiles'] as Map<String, dynamic>?;
+    return SupportTicket(
+      id: json['id'] as String,
+      userId: json['user_id'] as String,
+      subject: json['subject'] as String,
+      status: json['status'] as String,
+      createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
+      updatedAt: DateTime.parse(json['updated_at'] as String).toLocal(),
+      userFullName: profile?['full_name'] as String?,
+      userPhone: profile?['phone'] as String?,
+    );
+  }
+}
+
+class SupportTicketMessage {
+  const SupportTicketMessage({
+    required this.id,
+    required this.ticketId,
+    required this.senderId,
+    required this.isAdminReply,
+    required this.body,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String ticketId;
+  final String senderId;
+  final bool isAdminReply;
+  final String body;
+  final DateTime createdAt;
+
+  factory SupportTicketMessage.fromJson(Map<String, dynamic> json) {
+    return SupportTicketMessage(
+      id: json['id'] as String,
+      ticketId: json['ticket_id'] as String,
+      senderId: json['sender_id'] as String,
+      isAdminReply: json['is_admin_reply'] as bool? ?? false,
+      body: json['body'] as String,
+      createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
+    );
+  }
+}
+
 /// One of the labeled spots (`home`/`work`/`school`/`other`) a customer has
 /// saved for one-tap reuse instead of searching for the same address every
 /// time - see SavedPlacesRepository.
