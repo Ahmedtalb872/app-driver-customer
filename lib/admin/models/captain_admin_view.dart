@@ -47,10 +47,7 @@ class CaptainAdminView {
     this.payoutPhone,
   });
 
-  factory CaptainAdminView.fromJson(
-    Map<String, dynamic> json, {
-    double walletBalance = 0,
-  }) {
+  factory CaptainAdminView.fromJson(Map<String, dynamic> json) {
     final profile = json['profiles'] as Map<String, dynamic>?;
     return CaptainAdminView(
       id: json['id'] as String,
@@ -70,7 +67,12 @@ class CaptainAdminView {
       vehicleColor: json['vehicle_color'] as String?,
       vehiclePlate: json['vehicle_plate'] as String?,
       vehicleSeats: (json['vehicle_seats'] as num?)?.toInt(),
-      walletBalance: walletBalance,
+      // Captains' real earnings balance lives on profiles.wallet_balance
+      // (credited/debited directly by the sibling captain app's
+      // credit_captain_wallet_from_bpay/debit_captain_wallet RPCs) - not
+      // public.wallets, which is this app's own customer-recharge ledger
+      // and is never written to for a captain account.
+      walletBalance: ((profile?['wallet_balance'] as num?) ?? 0).toDouble(),
       createdAt: json['created_at'] == null
           ? null
           : DateTime.parse(json['created_at'] as String),

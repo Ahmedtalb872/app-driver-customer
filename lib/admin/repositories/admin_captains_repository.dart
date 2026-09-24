@@ -10,18 +10,6 @@ import '../models/captain_admin_view.dart';
 class AdminCaptainsRepository {
   SupabaseClient get _client => SupabaseConfig.client;
 
-  Future<Map<String, double>> _walletBalances(List<String> userIds) async {
-    if (userIds.isEmpty) return {};
-    final rows = await _client
-        .from('wallets')
-        .select('user_id, balance')
-        .inFilter('user_id', userIds);
-    return {
-      for (final row in List<Map<String, dynamic>>.from(rows))
-        row['user_id'] as String: (row['balance'] as num).toDouble(),
-    };
-  }
-
   Future<List<CaptainAdminView>> loadCaptains({
     String? searchQuery,
     String? statusFilter,
@@ -50,18 +38,7 @@ class AdminCaptainsRepository {
         .range(offset, offset + limit - 1);
     final list = List<Map<String, dynamic>>.from(rows);
 
-    final balances = await _walletBalances(
-      list.map((r) => r['id'] as String).toList(),
-    );
-
-    return list
-        .map(
-          (row) => CaptainAdminView.fromJson(
-            row,
-            walletBalance: balances[row['id']] ?? 0,
-          ),
-        )
-        .toList();
+    return list.map(CaptainAdminView.fromJson).toList();
   }
 
   Future<CaptainAdminView?> loadCaptainById(String id) async {
@@ -71,8 +48,7 @@ class AdminCaptainsRepository {
         .eq('id', id)
         .maybeSingle();
     if (row == null) return null;
-    final balances = await _walletBalances([id]);
-    return CaptainAdminView.fromJson(row, walletBalance: balances[id] ?? 0);
+    return CaptainAdminView.fromJson(row);
   }
 
   Future<List<Map<String, dynamic>>> loadTripHistory(
