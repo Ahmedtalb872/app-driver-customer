@@ -3,6 +3,7 @@ class CaptainAdminView {
   final String fullName;
   final String? phone;
   final String? email;
+  final String? avatarUrl;
   final String status;
   final String? rejectionReason;
   final String? adminNotes;
@@ -27,6 +28,7 @@ class CaptainAdminView {
     required this.fullName,
     this.phone,
     this.email,
+    this.avatarUrl,
     required this.status,
     this.rejectionReason,
     this.adminNotes,
@@ -54,6 +56,7 @@ class CaptainAdminView {
       fullName: (profile?['full_name'] as String?) ?? '',
       phone: profile?['phone'] as String?,
       email: profile?['email'] as String?,
+      avatarUrl: json['avatar_url'] as String?,
       status: (json['status'] as String?) ?? 'pending',
       rejectionReason: json['rejection_reason'] as String?,
       adminNotes: json['admin_notes'] as String?,

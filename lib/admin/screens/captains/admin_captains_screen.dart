@@ -297,6 +297,7 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
         scrollDirection: Axis.horizontal,
         child: DataTable(
           columns: const [
+            DataColumn(label: Text('')),
             DataColumn(label: Text('الاسم')),
             DataColumn(label: Text('الهاتف')),
             DataColumn(label: Text('الحالة')),
@@ -308,6 +309,10 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
           rows: _captains.map((captain) {
             return DataRow(
               cells: [
+                DataCell(
+                  _CaptainAvatar(captain: captain),
+                  onTap: () => _openDetails(captain),
+                ),
                 DataCell(
                   Text(captain.fullName.isEmpty ? '-' : captain.fullName),
                   onTap: () => _openDetails(captain),
@@ -398,5 +403,30 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
       default:
         return StatusBadge.neutral(captain.status);
     }
+  }
+}
+
+/// Circular profile-photo thumbnail for the captains table's leading
+/// column. Falls back to a generic person icon when the captain has no
+/// approved profile photo yet (avatar_url only gets set once one is
+/// approved - see AdminCaptainsRepository.syncApprovedProfilePhotoToAvatar).
+class _CaptainAvatar extends StatelessWidget {
+  const _CaptainAvatar({required this.captain});
+
+  final CaptainAdminView captain;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = captain.avatarUrl;
+    return CircleAvatar(
+      radius: 18,
+      backgroundColor: AdminColors.primary.withValues(alpha: 0.1),
+      backgroundImage: (url == null || url.isEmpty)
+          ? null
+          : NetworkImage(url),
+      child: (url == null || url.isEmpty)
+          ? Icon(Icons.person_outline, size: 18, color: AdminColors.primary)
+          : null,
+    );
   }
 }
