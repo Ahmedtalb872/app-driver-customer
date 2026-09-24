@@ -41400,7 +41400,7 @@ var $async$aXo=A.k(function(a,b){if(a===1){o.push(b)
 s=p}for(;;)switch(s){case 0:if(!$.bvM()){s=1
 break}p=4
 s=7
-return A.f(B.Rm.df("start",null,!1,t.z),$async$aXo)
+return A.f(B.Rn.df("start",null,!1,t.z),$async$aXo)
 case 7:p=2
 s=6
 break
@@ -41418,7 +41418,7 @@ var $async$QA=A.k(function(a,b){if(a===1){o.push(b)
 s=p}for(;;)switch(s){case 0:if(!$.bvM()){s=1
 break}p=4
 s=7
-return A.f(B.Rm.df("stop",null,!1,t.z),$async$QA)
+return A.f(B.Rn.df("stop",null,!1,t.z),$async$QA)
 case 7:p=2
 s=6
 break
@@ -41856,7 +41856,7 @@ var $async$aYf=A.k(function(f,g){if(f===1)return A.l(g,r)
 for(;;)switch(s){case 0:$.bHj()
 s=3
 return A.f(A.aYe(A.D(["logSeverity","none"],t.N,t.z)),$async$aYf)
-case 3:q=B.Rn.df(a,b,!1,c)
+case 3:q=B.Rm.df(a,b,!1,c)
 s=1
 break
 case 1:return A.m(q,r)}})
@@ -41866,7 +41866,7 @@ var $async$aYe=A.k(function(b,c){if(b===1)return A.l(c,r)
 for(;;)switch(s){case 0:s=!$.bCh?2:3
 break
 case 2:s=4
-return A.f(B.Rn.df("initialize",A.D(["options",a],t.N,t.z),!1,t.H),$async$aYe)
+return A.f(B.Rm.df("initialize",A.D(["options",a],t.N,t.z),!1,t.H),$async$aYe)
 case 4:$.bCh=!0
 case 3:return A.m(null,r)}})
 return A.n($async$aYe,r)},
@@ -161464,9 +161464,9 @@ B.Rl=new A.hh("plugins.flutter.io/url_launcher",B.bL,null)
 B.lI=new A.hh("flutter.baseflow.com/geolocator",B.bL,null)
 B.d8=new A.hh("flutter/platform_views",B.bL,null)
 B.aRu=new A.hh("dev.fluttercommunity.plus/package_info",B.bL,null)
-B.Rm=new A.hh("com.alhudhud.customerapp/trip_foreground_service",B.bL,null)
-B.Rn=new A.hh("FlutterWebRTC.Method",B.bL,null)
+B.Rm=new A.hh("FlutterWebRTC.Method",B.bL,null)
 B.aRv=new A.hh("flutter/service_worker",B.bL,null)
+B.Rn=new A.hh("com.alhudhud.lizeboun/trip_foreground_service",B.bL,null)
 B.jL=new A.a6R(0,"latestPointer")
 B.wm=new A.a6R(1,"averageBoundaryPointers")
 B.Rp=new A.z6(0,"clipRect")
