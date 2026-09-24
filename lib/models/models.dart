@@ -1115,6 +1115,7 @@ class SupportTicket {
     required this.updatedAt,
     this.userFullName,
     this.userPhone,
+    this.userRole,
   });
 
   final String id;
@@ -1125,6 +1126,7 @@ class SupportTicket {
   final DateTime updatedAt;
   final String? userFullName;
   final String? userPhone;
+  final String? userRole;
 
   bool get isOpen => status == 'open';
   bool get isInProgress => status == 'in_progress';
@@ -1142,6 +1144,7 @@ class SupportTicket {
       updatedAt: DateTime.parse(json['updated_at'] as String).toLocal(),
       userFullName: profile?['full_name'] as String?,
       userPhone: profile?['phone'] as String?,
+      userRole: profile?['role'] as String?,
     );
   }
 }

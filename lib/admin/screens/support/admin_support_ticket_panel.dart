@@ -135,7 +135,11 @@ class _AdminSupportTicketPanelState extends State<AdminSupportTicketPanel> {
                             ),
                           ),
                           Text(
-                            ticket.userPhone ?? '-',
+                            [
+                              if (ticket.userRole == 'captain') 'كابتن',
+                              if (ticket.userRole == 'customer') 'زبون',
+                              ticket.userPhone ?? '-',
+                            ].join(' - '),
                             style: const TextStyle(
                               color: AdminColors.textSecondary,
                               fontFamily: 'Cairo',

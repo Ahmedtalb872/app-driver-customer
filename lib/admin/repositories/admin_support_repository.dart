@@ -11,7 +11,7 @@ class AdminSupportRepository {
   Future<List<SupportTicket>> loadTickets({String? statusFilter}) async {
     var query = _client
         .from('support_tickets')
-        .select('*, profiles!inner(full_name, phone)');
+        .select('*, profiles!inner(full_name, phone, role)');
     if (statusFilter != null && statusFilter.isNotEmpty) {
       query = query.eq('status', statusFilter);
     }

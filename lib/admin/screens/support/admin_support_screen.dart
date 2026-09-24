@@ -94,6 +94,7 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
         child: DataTable(
           columns: const [
             DataColumn(label: Text('المستخدم')),
+            DataColumn(label: Text('النوع')),
             DataColumn(label: Text('الهاتف')),
             DataColumn(label: Text('الحالة')),
             DataColumn(label: Text('آخر تحديث')),
@@ -109,6 +110,7 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
                         : '-',
                   ),
                 ),
+                DataCell(_roleBadge(ticket)),
                 DataCell(Text(ticket.userPhone ?? '-')),
                 DataCell(_statusBadge(ticket)),
                 DataCell(Text(_formatDate(ticket.updatedAt))),
@@ -123,6 +125,17 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
   String _formatDate(DateTime dt) {
     return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} '
         '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+
+  Widget _roleBadge(SupportTicket ticket) {
+    switch (ticket.userRole) {
+      case 'captain':
+        return StatusBadge(label: 'كابتن', color: AdminColors.primary);
+      case 'customer':
+        return StatusBadge(label: 'زبون', color: AdminColors.secondary);
+      default:
+        return StatusBadge.neutral('-');
+    }
   }
 
   Widget _statusBadge(SupportTicket ticket) {
