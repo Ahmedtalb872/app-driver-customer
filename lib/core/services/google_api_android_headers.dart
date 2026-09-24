@@ -10,7 +10,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 /// Places API, ...), so the package name/cert fingerprint only need to be
 /// kept in sync with android/app/build.gradle.kts and android/debug.keystore
 /// in one place.
-const _androidPackageName = 'com.alhudhud.customerapp';
+const _androidPackageName = 'com.alhudhud.lizeboun';
 
 // SHA-1 of android/debug.keystore's androiddebugkey (hex, no colons) - see
 // android/app/build.gradle.kts's signingConfig for the keystore itself.

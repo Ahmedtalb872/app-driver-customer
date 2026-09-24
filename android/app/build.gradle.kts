@@ -32,7 +32,7 @@ if (hasReleaseSigning) {
 }
 
 android {
-    namespace = "com.alhudhud.customerapp"
+    namespace = "com.alhudhud.lizeboun"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -52,7 +52,11 @@ android {
         // GitHub Actions runner has no ~/.android/debug.keystore, so every
         // CI build was self-signing with a brand new, different key, and
         // installing over a previous download hit the same conflict.
-        applicationId = "com.alhudhud.customerapp"
+        // Renamed again (from com.alhudhud.customerapp) to match the
+        // package name already locked in on the Play Console listing
+        // ("com.alhudhud.lizeboun") - that name is permanent once an app is
+        // created there, so the app itself has to match it instead.
+        applicationId = "com.alhudhud.lizeboun"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

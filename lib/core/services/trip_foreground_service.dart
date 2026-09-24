@@ -17,7 +17,7 @@ class TripForegroundService {
   TripForegroundService._();
 
   static const _channel = MethodChannel(
-    'com.alhudhud.customerapp/trip_foreground_service',
+    'com.alhudhud.lizeboun/trip_foreground_service',
   );
 
   static Future<void> start() async {
