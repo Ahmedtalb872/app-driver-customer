@@ -193,8 +193,11 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
       await _routeAfterAuth();
     } on AuthException catch (e) {
       _showError(e.message);
-    } catch (_) {
-      _showError('تعذر حفظ كلمة السر الآن. حاول مرة أخرى.');
+    } catch (e) {
+      // TODO(temporary): surfacing the raw exception to diagnose a
+      // persistent failure at this step - revert to the generic Arabic
+      // message once resolved.
+      _showError('تعذر حفظ كلمة السر الآن. حاول مرة أخرى.\n$e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
