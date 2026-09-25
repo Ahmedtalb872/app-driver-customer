@@ -132,6 +132,28 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
     _load();
   }
 
+  /// Only refuses server-side when the captain has trip history (see
+  /// admin_delete_captain / [CaptainHasTripHistoryException]) - a captain
+  /// with none, regardless of status, can be deleted from here.
+  Future<void> _delete(CaptainAdminView captain) async {
+    final reason = await showReasonDialog(
+      context,
+      title: 'حذف ملف ${captain.fullName} نهائياً - سبب الحذف (إلزامي)',
+      hint: 'هذا الإجراء لا يمكن التراجع عنه',
+    );
+    if (reason == null) return;
+    try {
+      await _repository.delete(captain.id, reason);
+      _load();
+    } on CaptainHasTripHistoryException {
+      _showError(
+        'لا يمكن حذف كابتن له سجل رحلات سابقة - استخدم إيقاف الحساب بدلاً من ذلك.',
+      );
+    } catch (_) {
+      _showError();
+    }
+  }
+
   void _showError([String? message]) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -275,6 +297,7 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
         scrollDirection: Axis.horizontal,
         child: DataTable(
           columns: const [
+            DataColumn(label: Text('')),
             DataColumn(label: Text('الاسم')),
             DataColumn(label: Text('الهاتف')),
             DataColumn(label: Text('الحالة')),
@@ -286,6 +309,10 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
           rows: _captains.map((captain) {
             return DataRow(
               cells: [
+                DataCell(
+                  _CaptainAvatar(captain: captain),
+                  onTap: () => _openDetails(captain),
+                ),
                 DataCell(
                   Text(captain.fullName.isEmpty ? '-' : captain.fullName),
                   onTap: () => _openDetails(captain),
@@ -343,6 +370,15 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
                         icon: const Icon(Icons.visibility_outlined, size: 20),
                         onPressed: () => _openDetails(captain),
                       ),
+                      IconButton(
+                        tooltip: 'حذف الملف',
+                        icon: const Icon(
+                          Icons.delete_outline_rounded,
+                          size: 20,
+                          color: AdminColors.error,
+                        ),
+                        onPressed: () => _delete(captain),
+                      ),
                     ],
                   ),
                 ),
@@ -367,5 +403,30 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
       default:
         return StatusBadge.neutral(captain.status);
     }
+  }
+}
+
+/// Circular profile-photo thumbnail for the captains table's leading
+/// column. Falls back to a generic person icon when the captain has no
+/// approved profile photo yet (avatar_url only gets set once one is
+/// approved - see AdminCaptainsRepository.syncApprovedProfilePhotoToAvatar).
+class _CaptainAvatar extends StatelessWidget {
+  const _CaptainAvatar({required this.captain});
+
+  final CaptainAdminView captain;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = captain.avatarUrl;
+    return CircleAvatar(
+      radius: 18,
+      backgroundColor: AdminColors.primary.withValues(alpha: 0.1),
+      backgroundImage: (url == null || url.isEmpty)
+          ? null
+          : NetworkImage(url),
+      child: (url == null || url.isEmpty)
+          ? Icon(Icons.person_outline, size: 18, color: AdminColors.primary)
+          : null,
+    );
   }
 }

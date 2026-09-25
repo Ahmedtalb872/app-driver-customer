@@ -1,0 +1,171 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
+/// Falls back to DNS-over-HTTPS when the platform's normal DNS resolution
+/// fails.
+///
+/// One test device hits `SocketException: Failed host lookup` on every
+/// single request, on every network tried (mobile data and WiFi alike),
+/// with every DNS provider tried (carrier default and an explicit
+/// `dns.google` Private DNS) - yet the same device's browser resolves and
+/// loads the exact same hostname instantly, every time, on both networks.
+/// That split only makes sense if something on the network path is
+/// interfering with plain DNS (port 53) and DNS-over-TLS (port 853, what
+/// Android's Private DNS setting uses) specifically, while leaving
+/// DNS-over-HTTPS alone - DoH traffic is indistinguishable from ordinary
+/// HTTPS on port 443, which is exactly what Chrome's on-by-default "Secure
+/// DNS" uses and why it never breaks even when the app does.
+///
+/// This only ever engages as a fallback: [InternetAddress.lookup] is tried
+/// first and used as-is on any device where it already works (the vast
+/// majority), so this can't change behavior for anyone not already
+/// completely unable to connect.
+class DohFallbackHttpOverrides extends HttpOverrides {
+  /// Well-known DoH providers, queried by fixed IP so resolving *them*
+  /// never hits the same broken path - none of these IPs need a DNS
+  /// lookup at all. Tried in order; some networks specifically block one
+  /// well-known resolver IP (1.1.1.1 is a common target, precisely
+  /// because it's so often used to bypass network-level restrictions) -
+  /// see `DohFallbackHttpOverrides._resolveViaDoh` for the observed
+  /// "Operation not permitted" on that IP that motivated adding more.
+  static const _dohProviders = [
+    (ip: '8.8.8.8', host: 'dns.google'),
+    (ip: '9.9.9.9', host: 'dns.quad9.net'),
+    (ip: '1.1.1.1', host: 'cloudflare-dns.com'),
+  ];
+
+  final _cache = <String, InternetAddress>{};
+
+  /// Every network call below is wrapped in this. Without it, a network
+  /// that silently drops packets instead of actively refusing them (no
+  /// RST, no ICMP unreachable) leaves Socket.connect/SecureSocket.secure
+  /// pending forever - which, called from main() before runApp(), means
+  /// the native splash screen never gets dismissed and the app looks
+  /// completely frozen with no error, ever.
+  static const _networkTimeout = Duration(seconds: 6);
+
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    final client = super.createHttpClient(context);
+    client.connectionFactory = (
+      Uri uri,
+      String? proxyHost,
+      int? proxyPort,
+    ) async {
+      final address = await _resolve(uri.host, context);
+      final rawSocket = await Socket.connect(
+        address,
+        uri.port,
+      ).timeout(_networkTimeout);
+      if (uri.scheme != 'https') {
+        return ConnectionTask.fromSocket(
+          Future.value(rawSocket),
+          () => rawSocket.destroy(),
+        );
+      }
+      final secureSocket = await SecureSocket.secure(
+        rawSocket,
+        host: uri.host,
+        context: context,
+      ).timeout(_networkTimeout);
+      return ConnectionTask.fromSocket(
+        Future.value(secureSocket),
+        () => secureSocket.destroy(),
+      );
+    };
+    return client;
+  }
+
+  Future<InternetAddress> _resolve(String host, SecurityContext? context) async {
+    final cached = _cache[host];
+    if (cached != null) return cached;
+
+    try {
+      final results = await InternetAddress.lookup(
+        host,
+      ).timeout(_networkTimeout);
+      if (results.isNotEmpty) {
+        _cache[host] = results.first;
+        return results.first;
+      }
+    } on SocketException {
+      // Fall through to the DoH fallback below.
+    } on TimeoutException {
+      // Fall through to the DoH fallback below.
+    }
+
+    final resolved = await _resolveViaDoh(host, context);
+    _cache[host] = resolved;
+    return resolved;
+  }
+
+  Future<InternetAddress> _resolveViaDoh(
+    String host,
+    SecurityContext? context,
+  ) async {
+    Object? lastError;
+    for (final provider in _dohProviders) {
+      try {
+        return await _queryDoh(host, context, provider.ip, provider.host);
+      } catch (e) {
+        lastError = e;
+        // Try the next provider - a network that blocks one well-known
+        // resolver IP often doesn't block the others.
+      }
+    }
+    throw lastError ?? SocketException('DoH: no provider reachable for $host');
+  }
+
+  Future<InternetAddress> _queryDoh(
+    String host,
+    SecurityContext? context,
+    String providerIp,
+    String providerHost,
+  ) async {
+    final rawSocket = await Socket.connect(
+      providerIp,
+      443,
+    ).timeout(_networkTimeout);
+    final secureSocket = await SecureSocket.secure(
+      rawSocket,
+      host: providerHost,
+      context: context,
+    ).timeout(_networkTimeout);
+    try {
+      final path = '/dns-query?name=$host&type=A';
+      secureSocket.write(
+        'GET $path HTTP/1.1\r\n'
+        'Host: $providerHost\r\n'
+        'Accept: application/dns-json\r\n'
+        'Connection: close\r\n\r\n',
+      );
+      await secureSocket.flush();
+
+      final response = await secureSocket
+          .cast<List<int>>()
+          .transform(utf8.decoder)
+          .join()
+          .timeout(_networkTimeout);
+      final bodyStart = response.indexOf('\r\n\r\n');
+      if (bodyStart == -1) {
+        throw const SocketException('DoH: malformed HTTP response');
+      }
+      final body = response.substring(bodyStart + 4);
+      final json = jsonDecode(body) as Map<String, dynamic>;
+      final answers = json['Answer'] as List<dynamic>?;
+      final ip = answers
+          ?.map((a) => a as Map<String, dynamic>)
+          .firstWhere(
+            (a) => a['type'] == 1, // A record
+            orElse: () => const {},
+          )['data'] as String?;
+      if (ip == null || ip.isEmpty) {
+        throw SocketException('DoH: no A record for $host via $providerHost');
+      }
+      return InternetAddress(ip);
+    } finally {
+      unawaited(secureSocket.close());
+    }
+  }
+}

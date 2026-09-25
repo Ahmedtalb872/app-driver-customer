@@ -31,10 +31,15 @@ class RideRepository {
   // exclude such a trip from every query that uses this select entirely -
   // `.single()` would throw "no rows", and watchIncomingRequests would
   // silently never surface it to any captain.
+  // `captains!trips_captain_id_fkey` (not bare `captains(...)`) is
+  // required, not stylistic: trips gained a second FK to captains
+  // (subscribed_captain_id, 20260812000056_captain_subscriptions.sql), so
+  // an unqualified embed is now ambiguous - PostgREST rejects it
+  // (PGRST201) rather than guessing which relationship was meant.
   static const String _fullJoin =
       '*, '
       'customers(avatar_url, rating, ratings_count, completed_trips_count, is_verified, profiles(full_name, phone)), '
-      'captains(vehicle_brand, vehicle_model, vehicle_plate, profiles(full_name, phone))';
+      'captains!trips_captain_id_fkey(avatar_url, rating, vehicle_brand, vehicle_model, vehicle_plate, profiles(full_name, phone))';
 
   Trip _rowToTrip(Map<String, dynamic> row) {
     final customer = row['customers'] as Map<String, dynamic>?;
@@ -67,6 +72,65 @@ class RideRepository {
     return _rowToTrip(row);
   }
 
+  static const List<String> _activeStatuses = [
+    'searching',
+    'accepted',
+    'arrived',
+    // An open trip's captain-side "board passenger" action sets status
+    // straight to 'boarded' (see aihoudhoud's app_state_provider.dart,
+    // `_activeTrip!.isOpenRide ? 'boarded' : 'in_progress'`) rather than
+    // 'in_progress' - missing here meant a still-ongoing open trip
+    // vanished from this exact query the moment it was boarded, which is
+    // what made [fetchActiveTrip] stop finding it after a full app
+    // close/reopen. models.dart's status parsing already treats 'boarded'
+    // the same as 'in_progress' (both map to TripStatus.started) - only
+    // this raw SQL filter had fallen out of sync with that.
+    'boarded',
+    'in_progress',
+  ];
+
+  /// This customer's current in-progress trip, if any - null otherwise.
+  /// [AppStateProvider.activeTrip] only ever lives in memory (this app has
+  /// no local persistence of it at all), so a fresh app start/restart -
+  /// e.g. after losing connectivity mid-trip - has no way to know a trip is
+  /// still running server-side without this. See
+  /// [CustomerHomeScreen._resumeActiveTripIfAny], the only caller.
+  ///
+  /// A 'searching' trip whose [Trip.requestExpiresAt] has already passed is
+  /// skipped rather than treated as active: nothing in this app ever calls
+  /// [expireTrip] on its own (no captain accepted it, so nothing else would
+  /// either), so an old, never-accepted request can otherwise sit in
+  /// 'searching' forever and get resumed into on every single app open.
+  /// Found expired requests are cleaned up opportunistically here, the same
+  /// "client calls it when it happens to notice" pattern already used
+  /// elsewhere in this project (there's no pg_cron backing this app).
+  Future<Trip?> fetchActiveTrip() async {
+    final customerId = _client.auth.currentUser?.id;
+    if (customerId == null) return null;
+
+    final rows = await _client
+        .from('trips')
+        .select(_fullJoin)
+        .eq('customer_id', customerId)
+        .inFilter('status', _activeStatuses)
+        .order('requested_at', ascending: false)
+        .limit(5);
+
+    final now = DateTime.now();
+    for (final row in List<Map<String, dynamic>>.from(rows)) {
+      final trip = _rowToTrip(row);
+      final expiresAt = trip.requestExpiresAt;
+      if (trip.status == TripStatus.searching &&
+          expiresAt != null &&
+          expiresAt.isBefore(now)) {
+        unawaited(expireTrip(trip.id));
+        continue;
+      }
+      return trip;
+    }
+    return null;
+  }
+
   // -------------------------------------------------------------------
   // Customer: request a trip (normal or Open Trip).
   // -------------------------------------------------------------------
@@ -81,8 +145,22 @@ class RideRepository {
     required VehicleType vehicleType,
     required String paymentMethod,
     String? customerNote,
-    int timeoutSeconds = 45,
+    int timeoutSeconds = 300,
     int passengerCount = 1,
+    String serviceType = 'ride',
+    String? recipientName,
+    String? recipientPhone,
+    String? packageDescription,
+    /// The backend payment_method code ('cash'/'wallet'/'selefli') to send
+    /// as-is, bypassing [paymentMethod]'s loose Arabic-label matching below
+    /// - needed for 'selefli', which has no display-label call site to
+    /// match against. Existing callers that only ever pass 'نقداً' don't
+    /// need this; it's for RequestRideScreen's Selefli opt-in.
+    String? paymentMethodCode,
+    /// Required (and validated server-side) when [paymentMethodCode] is
+    /// 'selefli' - the client-side price estimate the request is checked
+    /// against that tier's cap. Ignored for cash/wallet.
+    double? estimatedPrice,
   }) async {
     final row = await _client.rpc(
       'customer_request_trip',
@@ -95,10 +173,17 @@ class RideRepository {
         'p_destination_lat': destinationLat,
         'p_destination_lng': destinationLng,
         'p_vehicle_type': vehicleType.name,
-        'p_payment_method': paymentMethod == 'المحفظة' ? 'wallet' : 'cash',
+        'p_payment_method':
+            paymentMethodCode ??
+            (paymentMethod == 'المحفظة' ? 'wallet' : 'cash'),
         'p_customer_note': customerNote,
         'p_timeout_seconds': timeoutSeconds,
         'p_passenger_count': passengerCount,
+        'p_service_type': serviceType,
+        'p_recipient_name': recipientName,
+        'p_recipient_phone': recipientPhone,
+        'p_package_description': packageDescription,
+        'p_estimated_price': estimatedPrice,
       },
     );
     final tripId = (row as Map<String, dynamic>)['id'] as String;
@@ -171,6 +256,17 @@ class RideRepository {
     final controller = StreamController<Trip?>.broadcast();
     Trip? lastKnown;
 
+    Future<void> refresh() async {
+      try {
+        lastKnown = await _fetchEnrichedTrip(tripId);
+        controller.add(lastKnown);
+      } catch (_) {
+        // Transient fetch failure: keep showing the last known state
+        // rather than surfacing a raw error to the UI.
+        controller.add(lastKnown);
+      }
+    }
+
     final sub = _client
         .from('trips')
         .stream(primaryKey: ['id'])
@@ -180,17 +276,27 @@ class RideRepository {
             controller.add(null);
             return;
           }
-          try {
-            lastKnown = await _fetchEnrichedTrip(tripId);
-            controller.add(lastKnown);
-          } catch (_) {
-            // Transient fetch failure: keep showing the last known state
-            // rather than surfacing a raw error to the UI.
-            controller.add(lastKnown);
-          }
+          await refresh();
         });
 
-    controller.onCancel = () => sub.cancel();
+    // Realtime should push every change (captain accepts, arrives, moves,
+    // ...) the moment it happens, but this is the customer's only channel
+    // for that while this screen is open, and nothing here ever explicitly
+    // resubscribes/refreshes on app resume - a websocket that quietly drops
+    // (locked screen, a brief connectivity blip while waiting for a
+    // captain) can otherwise leave the customer stuck on "جاري البحث عن
+    // كابتن..." forever even after a captain actually accepted. This
+    // periodic re-fetch is a cheap safety net that guarantees the screen
+    // catches up within a few seconds regardless of what the realtime
+    // channel did.
+    final pollTimer = Timer.periodic(const Duration(seconds: 6), (_) {
+      refresh();
+    });
+
+    controller.onCancel = () {
+      sub.cancel();
+      pollTimer.cancel();
+    };
     return controller.stream;
   }
 
@@ -273,6 +379,23 @@ class RideRepository {
         .eq('id', tripId);
   }
 
+  /// Customer rates the captain (1-5 stars, optional note) right after a
+  /// completed trip - see `customer_rate_trip`
+  /// (20260812000067_customer_rate_trip.sql), which also folds this into
+  /// the captain's running `captains.rating` average server-side. Throws if
+  /// this trip was already rated (the RPC is idempotent-guarded, not
+  /// silently a no-op) - callers should only ever call this once per trip.
+  Future<void> rateTrip(String tripId, {required int rating, String? note}) async {
+    await _client.rpc(
+      'customer_rate_trip',
+      params: {
+        'p_trip_id': tripId,
+        'p_rating': rating,
+        'p_note': note,
+      },
+    );
+  }
+
   Future<void> setCaptainOnline(bool isOnline) async {
     await _client.rpc('captain_set_online', params: {'p_is_online': isOnline});
   }
@@ -290,6 +413,27 @@ class RideRepository {
         .select()
         .eq('vehicle_type', vehicleType)
         .maybeSingle();
+  }
+
+  // -------------------------------------------------------------------
+  // Customer: trip history.
+  // -------------------------------------------------------------------
+
+  /// The signed-in customer's past trips (most recent first), enriched the
+  /// same way [watchTrip]/[acceptTrip] already are so [MyTripsScreen] can
+  /// render them with [Trip] unchanged.
+  Future<List<Trip>> fetchCustomerTrips() async {
+    final customerId = _client.auth.currentUser?.id;
+    if (customerId == null) return [];
+    final rows = await _client
+        .from('trips')
+        .select(_fullJoin)
+        .eq('customer_id', customerId)
+        .order('requested_at', ascending: false);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(_rowToTrip)
+        .toList();
   }
 }
 

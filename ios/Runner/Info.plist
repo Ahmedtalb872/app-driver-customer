@@ -7,13 +7,21 @@
 		<key>NSLocationWhenInUseUsageDescription</key>
 		<string>This app needs access to location when open.</string>
 		<key>NSMicrophoneUsageDescription</key>
-		<string>يستخدم الهدهد الميكروفون للبحث الصوتي عن مكان أو مقاطعة.</string>
+		<string>يستخدم الهدهد الميكروفون للبحث الصوتي عن مكان أو مقاطعة، وللمكالمات داخل التطبيق مع الكابتن.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>يستخدم الهدهد مكتبة الصور لاختيار صورة الملف الشخصي.</string>
 		<key>NSSpeechRecognitionUsageDescription</key>
 		<string>يستخدم الهدهد التعرف على الصوت لتحويل بحثك الصوتي إلى نص.</string>
+		<!-- Google Maps SDK API key, read by AppDelegate.swift at launch.
+		     Sourced from ios/Flutter/ApiKeys.xcconfig (gitignored) - see
+		     that file and android/app/build.gradle.kts for the Android
+		     equivalent. Empty by default. -->
+		<key>GoogleMapsApiKey</key>
+		<string>$(GOOGLE_MAPS_API_KEY)</string>
 		<key>CFBundleDevelopmentRegion</key>
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
 		<key>CFBundleDisplayName</key>
-		<string>Alhudhud</string>
+		<string>الهدهد Customer</string>
 		<key>CFBundleExecutable</key>
 		<string>$(EXECUTABLE_NAME)</string>
 		<key>CFBundleIdentifier</key>

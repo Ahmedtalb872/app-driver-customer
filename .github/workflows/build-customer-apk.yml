@@ -1,0 +1,162 @@
+name: Build customer app APK
+
+# Builds a real, installable Android APK of the customer app and publishes
+# it to a single rolling GitHub Release (tag customer-apk-latest) so it can
+# be downloaded and installed directly on a phone - no Android Studio, no
+# local git/Gradle state to get out of sync. Re-running this workflow
+# always replaces the previous release's APK in place, so the same link
+# keeps working: https://github.com/<owner>/<repo>/releases/tag/customer-apk-latest
+#
+# Requires the same repository secrets as deploy-customer-web.yml, plus one
+# more for the real Google Maps SDK this APK renders (see
+# lib/core/widgets/real_map_widget.dart):
+#   SUPABASE_URL         - the Supabase project URL
+#   SUPABASE_ANON_KEY    - the Supabase project's public anon key
+#   MAPTILER_API_KEY     - optional; only affects the web preview build,
+#                          falls back to free OpenStreetMap tiles when unset
+#   GOOGLE_MAPS_API_KEY  - a Maps SDK for Android key from a Google Cloud
+#                          project with billing enabled. Without it the map
+#                          view still renders but tiles come back blank/grey
+#                          (Google's own behavior, not a build failure). Also
+#                          used for real road-based routing via the
+#                          Directions API (needs that API added to the same
+#                          key's restrictions) - falls back to a
+#                          straight-line estimate without it - and for
+#                          destination search also finding real Google Maps
+#                          places via the Places API (needs that API added
+#                          too) - falls back to only this app's own places
+#                          registry without it.
+on:
+  push:
+    branches:
+      - main
+      - claude/project-nature-3gwftj
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    env:
+      # The `secrets` context can't be referenced directly in a step's
+      # `if:` condition ("Unrecognized named-value: 'secrets'") - routed
+      # through `env` here instead, which `if:` can read fine.
+      HAS_RELEASE_SIGNING: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Write .env
+        run: |
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+          echo "MAPTILER_API_KEY=${{ secrets.MAPTILER_API_KEY }}" >> .env
+          echo "GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" >> .env
+
+      - name: Give this build a unique version code
+        # pubspec.yaml's build number (the part after "+") was hardcoded at
+        # 1 forever, so every APK/AAB this workflow ever produced had the
+        # exact same Android versionCode. That's harmless for the sideload
+        # APK (same-signature reinstalls work regardless), but Google Play
+        # rejects a second .aab upload with a versionCode it's already seen
+        # - it requires a strictly increasing one per upload. Mirrors the
+        # same fix already applied to the captain app's build-apk.yml.
+        # github.run_number strictly increases on every run of this
+        # workflow, so it's a safe, always-fresh versionCode.
+        run: |
+          sed -i -E "s/^version: [0-9]+\.[0-9]+\.[0-9]+\+[0-9]+/version: 1.1.1+${{ github.run_number }}/" pubspec.yaml
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Write android/local.properties (Google Maps API key)
+        # Appended, not overwritten - `flutter pub get` above already wrote
+        # this file's flutter.sdk/flutter.buildMode lines; see
+        # android/app/build.gradle.kts for how MAPS_API_KEY flows from here
+        # into the manifest.
+        #
+        # Uses env: rather than inline ${{ }} interpolation into the shell
+        # command string, and printf instead of echo. The real bug, found
+        # by decoding the compiled APK's actual manifest
+        # (com.google.android.geo.API_KEY came out as ""): flutter pub get's
+        # own local.properties has no trailing newline, so a plain `>>`
+        # append here landed on the end of its last existing line
+        # (flutter.sdk=...) instead of starting a new one - Properties
+        # parsing then never saw a MAPS_API_KEY key at all, while the append
+        # command itself still reported success. The leading \n below
+        # guarantees a fresh line no matter what the file already ends
+        # with; the verification turns any future repeat of this into a
+        # hard build failure instead of a silently blank map in a shipped
+        # APK.
+        env:
+          MAPS_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: |
+          printf '\nMAPS_API_KEY=%s\n' "$MAPS_KEY" >> android/local.properties
+          if ! grep -q '^MAPS_API_KEY=.' android/local.properties; then
+            echo "::error::MAPS_API_KEY line missing or empty in android/local.properties after write - check the GOOGLE_MAPS_API_KEY repository secret"
+            exit 1
+          fi
+
+      - name: Build release APK (customer app)
+        # Always signed with the debug key (see android/app/build.gradle.kts)
+        # regardless of whether the Play Store secrets below are set - this
+        # is the sideload-for-testing build, must stay install-over-previous
+        # compatible for anyone who already has an earlier debug-signed copy.
+        run: flutter build apk --release -t lib/main.dart
+
+      - name: Write release keystore (Play Store signing)
+        # Skipped entirely until the four ANDROID_* secrets are added to the
+        # repo (Settings -> Secrets and variables -> Actions) - the workflow
+        # keeps working exactly as before (APK-only) without them.
+        if: ${{ env.HAS_RELEASE_SIGNING == 'true' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+          : > android/key.properties
+          printf 'storeFile=app/release.keystore\n' >> android/key.properties
+          printf 'storePassword=%s\n' "$STORE_PASSWORD" >> android/key.properties
+          printf 'keyAlias=%s\n' "$KEY_ALIAS" >> android/key.properties
+          printf 'keyPassword=%s\n' "$KEY_PASSWORD" >> android/key.properties
+
+      - name: Build App Bundle (Play Store upload)
+        # .aab, not .apk - the format Google Play requires for a real
+        # submission. Only runs once the release keystore is configured
+        # (see the step above); android/key.properties existing is what
+        # switches build.gradle.kts's release signingConfig off the debug
+        # key and onto this one.
+        if: ${{ env.HAS_RELEASE_SIGNING == 'true' }}
+        run: flutter build appbundle --release -t lib/main.dart
+
+      - name: Publish rolling release with the APK (and App Bundle if built)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          mv "$APK" "hudhud-customer-${GITHUB_SHA::7}.apk"
+          ASSETS=("hudhud-customer-${GITHUB_SHA::7}.apk")
+          AAB=build/app/outputs/bundle/release/app-release.aab
+          if [ -f "$AAB" ]; then
+            mv "$AAB" "hudhud-customer-${GITHUB_SHA::7}.aab"
+            ASSETS+=("hudhud-customer-${GITHUB_SHA::7}.aab")
+          fi
+          gh release delete customer-apk-latest --yes --cleanup-tag || true
+          gh release create customer-apk-latest "${ASSETS[@]}" \
+            --title "تطبيق الزبون - أحدث نسخة" \
+            --notes "بُني تلقائياً من الالتزام ${GITHUB_SHA::7} على فرع ${GITHUB_REF_NAME}. حمّل ملف APK أدناه وثبّته مباشرة على الهاتف (فعّل \"تثبيت من مصادر غير معروفة\" إذا طُلب ذلك). ملف AAB (إن وُجد) مخصص للرفع على Google Play Console فقط، وليس للتثبيت المباشر."

@@ -1,3 +1,5 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 /// Abstraction over the map's tile source.
 ///
 /// Every screen that renders a map (customer, captain, admin/operator
@@ -24,9 +26,10 @@ abstract class MapTileProvider {
   bool get requiresApiKey => false;
 }
 
-/// Default tile provider for this app: free OpenStreetMap raster tiles, no
-/// API key, no paid usage tier. Used everywhere unless a screen explicitly
-/// opts into a different [MapTileProvider].
+/// Free OpenStreetMap raster tiles, no API key, no paid usage tier. This is
+/// the fallback [MapTileProvider] whenever [MapTilerTileProvider] isn't
+/// configured (see [defaultMapTileProvider]) - never removed, since it's
+/// what keeps the app's map working with zero setup.
 class OpenStreetMapTileProvider extends MapTileProvider {
   const OpenStreetMapTileProvider();
 
@@ -38,4 +41,43 @@ class OpenStreetMapTileProvider extends MapTileProvider {
 
   @override
   String get userAgentPackageName => 'com.alhudhud.app';
+}
+
+/// MapTiler's raster "streets" style - closer to the familiar Google-Maps
+/// look (per the Hudhud Map Spec) than OpenStreetMap's default raster
+/// tiles. Requires an API key from a MapTiler account (free tier covers
+/// moderate usage); see [defaultMapTileProvider] for how that key is read
+/// and what happens when it isn't set yet.
+class MapTilerTileProvider extends MapTileProvider {
+  const MapTilerTileProvider(this.apiKey);
+
+  final String apiKey;
+
+  @override
+  String get urlTemplate =>
+      'https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=$apiKey';
+
+  @override
+  String get attribution => 'MapTiler © OpenStreetMap contributors';
+
+  @override
+  String get userAgentPackageName => 'com.alhudhud.app';
+
+  @override
+  bool get requiresApiKey => true;
+}
+
+/// The tile provider every [RealMapWidget] uses unless a call site passes
+/// its own - reads `MAPTILER_API_KEY` from the already-loaded `.env` (same
+/// file/mechanism as `SUPABASE_URL`, see `SupabaseConfig.initialize`) and
+/// switches to [MapTilerTileProvider] when it's set. Falls back to
+/// [OpenStreetMapTileProvider] when the key is missing/empty, so a build
+/// that hasn't configured MapTiler yet (e.g. CI before the secret is added)
+/// still renders a working map instead of broken/blank tiles.
+MapTileProvider defaultMapTileProvider() {
+  final key = dotenv.env['MAPTILER_API_KEY'];
+  if (key != null && key.trim().isNotEmpty) {
+    return MapTilerTileProvider(key.trim());
+  }
+  return const OpenStreetMapTileProvider();
 }

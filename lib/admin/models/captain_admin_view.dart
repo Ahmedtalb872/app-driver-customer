@@ -3,6 +3,7 @@ class CaptainAdminView {
   final String fullName;
   final String? phone;
   final String? email;
+  final String? avatarUrl;
   final String status;
   final String? rejectionReason;
   final String? adminNotes;
@@ -19,12 +20,15 @@ class CaptainAdminView {
   final double walletBalance;
   final DateTime? createdAt;
   final DateTime? dateOfBirth;
+  final String? payoutMethod;
+  final String? payoutPhone;
 
   const CaptainAdminView({
     required this.id,
     required this.fullName,
     this.phone,
     this.email,
+    this.avatarUrl,
     required this.status,
     this.rejectionReason,
     this.adminNotes,
@@ -41,18 +45,18 @@ class CaptainAdminView {
     this.walletBalance = 0,
     this.createdAt,
     this.dateOfBirth,
+    this.payoutMethod,
+    this.payoutPhone,
   });
 
-  factory CaptainAdminView.fromJson(
-    Map<String, dynamic> json, {
-    double walletBalance = 0,
-  }) {
+  factory CaptainAdminView.fromJson(Map<String, dynamic> json) {
     final profile = json['profiles'] as Map<String, dynamic>?;
     return CaptainAdminView(
       id: json['id'] as String,
       fullName: (profile?['full_name'] as String?) ?? '',
       phone: profile?['phone'] as String?,
       email: profile?['email'] as String?,
+      avatarUrl: json['avatar_url'] as String?,
       status: (json['status'] as String?) ?? 'pending',
       rejectionReason: json['rejection_reason'] as String?,
       adminNotes: json['admin_notes'] as String?,
@@ -66,15 +70,34 @@ class CaptainAdminView {
       vehicleColor: json['vehicle_color'] as String?,
       vehiclePlate: json['vehicle_plate'] as String?,
       vehicleSeats: (json['vehicle_seats'] as num?)?.toInt(),
-      walletBalance: walletBalance,
+      // Captains' real earnings balance lives on profiles.wallet_balance
+      // (credited/debited directly by the sibling captain app's
+      // credit_captain_wallet_from_bpay/debit_captain_wallet RPCs) - not
+      // public.wallets, which is this app's own customer-recharge ledger
+      // and is never written to for a captain account.
+      walletBalance: ((profile?['wallet_balance'] as num?) ?? 0).toDouble(),
       createdAt: json['created_at'] == null
           ? null
           : DateTime.parse(json['created_at'] as String),
       dateOfBirth: json['date_of_birth'] == null
           ? null
           : DateTime.parse(json['date_of_birth'] as String),
+      payoutMethod: json['payout_method'] as String?,
+      payoutPhone: json['payout_phone'] as String?,
     );
   }
+
+  static const Map<String, String> payoutMethodLabels = {
+    'bankily': 'Bankily',
+    'masrvi': 'Masrvi',
+    'sedad': 'Sedad',
+    'banky': 'بنكي',
+    'other': 'أخرى',
+  };
+
+  String? get payoutMethodLabel => payoutMethod == null
+      ? null
+      : payoutMethodLabels[payoutMethod] ?? payoutMethod;
 
   bool get isPending => status == 'pending';
   bool get isApproved => status == 'approved';
