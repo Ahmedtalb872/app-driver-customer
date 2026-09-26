@@ -16,6 +16,7 @@ import '../screens/finance/withdrawal_requests_screen.dart';
 import '../screens/live_operations/live_operations_screen.dart';
 import '../screens/locations/districts_neighborhoods_screen.dart';
 import '../screens/locations/places_categories_screen.dart';
+import '../screens/marketing/sms_campaigns_screen.dart';
 import '../screens/notifications/admin_notifications_screen.dart';
 import '../screens/payments/payment_methods_screen.dart';
 import '../screens/pricing/admin_pricing_screen.dart';
@@ -44,6 +45,7 @@ const Map<String, String> _routeTitles = {
   '/admin/locations/places': 'الأماكن والتصنيفات',
   '/admin/promo-codes': 'أكواد الخصم',
   '/admin/notifications': 'الإشعارات',
+  '/admin/sms-campaigns': 'حملات SMS',
   '/admin/support': 'الدعم والشكاوى',
   '/admin/reviews': 'التقييمات',
   '/admin/admins': 'المستخدمون الإداريون',
@@ -157,6 +159,10 @@ GoRouter buildAdminRouter(AdminSession session) {
           GoRoute(
             path: '/admin/notifications',
             builder: (context, state) => const AdminNotificationsScreen(),
+          ),
+          GoRoute(
+            path: '/admin/sms-campaigns',
+            builder: (context, state) => const SmsCampaignsScreen(),
           ),
           GoRoute(
             path: '/admin/support',

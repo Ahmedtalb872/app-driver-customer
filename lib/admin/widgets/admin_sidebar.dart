@@ -97,6 +97,11 @@ const List<AdminSidebarItem> adminSidebarItems = [
     route: '/admin/notifications',
   ),
   AdminSidebarItem(
+    label: 'حملات SMS',
+    icon: Icons.sms_rounded,
+    route: '/admin/sms-campaigns',
+  ),
+  AdminSidebarItem(
     label: 'الدعم والشكاوى',
     icon: Icons.support_agent_rounded,
     route: '/admin/support',
