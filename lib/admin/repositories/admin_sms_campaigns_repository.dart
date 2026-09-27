@@ -47,7 +47,9 @@ class AdminSmsCampaignsRepository {
   /// composed here. [delaySeconds] paces the sends (capped at 3s
   /// server-side) so as not to trip Chinguisoft's own rate limiting.
   /// [onProgress] is called after every chunk with (sentSoFar, remaining).
-  /// Returns the final total sent.
+  /// [onCampaignId] fires once the campaign row exists (after the first
+  /// chunk), so a caller can look up per-recipient results afterward via
+  /// [loadRecipients]. Returns the final total sent.
   Future<int> sendCampaign({
     required String title,
     String? url,
@@ -56,6 +58,7 @@ class AdminSmsCampaignsRepository {
     List<String>? phones,
     double delaySeconds = 0.5,
     void Function(int sentSoFar, int remaining)? onProgress,
+    void Function(String campaignId)? onCampaignId,
   }) async {
     String? campaignId;
     int sentTotal = 0;
@@ -71,7 +74,11 @@ class AdminSmsCampaignsRepository {
         campaignId: campaignId,
         delaySeconds: delaySeconds,
       );
-      campaignId = data['campaignId'] as String?;
+      final newCampaignId = data['campaignId'] as String?;
+      if (newCampaignId != null && newCampaignId != campaignId) {
+        campaignId = newCampaignId;
+        onCampaignId?.call(campaignId);
+      }
       sentTotal = (data['sent'] as num?)?.toInt() ?? sentTotal;
       remaining = (data['remaining'] as num?)?.toInt() ?? 0;
       onProgress?.call(sentTotal, remaining);

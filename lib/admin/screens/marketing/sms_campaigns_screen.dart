@@ -213,6 +213,13 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
   List<String> _phones = [];
   final Set<int> _sendingIndexes = {};
 
+  /// Last known outcome per row (true = Chinguisoft accepted it, false =
+  /// it failed) - populated right after a single-number send from that
+  /// call's own response, and after a bulk send by reading back
+  /// public.sms_campaign_recipients for the campaign that was just created.
+  /// Absent (no entry) means never attempted this session.
+  final Map<int, bool> _lastSendOk = {};
+
   /// Parses the pasted phone list textarea: one number per line, or
   /// separated by commas/spaces - whatever the admin copy-pasted from a
   /// spreadsheet or contacts export. The Edge Function itself strips all
@@ -248,7 +255,13 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
   }
 
   void _syncPhones() {
-    setState(() => _phones = _parseCustomPhones());
+    // The list changed shape, so any previous row index -> status mapping
+    // no longer necessarily points at the same number - drop it rather
+    // than show a stale/misleading badge next to the wrong row.
+    setState(() {
+      _phones = _parseCustomPhones();
+      _lastSendOk.clear();
+    });
   }
 
   /// Appends a single hand-typed number to the phone list textarea, so the
@@ -294,25 +307,36 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
     if (index < 0 || index >= _phones.length) return;
     final phone = _phones[index];
     final delaySeconds = double.tryParse(_delayController.text.trim()) ?? 0.5;
-    setState(() => _sendingIndexes.add(index));
+    setState(() {
+      _sendingIndexes.add(index);
+      _lastSendOk.remove(index);
+    });
     try {
-      await _repository.sendCampaign(
+      final sentCount = await _repository.sendCampaign(
         title: 'رقم واحد: $phone',
         audience: 'custom',
         phones: [phone],
         delaySeconds: delaySeconds,
       );
+      // A one-recipient campaign's own "sent" total doubles as this
+      // number's outcome - no need for a separate recipients read.
+      final success = sentCount >= 1;
       if (!mounted) return;
+      setState(() => _lastSendOk[index] = success);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'أُرسلت الرسالة إلى $phone',
+            success
+                ? 'وصلت: قبلت Chinguisoft الرسالة إلى $phone'
+                : 'فشلت: Chinguisoft لم تقبل الرسالة إلى $phone',
             style: const TextStyle(fontFamily: 'Cairo'),
           ),
+          backgroundColor: success ? null : Colors.red,
         ),
       );
       _loadHistory();
     } catch (e) {
+      if (mounted) setState(() => _lastSendOk[index] = false);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -362,13 +386,16 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
       _sending = true;
       _progressSent = 0;
       _progressRemaining = phones.length;
+      _lastSendOk.clear();
     });
+    String? campaignId;
     try {
       final sent = await _repository.sendCampaign(
         title: title,
         audience: 'custom',
         phones: phones,
         delaySeconds: delaySeconds,
+        onCampaignId: (id) => campaignId = id,
         onProgress: (sentSoFar, remaining) {
           if (!mounted) return;
           setState(() {
@@ -382,13 +409,16 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
         SnackBar(
           content: Text(
             'اكتملت الحملة: قبلت Chinguisoft إرسال $sent من ${phones.length} '
-            'رقم (راجع سجل الحملة أدناه لتفاصيل كل رقم).',
+            'رقم (راجع علامة نجاح/فشل أمام كل رقم أدناه).',
             style: const TextStyle(fontFamily: 'Cairo'),
           ),
         ),
       );
       _titleController.clear();
       _loadHistory();
+      if (campaignId != null) {
+        await _refreshRowStatuses(campaignId!);
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -402,6 +432,35 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
       );
     } finally {
       if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  /// After a bulk send, reads back the campaign's own recipient rows and
+  /// maps each one's final status onto the matching row(s) in _phones by
+  /// phone string, so the same per-row badge used for single sends also
+  /// reflects a bulk send's real per-number outcome. Best-effort: if this
+  /// fails (e.g. the recipients table isn't reachable), the aggregate
+  /// snackbar above already told the admin the overall result.
+  Future<void> _refreshRowStatuses(String campaignId) async {
+    try {
+      final recipients = await _repository.loadRecipients(campaignId);
+      final okByPhone = <String, bool>{};
+      for (final r in recipients) {
+        final phone = r['phone'] as String?;
+        final status = r['status'] as String?;
+        if (phone != null && status != null && status != 'pending') {
+          okByPhone[phone] = status == 'sent';
+        }
+      }
+      if (!mounted || okByPhone.isEmpty) return;
+      setState(() {
+        for (var i = 0; i < _phones.length; i++) {
+          final ok = okByPhone[_phones[i]];
+          if (ok != null) _lastSendOk[i] = ok;
+        }
+      });
+    } catch (_) {
+      // Ignore - see doc comment above.
     }
   }
 
@@ -500,8 +559,17 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
                             itemBuilder: (context, index) {
                               final phone = _phones[index];
                               final isSendingThis = _sendingIndexes.contains(index);
+                              final lastOk = _lastSendOk[index];
                               return Row(
                                 children: [
+                                  if (lastOk != null) ...[
+                                    Icon(
+                                      lastOk ? Icons.check_circle : Icons.cancel,
+                                      color: lastOk ? Colors.green : Colors.red,
+                                      size: 18,
+                                    ),
+                                    const SizedBox(width: 6),
+                                  ],
                                   Expanded(
                                     child: Text(
                                       phone,
