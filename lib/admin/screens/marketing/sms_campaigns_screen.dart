@@ -674,7 +674,6 @@ class _SmsCampaignDetailPanelState extends State<_SmsCampaignDetailPanel> {
                                 title: Text(
                                   r['phone'] as String? ?? '',
                                   style: const TextStyle(fontFamily: 'Cairo'),
-                                  textDirection: TextDirection.ltr,
                                 ),
                                 subtitle: r['error_message'] != null
                                     ? Text(
