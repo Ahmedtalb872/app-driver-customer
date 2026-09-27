@@ -106,4 +106,26 @@ class AdminSmsCampaignsRepository {
         .order('created_at');
     return List<Map<String, dynamic>>.from(rows);
   }
+
+  /// The raw text of the "أرقام الهواتف" textarea, persisted so it survives
+  /// a page refresh (and is shared across whichever browser/device the
+  /// admin opens the dashboard from). Null means no draft has ever been
+  /// saved yet - the caller falls back to its own hardcoded starter list.
+  Future<String?> loadDraftPhonesText() async {
+    final row = await _client
+        .from('sms_campaign_draft_list')
+        .select('phones_text')
+        .eq('id', 'default')
+        .maybeSingle();
+    return row?['phones_text'] as String?;
+  }
+
+  Future<void> saveDraftPhonesText(String phonesText) async {
+    await _client.from('sms_campaign_draft_list').upsert({
+      'id': 'default',
+      'phones_text': phonesText,
+      'updated_at': DateTime.now().toIso8601String(),
+      'updated_by': _client.auth.currentUser?.id,
+    });
+  }
 }

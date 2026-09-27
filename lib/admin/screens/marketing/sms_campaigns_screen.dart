@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -221,6 +222,12 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
   /// Absent (no entry) means never attempted this session.
   final Map<int, bool> _lastSendOk = {};
 
+  /// True once the persisted draft list has been loaded (or confirmed to
+  /// not exist yet) - guards against saving the hardcoded starter text
+  /// back over a real saved draft before that load finishes.
+  bool _draftLoaded = false;
+  Timer? _draftSaveTimer;
+
   /// Parses the pasted phone list textarea: one number per line, or
   /// separated by commas/spaces - whatever the admin copy-pasted from a
   /// spreadsheet or contacts export. The Edge Function itself strips all
@@ -244,10 +251,12 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
     _syncPhones();
     _searchController.addListener(_onSearchChanged);
     _loadHistory();
+    _loadDraftPhones();
   }
 
   @override
   void dispose() {
+    _draftSaveTimer?.cancel();
     _customPhonesController.removeListener(_syncPhones);
     _searchController.removeListener(_onSearchChanged);
     _titleController.dispose();
@@ -256,6 +265,34 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
     _addNumberController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  /// Loads the persisted phone-list draft, if any, replacing the hardcoded
+  /// starter batch with whatever was last saved (across any device). If
+  /// nothing has ever been saved, saves the starter batch as the baseline
+  /// so it's there to load next time even without an edit.
+  Future<void> _loadDraftPhones() async {
+    try {
+      final saved = await _repository.loadDraftPhonesText();
+      if (!mounted) return;
+      if (saved != null) {
+        _customPhonesController.text = saved;
+      } else {
+        await _repository.saveDraftPhonesText(_customPhonesController.text);
+      }
+    } catch (_) {
+      // Best-effort - keep working from the hardcoded starter list if the
+      // draft table isn't reachable (e.g. its migration hasn't run yet).
+    } finally {
+      _draftLoaded = true;
+    }
+  }
+
+  void _scheduleDraftSave() {
+    _draftSaveTimer?.cancel();
+    _draftSaveTimer = Timer(const Duration(milliseconds: 800), () {
+      _repository.saveDraftPhonesText(_customPhonesController.text);
+    });
   }
 
   void _onSearchChanged() => setState(() {});
@@ -282,6 +319,7 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
       _phones = _parseCustomPhones();
       _lastSendOk.clear();
     });
+    if (_draftLoaded) _scheduleDraftSave();
   }
 
   /// Appends a single hand-typed number to the phone list textarea, so the
