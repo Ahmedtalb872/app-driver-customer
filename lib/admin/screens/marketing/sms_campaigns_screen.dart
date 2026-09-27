@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -384,6 +386,7 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
                   TextField(
                     controller: _customPhonesController,
                     maxLines: 8,
+                    textDirection: ui.TextDirection.ltr,
                     decoration: const InputDecoration(
                       labelText: 'أرقام الهواتف (رقم في كل سطر، أو مفصولة بفاصلة)',
                       hintText: '22244800028\n22244800029\n...',
@@ -397,6 +400,7 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
                         child: TextField(
                           controller: _addNumberController,
                           keyboardType: TextInputType.phone,
+                          textDirection: ui.TextDirection.ltr,
                           decoration: const InputDecoration(
                             labelText: 'إضافة رقم واحد',
                             hintText: '+22244800028',
@@ -674,6 +678,7 @@ class _SmsCampaignDetailPanelState extends State<_SmsCampaignDetailPanel> {
                                 title: Text(
                                   r['phone'] as String? ?? '',
                                   style: const TextStyle(fontFamily: 'Cairo'),
+                                  textDirection: ui.TextDirection.ltr,
                                 ),
                                 subtitle: r['error_message'] != null
                                     ? Text(
