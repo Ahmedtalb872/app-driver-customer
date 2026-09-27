@@ -206,6 +206,13 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
   bool _loadingHistory = true;
   List<Map<String, dynamic>> _history = [];
 
+  /// Kept in sync with _customPhonesController (typing, pasting, or
+  /// _addSingleNumber all funnel through it) so each number can be rendered
+  /// as its own row with its own "إرسال" button below the textarea, while
+  /// the textarea itself stays the easy way to bulk-paste/edit the list.
+  List<String> _phones = [];
+  final Set<int> _sendingIndexes = {};
+
   /// Parses the pasted phone list textarea: one number per line, or
   /// separated by commas/spaces - whatever the admin copy-pasted from a
   /// spreadsheet or contacts export. The Edge Function itself strips all
@@ -225,16 +232,23 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
     _customPhonesController = TextEditingController(
       text: _prefilledRecruitmentPhones,
     );
+    _customPhonesController.addListener(_syncPhones);
+    _syncPhones();
     _loadHistory();
   }
 
   @override
   void dispose() {
+    _customPhonesController.removeListener(_syncPhones);
     _titleController.dispose();
     _customPhonesController.dispose();
     _delayController.dispose();
     _addNumberController.dispose();
     super.dispose();
+  }
+
+  void _syncPhones() {
+    setState(() => _phones = _parseCustomPhones());
   }
 
   /// Appends a single hand-typed number to the phone list textarea, so the
@@ -271,8 +285,51 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
     });
   }
 
+  /// Resends to exactly one number - shown as its own "إرسال" button per
+  /// row, for when a specific number needs a retry without touching the
+  /// rest of the list. Creates its own one-recipient campaign (tracked the
+  /// same way in the history/detail panel below) rather than reusing the
+  /// bulk campaign's id.
+  Future<void> _sendSingle(int index) async {
+    if (index < 0 || index >= _phones.length) return;
+    final phone = _phones[index];
+    final delaySeconds = double.tryParse(_delayController.text.trim()) ?? 0.5;
+    setState(() => _sendingIndexes.add(index));
+    try {
+      await _repository.sendCampaign(
+        title: 'رقم واحد: $phone',
+        audience: 'custom',
+        phones: [phone],
+        delaySeconds: delaySeconds,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'أُرسلت الرسالة إلى $phone',
+            style: const TextStyle(fontFamily: 'Cairo'),
+          ),
+        ),
+      );
+      _loadHistory();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'تعذر الإرسال إلى $phone: $e',
+            style: const TextStyle(fontFamily: 'Cairo'),
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _sendingIndexes.remove(index));
+    }
+  }
+
   Future<void> _send() async {
-    final phones = _parseCustomPhones();
+    final phones = _phones;
     if (phones.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -416,7 +473,66 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
+                  Text(
+                    'القائمة الحالية (${_phones.length} رقم) - اضغط "إرسال" '
+                    'أمام أي رقم لإعادة إرسال الرسالة له وحده',
+                    style: const TextStyle(fontFamily: 'Cairo', fontSize: 12),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 260,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: _phones.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'لا توجد أرقام بعد',
+                              style: TextStyle(fontFamily: 'Cairo', color: Colors.grey),
+                            ),
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            itemCount: _phones.length,
+                            separatorBuilder: (_, __) => const Divider(height: 1),
+                            itemBuilder: (context, index) {
+                              final phone = _phones[index];
+                              final isSendingThis = _sendingIndexes.contains(index);
+                              return Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      phone,
+                                      textDirection: ui.TextDirection.ltr,
+                                      style: const TextStyle(fontFamily: 'Cairo'),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    height: 32,
+                                    width: 70,
+                                    child: isSendingThis
+                                        ? const Center(
+                                            child: SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(strokeWidth: 2),
+                                            ),
+                                          )
+                                        : TextButton(
+                                            onPressed: (_sending || _sendingIndexes.isNotEmpty)
+                                                ? null
+                                                : () => _sendSingle(index),
+                                            child: const Text('إرسال'),
+                                          ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                  ),
+                  const SizedBox(height: 16),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -453,14 +569,16 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
                   Row(
                     children: [
                       ElevatedButton(
-                        onPressed: _sending ? null : _send,
+                        onPressed: (_sending || _sendingIndexes.isNotEmpty)
+                            ? null
+                            : _send,
                         child: _sending
                             ? const SizedBox(
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(strokeWidth: 2),
                               )
-                            : const Text('إرسال'),
+                            : const Text('إرسال للجميع دفعة واحدة'),
                       ),
                       if (_sending) ...[
                         const SizedBox(width: 16),
