@@ -200,6 +200,7 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
   late final TextEditingController _customPhonesController;
   final _delayController = TextEditingController(text: '0.5');
   final _addNumberController = TextEditingController();
+  final _searchController = TextEditingController();
   bool _sending = false;
   int _progressSent = 0;
   int _progressRemaining = 0;
@@ -241,17 +242,36 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
     );
     _customPhonesController.addListener(_syncPhones);
     _syncPhones();
+    _searchController.addListener(_onSearchChanged);
     _loadHistory();
   }
 
   @override
   void dispose() {
     _customPhonesController.removeListener(_syncPhones);
+    _searchController.removeListener(_onSearchChanged);
     _titleController.dispose();
     _customPhonesController.dispose();
     _delayController.dispose();
     _addNumberController.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged() => setState(() {});
+
+  /// Indexes into _phones matching the search box, digit-only so the admin
+  /// can search with or without "+"/spaces/punctuation. Empty search shows
+  /// every row.
+  List<int> _filteredPhoneIndexes() {
+    final query = _searchController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (query.isEmpty) {
+      return List<int>.generate(_phones.length, (i) => i);
+    }
+    return [
+      for (var i = 0; i < _phones.length; i++)
+        if (_phones[i].replaceAll(RegExp(r'[^0-9]'), '').contains(query)) i,
+    ];
   }
 
   void _syncPhones() {
@@ -533,72 +553,110 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Text(
-                    'القائمة الحالية (${_phones.length} رقم) - اضغط "إرسال" '
-                    'أمام أي رقم لإعادة إرسال الرسالة له وحده',
-                    style: const TextStyle(fontFamily: 'Cairo', fontSize: 12),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    height: 260,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: _phones.isEmpty
-                        ? const Center(
-                            child: Text(
-                              'لا توجد أرقام بعد',
-                              style: TextStyle(fontFamily: 'Cairo', color: Colors.grey),
+                  TextField(
+                    controller: _searchController,
+                    textDirection: ui.TextDirection.ltr,
+                    decoration: InputDecoration(
+                      labelText: 'بحث عن رقم',
+                      hintText: '49494933',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _searchController.text.isEmpty
+                          ? null
+                          : IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () => _searchController.clear(),
                             ),
-                          )
-                        : ListView.separated(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            itemCount: _phones.length,
-                            separatorBuilder: (_, __) => const Divider(height: 1),
-                            itemBuilder: (context, index) {
-                              final phone = _phones[index];
-                              final isSendingThis = _sendingIndexes.contains(index);
-                              final lastOk = _lastSendOk[index];
-                              return Row(
-                                children: [
-                                  if (lastOk != null) ...[
-                                    Icon(
-                                      lastOk ? Icons.check_circle : Icons.cancel,
-                                      color: lastOk ? Colors.green : Colors.red,
-                                      size: 18,
-                                    ),
-                                    const SizedBox(width: 6),
-                                  ],
-                                  Expanded(
-                                    child: Text(
-                                      phone,
-                                      textDirection: ui.TextDirection.ltr,
-                                      style: const TextStyle(fontFamily: 'Cairo'),
-                                    ),
-                                  ),
-                                  SizedBox(
-                                    height: 32,
-                                    width: 70,
-                                    child: isSendingThis
-                                        ? const Center(
-                                            child: SizedBox(
-                                              width: 16,
-                                              height: 16,
-                                              child: CircularProgressIndicator(strokeWidth: 2),
-                                            ),
-                                          )
-                                        : TextButton(
-                                            onPressed: (_sending || _sendingIndexes.isNotEmpty)
-                                                ? null
-                                                : () => _sendSingle(index),
-                                            child: const Text('إرسال'),
-                                          ),
-                                  ),
-                                ],
-                              );
-                            },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Builder(
+                    builder: (context) {
+                      final visibleIndexes = _filteredPhoneIndexes();
+                      final countLabel = _searchController.text.trim().isEmpty
+                          ? '${_phones.length} رقم'
+                          : '${visibleIndexes.length} من ${_phones.length} رقم';
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'القائمة الحالية ($countLabel) - اضغط "إرسال" '
+                            'أمام أي رقم لإعادة إرسال الرسالة له وحده',
+                            style: const TextStyle(fontFamily: 'Cairo', fontSize: 12),
                           ),
+                          const SizedBox(height: 8),
+                          Container(
+                            height: 260,
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: visibleIndexes.isEmpty
+                                ? Center(
+                                    child: Text(
+                                      _phones.isEmpty
+                                          ? 'لا توجد أرقام بعد'
+                                          : 'لا يوجد رقم مطابق للبحث',
+                                      style: const TextStyle(
+                                        fontFamily: 'Cairo',
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  )
+                                : ListView.separated(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    itemCount: visibleIndexes.length,
+                                    separatorBuilder: (_, __) => const Divider(height: 1),
+                                    itemBuilder: (context, i) {
+                                      final index = visibleIndexes[i];
+                                      final phone = _phones[index];
+                                      final isSendingThis = _sendingIndexes.contains(index);
+                                      final lastOk = _lastSendOk[index];
+                                      return Row(
+                                        children: [
+                                          if (lastOk != null) ...[
+                                            Icon(
+                                              lastOk ? Icons.check_circle : Icons.cancel,
+                                              color: lastOk ? Colors.green : Colors.red,
+                                              size: 18,
+                                            ),
+                                            const SizedBox(width: 6),
+                                          ],
+                                          Expanded(
+                                            child: Text(
+                                              phone,
+                                              textDirection: ui.TextDirection.ltr,
+                                              style: const TextStyle(fontFamily: 'Cairo'),
+                                            ),
+                                          ),
+                                          SizedBox(
+                                            height: 32,
+                                            width: 70,
+                                            child: isSendingThis
+                                                ? const Center(
+                                                    child: SizedBox(
+                                                      width: 16,
+                                                      height: 16,
+                                                      child: CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                      ),
+                                                    ),
+                                                  )
+                                                : TextButton(
+                                                    onPressed: (_sending ||
+                                                            _sendingIndexes.isNotEmpty)
+                                                        ? null
+                                                        : () => _sendSingle(index),
+                                                    child: const Text('إرسال'),
+                                                  ),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 16),
                   Row(
