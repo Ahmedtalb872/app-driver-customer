@@ -74,7 +74,7 @@ function toLocalMauritanianNumber(phone: string): string {
 
 async function sendCampaignSms(phone: string, url: string, code: string) {
   return fetch(
-    `https://chinguisoft.com/sn/api/sms/campaign/${CHINGUISOFT_CAMPAIGN_KEY}`,
+    `https://chinguisoft.com/api/sms/campaign/${CHINGUISOFT_CAMPAIGN_KEY}`,
     {
       method: "POST",
       headers: {
