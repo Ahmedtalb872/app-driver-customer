@@ -197,6 +197,7 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
   final _titleController = TextEditingController();
   late final TextEditingController _customPhonesController;
   final _delayController = TextEditingController(text: '0.5');
+  final _addNumberController = TextEditingController();
   bool _sending = false;
   int _progressSent = 0;
   int _progressRemaining = 0;
@@ -230,7 +231,32 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
     _titleController.dispose();
     _customPhonesController.dispose();
     _delayController.dispose();
+    _addNumberController.dispose();
     super.dispose();
+  }
+
+  /// Appends a single hand-typed number to the phone list textarea, so the
+  /// admin can add one-off numbers without retyping/pasting the whole list.
+  void _addSingleNumber() {
+    final number = _addNumberController.text.trim();
+    if (number.isEmpty) return;
+    final current = _customPhonesController.text;
+    _customPhonesController.text = current.isEmpty || current.endsWith('\n')
+        ? '$current$number'
+        : '$current\n$number';
+    _addNumberController.clear();
+  }
+
+  Future<void> _openCampaignDetails(Map<String, dynamic> campaign) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _SmsCampaignDetailPanel(
+        repository: _repository,
+        campaign: campaign,
+      ),
+    );
   }
 
   Future<void> _loadHistory() async {
@@ -366,6 +392,28 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
                   ),
                   const SizedBox(height: 12),
                   Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _addNumberController,
+                          keyboardType: TextInputType.phone,
+                          decoration: const InputDecoration(
+                            labelText: 'إضافة رقم واحد',
+                            hintText: '+22244800028',
+                          ),
+                          onSubmitted: (_) => setState(_addSingleNumber),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      OutlinedButton.icon(
+                        onPressed: () => setState(_addSingleNumber),
+                        icon: const Icon(Icons.add),
+                        label: const Text('إضافة إلى القائمة'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
@@ -452,6 +500,7 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
         : DateTime.tryParse(row['sent_at'] as String);
     return Card(
       child: ListTile(
+        onTap: () => _openCampaignDetails(row),
         title: Text(
           row['title'] as String? ?? '',
           style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
@@ -472,6 +521,178 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Shows every recipient of one campaign with its individual send result -
+/// answers "which numbers actually got the message" instead of just the
+/// aggregate count on the history tile. Backed by
+/// public.sms_campaign_recipients, written incrementally by
+/// send-sms-campaign as each send completes.
+class _SmsCampaignDetailPanel extends StatefulWidget {
+  const _SmsCampaignDetailPanel({
+    required this.repository,
+    required this.campaign,
+  });
+
+  final AdminSmsCampaignsRepository repository;
+  final Map<String, dynamic> campaign;
+
+  @override
+  State<_SmsCampaignDetailPanel> createState() =>
+      _SmsCampaignDetailPanelState();
+}
+
+class _SmsCampaignDetailPanelState extends State<_SmsCampaignDetailPanel> {
+  bool _loading = true;
+  List<Map<String, dynamic>> _recipients = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final id = widget.campaign['id'] as String;
+    final recipients = await widget.repository.loadRecipients(id);
+    if (!mounted) return;
+    setState(() {
+      _recipients = recipients;
+      _loading = false;
+    });
+  }
+
+  Widget _statusBadge(String? status) {
+    final Color color;
+    final String label;
+    switch (status) {
+      case 'sent':
+        color = Colors.green;
+        label = 'نجاح';
+        break;
+      case 'failed':
+        color = Colors.red;
+        label = 'فشل';
+        break;
+      default:
+        color = Colors.grey;
+        label = 'قيد الانتظار';
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontFamily: 'Cairo',
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sentCount = _recipients.where((r) => r['status'] == 'sent').length;
+    final failedCount =
+        _recipients.where((r) => r['status'] == 'failed').length;
+    final pendingCount =
+        _recipients.where((r) => r['status'] == 'pending').length;
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.4,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.campaign['title'] as String? ?? '',
+                      style: const TextStyle(
+                        fontFamily: 'Cairo',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (!_loading)
+                      Text(
+                        'نجاح: $sentCount — فشل: $failedCount — قيد الانتظار: $pendingCount',
+                        style: const TextStyle(fontFamily: 'Cairo', fontSize: 12),
+                      ),
+                  ],
+                ),
+              ),
+              const Divider(height: 24),
+              Expanded(
+                child: _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _recipients.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'لا توجد أرقام لهذه الحملة',
+                              style: TextStyle(fontFamily: 'Cairo', color: Colors.grey),
+                            ),
+                          )
+                        : ListView.separated(
+                            controller: scrollController,
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            itemCount: _recipients.length,
+                            separatorBuilder: (_, __) => const Divider(height: 1),
+                            itemBuilder: (context, index) {
+                              final r = _recipients[index];
+                              return ListTile(
+                                title: Text(
+                                  r['phone'] as String? ?? '',
+                                  style: const TextStyle(fontFamily: 'Cairo'),
+                                  textDirection: TextDirection.ltr,
+                                ),
+                                subtitle: r['error_message'] != null
+                                    ? Text(
+                                        r['error_message'] as String,
+                                        style: const TextStyle(fontSize: 11, color: Colors.red),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      )
+                                    : null,
+                                trailing: _statusBadge(r['status'] as String?),
+                              );
+                            },
+                          ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

@@ -87,4 +87,16 @@ class AdminSmsCampaignsRepository {
         .limit(50);
     return List<Map<String, dynamic>>.from(rows);
   }
+
+  /// Per-number results for one campaign (phone + status + any error) -
+  /// see public.sms_campaign_recipients, written to incrementally by
+  /// send-sms-campaign as each send completes.
+  Future<List<Map<String, dynamic>>> loadRecipients(String campaignId) async {
+    final rows = await _client
+        .from('sms_campaign_recipients')
+        .select()
+        .eq('campaign_id', campaignId)
+        .order('created_at');
+    return List<Map<String, dynamic>>.from(rows);
+  }
 }
