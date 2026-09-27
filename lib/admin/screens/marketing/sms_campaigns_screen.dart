@@ -4,6 +4,11 @@ import 'package:intl/intl.dart';
 import '../../repositories/admin_sms_campaigns_repository.dart';
 import '../../widgets/confirm_dialog.dart';
 
+/// Recruits captains (or anyone else) who have never signed up: the admin
+/// pastes a raw phone list and presses send - no message text, link, or
+/// discount code to fill in, since Chinguisoft's campaign account this
+/// dashboard uses only has send permission, with the actual SMS content
+/// fixed on Chinguisoft's own side.
 class SmsCampaignsScreen extends StatefulWidget {
   const SmsCampaignsScreen({super.key});
 
@@ -14,27 +19,16 @@ class SmsCampaignsScreen extends StatefulWidget {
 class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
   final _repository = AdminSmsCampaignsRepository();
   final _titleController = TextEditingController();
-  final _urlController = TextEditingController();
-  final _codeController = TextEditingController();
   final _customPhonesController = TextEditingController();
-  String _audience = 'customers';
   bool _sending = false;
   bool _loadingHistory = true;
   List<Map<String, dynamic>> _history = [];
 
-  static const _audienceLabels = {
-    'customers': 'الزبائن المسجلين',
-    'captains': 'الكباتن المسجلين',
-    'both': 'الجميع المسجلين',
-    'custom': 'قائمة أرقام مخصصة',
-  };
-
   /// Parses the pasted phone list textarea: one number per line, or
   /// separated by commas/spaces - whatever the admin copy-pasted from a
-  /// spreadsheet or contacts export. Digits and a leading '+' only; the
-  /// Edge Function itself strips all punctuation and any '222' country
-  /// code before calling Chinguisoft, so this just needs to isolate each
-  /// individual number.
+  /// spreadsheet or contacts export. The Edge Function itself strips all
+  /// punctuation and any '222' country code before calling Chinguisoft, so
+  /// this just needs to isolate each individual number.
   List<String> _parseCustomPhones() {
     return _customPhonesController.text
         .split(RegExp(r'[\s,;]+'))
@@ -52,8 +46,6 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
   @override
   void dispose() {
     _titleController.dispose();
-    _urlController.dispose();
-    _codeController.dispose();
     _customPhonesController.dispose();
     super.dispose();
   }
@@ -69,35 +61,28 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
   }
 
   Future<void> _send() async {
-    final title = _titleController.text.trim();
-    final url = _urlController.text.trim();
-    final code = _codeController.text.trim();
-    if (title.isEmpty || url.isEmpty || code.isEmpty) return;
-
-    final isCustom = _audience == 'custom';
-    final customPhones = isCustom ? _parseCustomPhones() : null;
-    if (isCustom && (customPhones == null || customPhones.isEmpty)) {
+    final phones = _parseCustomPhones();
+    if (phones.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'الصق رقماً واحداً على الأقل في قائمة الأرقام المخصصة.',
+            'الصق رقماً واحداً على الأقل قبل الإرسال.',
             style: TextStyle(fontFamily: 'Cairo'),
           ),
         ),
       );
       return;
     }
+    final title = _titleController.text.trim().isEmpty
+        ? 'حملة ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now())}'
+        : _titleController.text.trim();
 
-    final recipientDescription = isCustom
-        ? '${customPhones!.length} رقم في القائمة المخصصة'
-        : 'كل "${_audienceLabels[_audience]}" لديه رقم هاتف مسجّل';
     final ok = await showConfirmDialog(
       context,
       title: 'إرسال حملة SMS',
       message:
-          'سيصل رابط "$url" مع كود "$code" فوراً برسالة نصية إلى '
-          '$recipientDescription. كل رسالة تُخصم من رصيد حملات Chinguisoft. '
-          'هل تريد المتابعة؟',
+          'ستُرسل الرسالة فوراً إلى ${phones.length} رقم. كل رسالة تُخصم '
+          'من رصيد حملات Chinguisoft. هل تريد المتابعة؟',
       confirmLabel: 'إرسال',
     );
     if (!ok) return;
@@ -106,10 +91,8 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
     try {
       final sent = await _repository.sendCampaign(
         title: title,
-        url: url,
-        code: code,
-        audience: _audience,
-        phones: customPhones,
+        audience: 'custom',
+        phones: phones,
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -121,8 +104,6 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
         ),
       );
       _titleController.clear();
-      _urlController.clear();
-      _codeController.clear();
       _customPhonesController.clear();
       _loadHistory();
     } catch (e) {
@@ -163,8 +144,9 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    'رسالة نصية حقيقية (رابط + كود خصم) عبر Chinguisoft - '
-                    'تصل حتى لمن لم يثبّت التطبيق، وتُخصم من رصيد الحملات.',
+                    'الصق أرقام هواتف (لا تحتاج أن تكون مسجّلة في التطبيق - '
+                    'مثل كباتن جدد تريد استقطابهم) وستصلهم رسالة نصية '
+                    'حقيقية عبر Chinguisoft فوراً.',
                     style: TextStyle(
                       fontFamily: 'Cairo',
                       fontSize: 12,
@@ -172,87 +154,20 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'إرسال إلى',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+                  TextField(
+                    controller: _customPhonesController,
+                    maxLines: 8,
+                    decoration: const InputDecoration(
+                      labelText: 'أرقام الهواتف (رقم في كل سطر، أو مفصولة بفاصلة)',
+                      hintText: '22244800028\n22244800029\n...',
+                      alignLabelWithHint: true,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(
-                        value: 'customers',
-                        label: Text('الزبائن', style: TextStyle(fontFamily: 'Cairo')),
-                        icon: Icon(Icons.groups_rounded),
-                      ),
-                      ButtonSegment(
-                        value: 'captains',
-                        label: Text('الكباتن', style: TextStyle(fontFamily: 'Cairo')),
-                        icon: Icon(Icons.local_taxi_rounded),
-                      ),
-                      ButtonSegment(
-                        value: 'both',
-                        label: Text('الجميع', style: TextStyle(fontFamily: 'Cairo')),
-                        icon: Icon(Icons.diversity_3_rounded),
-                      ),
-                      ButtonSegment(
-                        value: 'custom',
-                        label: Text('قائمة مخصصة', style: TextStyle(fontFamily: 'Cairo')),
-                        icon: Icon(Icons.playlist_add_check_rounded),
-                      ),
-                    ],
-                    selected: {_audience},
-                    onSelectionChanged: (selection) =>
-                        setState(() => _audience = selection.first),
-                  ),
-                  if (_audience == 'custom') ...[
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _customPhonesController,
-                      maxLines: 6,
-                      decoration: const InputDecoration(
-                        labelText: 'أرقام الهواتف (رقم في كل سطر، أو مفصولة بفاصلة)',
-                        hintText: '22244800028\n22244800029\n...',
-                        alignLabelWithHint: true,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'مخصصة لإرسال دعوات لأرقام غير مسجّلة في التطبيق (مثل '
-                      'كباتن جدد تريد استقطابهم) - لا تحتاج أن تكون '
-                      'مسجّلة كزبون أو كابتن مسبقاً.',
-                      style: TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 11,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   TextField(
                     controller: _titleController,
                     decoration: const InputDecoration(
-                      labelText: 'عنوان الحملة (للسجل الداخلي فقط)',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _urlController,
-                    keyboardType: TextInputType.url,
-                    decoration: const InputDecoration(
-                      labelText: 'رابط العرض',
-                      hintText: 'https://example.com/promo',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _codeController,
-                    decoration: const InputDecoration(
-                      labelText: 'كود الخصم',
-                      hintText: 'PROMO10',
+                      labelText: 'عنوان الحملة (اختياري، للسجل الداخلي فقط)',
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -300,19 +215,12 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
     final sentAt = row['sent_at'] == null
         ? null
         : DateTime.tryParse(row['sent_at'] as String);
-    final audienceLabel =
-        _audienceLabels[row['audience'] as String?] ?? _audienceLabels['customers'];
     return Card(
       child: ListTile(
         title: Text(
           row['title'] as String? ?? '',
           style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
         ),
-        subtitle: Text(
-          '${row['promo_url'] as String? ?? ''} — ${row['promo_code'] as String? ?? ''}\n$audienceLabel',
-          style: const TextStyle(fontFamily: 'Cairo'),
-        ),
-        isThreeLine: true,
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,

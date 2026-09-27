@@ -58,6 +58,11 @@ function sendCampaignSms(
   code: string,
   reference: number,
 ) {
+  // url/code are sent as empty strings rather than omitted when the caller
+  // has none - this campaign account's actual message text is configured
+  // on Chinguisoft's own side (Campaign settings), not composed per call;
+  // these two fields only ever add an optional link/discount code on top
+  // of it.
   return fetch(
     `https://chinguisoft.com/sn/api/sms/campaign/${CHINGUISOFT_CAMPAIGN_KEY}`,
     {
@@ -101,19 +106,21 @@ Deno.serve(async (req: Request) => {
 
     const {
       title,
-      url,
-      code,
+      url: rawUrl,
+      code: rawCode,
       audience: rawAudience,
       phones: rawPhones,
     } = await req.json();
-    if (!title || !url || !code) {
-      return json({ error: "missing_title_url_or_code" }, 400);
+    if (!title) {
+      return json({ error: "missing_title" }, 400);
     }
+    const url = typeof rawUrl === "string" ? rawUrl : "";
+    const code = typeof rawCode === "string" ? rawCode : "";
     const audience = ["customers", "captains", "both", "custom"].includes(
       rawAudience,
     )
       ? rawAudience
-      : "customers";
+      : "custom";
 
     const phones: string[] = [];
 
