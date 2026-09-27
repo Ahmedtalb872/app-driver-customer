@@ -1,9 +1,12 @@
 // Sends a real promotional SMS (a link + discount code - Chinguisoft's
-// fixed "SMS Campaign" template, see chinguisoft.com/sn) to every customer
-// and/or captain with a phone number. Mirrors send-broadcast-push's
-// audience/auth shape exactly, but calls Chinguisoft's campaign API once
-// per recipient - that API takes a single phone number per call, there is
-// no bulk endpoint.
+// fixed "SMS Campaign" template, see chinguisoft.com/sn) either to every
+// registered customer/captain with a phone number, or to an arbitrary
+// admin-pasted phone list (audience "custom") - the latter is the actual
+// primary use case: recruiting captains who have never signed up, so
+// public.profiles has no row for them at all. Mirrors
+// send-broadcast-push's audience/auth shape, but calls Chinguisoft's
+// campaign API once per recipient - that API takes a single phone number
+// per call, there is no bulk endpoint.
 //
 // Called directly from the admin dashboard (an authenticated admin
 // session), not from a Postgres trigger - so this checks the caller's own
@@ -39,10 +42,14 @@ function json(body: unknown, status = 200) {
 }
 
 /// Chinguisoft expects a local 8-digit number (e.g. "44800028"), not the
-/// E.164 format Supabase stores (e.g. "+22244800028") - same helper as
-/// send-sms-hook.
+/// E.164 format Supabase stores (e.g. "+22244800028"). Strips every
+/// non-digit character first (spaces, dashes, parentheses, '+') rather than
+/// just the same fixed "+222" prefix send-sms-hook strips, since a
+/// "custom" audience is a raw admin-pasted list that can come in almost
+/// any punctuation/format.
 function toLocalMauritanianNumber(phone: string): string {
-  return phone.replace(/^\+?222/, "");
+  const digits = phone.replace(/\D/g, "");
+  return digits.replace(/^222/, "");
 }
 
 function sendCampaignSms(
@@ -92,38 +99,55 @@ Deno.serve(async (req: Request) => {
     });
     if (!isAdmin) return json({ error: "forbidden" }, 403);
 
-    const { title, url, code, audience: rawAudience } = await req.json();
+    const {
+      title,
+      url,
+      code,
+      audience: rawAudience,
+      phones: rawPhones,
+    } = await req.json();
     if (!title || !url || !code) {
       return json({ error: "missing_title_url_or_code" }, 400);
     }
-    const audience = ["customers", "captains", "both"].includes(rawAudience)
+    const audience = ["customers", "captains", "both", "custom"].includes(
+      rawAudience,
+    )
       ? rawAudience
       : "customers";
 
     const phones: string[] = [];
 
-    if (audience === "customers" || audience === "both") {
-      const { data: customers, error: customersError } = await supabase
-        .from("profiles")
-        .select("phone")
-        .eq("role", "customer")
-        .not("phone", "is", null);
-      if (customersError) return json({ error: customersError.message }, 500);
+    if (audience === "custom") {
+      if (!Array.isArray(rawPhones) || rawPhones.length === 0) {
+        return json({ error: "missing_phones" }, 400);
+      }
       phones.push(
-        ...(customers ?? []).map((c) => c.phone as string).filter(Boolean),
+        ...rawPhones.filter((p): p is string => typeof p === "string" && p.trim() !== ""),
       );
-    }
+    } else {
+      if (audience === "customers" || audience === "both") {
+        const { data: customers, error: customersError } = await supabase
+          .from("profiles")
+          .select("phone")
+          .eq("role", "customer")
+          .not("phone", "is", null);
+        if (customersError) return json({ error: customersError.message }, 500);
+        phones.push(
+          ...(customers ?? []).map((c) => c.phone as string).filter(Boolean),
+        );
+      }
 
-    if (audience === "captains" || audience === "both") {
-      const { data: captains, error: captainsError } = await supabase
-        .from("profiles")
-        .select("phone")
-        .eq("role", "captain")
-        .not("phone", "is", null);
-      if (captainsError) return json({ error: captainsError.message }, 500);
-      phones.push(
-        ...(captains ?? []).map((c) => c.phone as string).filter(Boolean),
-      );
+      if (audience === "captains" || audience === "both") {
+        const { data: captains, error: captainsError } = await supabase
+          .from("profiles")
+          .select("phone")
+          .eq("role", "captain")
+          .not("phone", "is", null);
+        if (captainsError) return json({ error: captainsError.message }, 500);
+        phones.push(
+          ...(captains ?? []).map((c) => c.phone as string).filter(Boolean),
+        );
+      }
     }
 
     const results = await Promise.allSettled(

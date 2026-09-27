@@ -6,19 +6,29 @@ class AdminSmsCampaignsRepository {
   SupabaseClient get _client => SupabaseConfig.client;
 
   /// Sends a promotional SMS (a link + discount code - Chinguisoft's fixed
-  /// campaign template) to every customer and/or captain with a phone
-  /// number (see supabase/functions/send-sms-campaign) and returns how many
-  /// were actually sent. [audience] is one of 'customers' (default),
-  /// 'captains', or 'both'.
+  /// campaign template) to a target audience and returns how many were
+  /// actually sent (see supabase/functions/send-sms-campaign). [audience] is
+  /// one of 'customers' (default), 'captains', 'both' (all three read
+  /// phone numbers from registered profiles), or 'custom' - in which case
+  /// [phones] must be a non-empty list of admin-supplied phone numbers
+  /// (e.g. captains being recruited who have never signed up, so have no
+  /// profiles row at all).
   Future<int> sendCampaign({
     required String title,
     required String url,
     required String code,
     String audience = 'customers',
+    List<String>? phones,
   }) async {
     final response = await _client.functions.invoke(
       'send-sms-campaign',
-      body: {'title': title, 'url': url, 'code': code, 'audience': audience},
+      body: {
+        'title': title,
+        'url': url,
+        'code': code,
+        'audience': audience,
+        if (phones != null) 'phones': phones,
+      },
     );
     final data = response.data;
     if (data is Map && data['error'] != null) {

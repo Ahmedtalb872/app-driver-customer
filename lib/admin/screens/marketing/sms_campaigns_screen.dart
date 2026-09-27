@@ -16,16 +16,32 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
   final _titleController = TextEditingController();
   final _urlController = TextEditingController();
   final _codeController = TextEditingController();
+  final _customPhonesController = TextEditingController();
   String _audience = 'customers';
   bool _sending = false;
   bool _loadingHistory = true;
   List<Map<String, dynamic>> _history = [];
 
   static const _audienceLabels = {
-    'customers': 'الزبائن',
-    'captains': 'الكباتن',
-    'both': 'الجميع (زبائن وكباتن)',
+    'customers': 'الزبائن المسجلين',
+    'captains': 'الكباتن المسجلين',
+    'both': 'الجميع المسجلين',
+    'custom': 'قائمة أرقام مخصصة',
   };
+
+  /// Parses the pasted phone list textarea: one number per line, or
+  /// separated by commas/spaces - whatever the admin copy-pasted from a
+  /// spreadsheet or contacts export. Digits and a leading '+' only; the
+  /// Edge Function itself strips all punctuation and any '222' country
+  /// code before calling Chinguisoft, so this just needs to isolate each
+  /// individual number.
+  List<String> _parseCustomPhones() {
+    return _customPhonesController.text
+        .split(RegExp(r'[\s,;]+'))
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .toList();
+  }
 
   @override
   void initState() {
@@ -38,6 +54,7 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
     _titleController.dispose();
     _urlController.dispose();
     _codeController.dispose();
+    _customPhonesController.dispose();
     super.dispose();
   }
 
@@ -57,13 +74,30 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
     final code = _codeController.text.trim();
     if (title.isEmpty || url.isEmpty || code.isEmpty) return;
 
+    final isCustom = _audience == 'custom';
+    final customPhones = isCustom ? _parseCustomPhones() : null;
+    if (isCustom && (customPhones == null || customPhones.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'الصق رقماً واحداً على الأقل في قائمة الأرقام المخصصة.',
+            style: TextStyle(fontFamily: 'Cairo'),
+          ),
+        ),
+      );
+      return;
+    }
+
+    final recipientDescription = isCustom
+        ? '${customPhones!.length} رقم في القائمة المخصصة'
+        : 'كل "${_audienceLabels[_audience]}" لديه رقم هاتف مسجّل';
     final ok = await showConfirmDialog(
       context,
       title: 'إرسال حملة SMS',
       message:
-          'سيصل رابط "$url" مع كود "$code" فوراً برسالة نصية لكل '
-          '"${_audienceLabels[_audience]}" لديه رقم هاتف مسجّل. كل رسالة '
-          'تُخصم من رصيد حملات Chinguisoft. هل تريد المتابعة؟',
+          'سيصل رابط "$url" مع كود "$code" فوراً برسالة نصية إلى '
+          '$recipientDescription. كل رسالة تُخصم من رصيد حملات Chinguisoft. '
+          'هل تريد المتابعة؟',
       confirmLabel: 'إرسال',
     );
     if (!ok) return;
@@ -75,6 +109,7 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
         url: url,
         code: code,
         audience: _audience,
+        phones: customPhones,
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -88,6 +123,7 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
       _titleController.clear();
       _urlController.clear();
       _codeController.clear();
+      _customPhonesController.clear();
       _loadHistory();
     } catch (e) {
       if (!mounted) return;
@@ -162,11 +198,39 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
                         label: Text('الجميع', style: TextStyle(fontFamily: 'Cairo')),
                         icon: Icon(Icons.diversity_3_rounded),
                       ),
+                      ButtonSegment(
+                        value: 'custom',
+                        label: Text('قائمة مخصصة', style: TextStyle(fontFamily: 'Cairo')),
+                        icon: Icon(Icons.playlist_add_check_rounded),
+                      ),
                     ],
                     selected: {_audience},
                     onSelectionChanged: (selection) =>
                         setState(() => _audience = selection.first),
                   ),
+                  if (_audience == 'custom') ...[
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _customPhonesController,
+                      maxLines: 6,
+                      decoration: const InputDecoration(
+                        labelText: 'أرقام الهواتف (رقم في كل سطر، أو مفصولة بفاصلة)',
+                        hintText: '22244800028\n22244800029\n...',
+                        alignLabelWithHint: true,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'مخصصة لإرسال دعوات لأرقام غير مسجّلة في التطبيق (مثل '
+                      'كباتن جدد تريد استقطابهم) - لا تحتاج أن تكون '
+                      'مسجّلة كزبون أو كابتن مسبقاً.',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 11,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   TextField(
                     controller: _titleController,
