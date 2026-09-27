@@ -86,7 +86,11 @@ async function sendCampaignSms(phone: string, url: string, code: string) {
         lang: "ar",
         url,
         code,
-        reference: 0,
+        // Must match an actual pre-written message template's reference
+        // number configured on Chinguisoft's own campaign dashboard (this
+        // account's only template is reference 1, in ar/fr) - an
+        // unmatched reference sends nothing even though the call succeeds.
+        reference: 1,
       }),
     },
   );
