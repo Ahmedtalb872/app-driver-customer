@@ -77,6 +77,12 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
   late _Step _step;
   bool _isLoading = false;
   bool _isNewRealSignup = false;
+  // True while walking the OTP step for an already-registered number that
+  // forgot its password (see _startPasswordReset), as opposed to a brand
+  // new sign-up - both land on _buildSetPasswordStep afterward, but a
+  // reset must never fall through _verifyCode straight into
+  // _routeAfterAuth the way an ordinary OTP sign-in would.
+  bool _isPasswordReset = false;
   String? _fullPhone;
 
   // Shared across _buildSetPasswordStep/_buildPasswordStep/
@@ -114,7 +120,10 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
     if (!_phoneFormKey.currentState!.validate()) return;
     final phone = '+222${_phoneController.text}';
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _isPasswordReset = false;
+    });
     try {
       if (DemoModeConfig.isDemoPhone(phone)) {
         setState(() {
@@ -167,7 +176,7 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
       );
       if (!mounted) return;
 
-      if (_isNewRealSignup) {
+      if (_isNewRealSignup || _isPasswordReset) {
         setState(() => _step = _Step.setPassword);
         return;
       }
@@ -176,6 +185,47 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
       _showError(e.message);
     } catch (_) {
       _showError('رمز التحقق غير صحيح أو انتهت صلاحيته.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// Entry point for "نسيت كلمة السر؟" on either password screen - an
+  /// already-registered number skips straight to the password step
+  /// ([_buildPasswordStep]/[_buildDirectLoginStep]) with no way back to
+  /// OTP, so a customer whose password-setup step never completed (e.g. the
+  /// app closed right after OTP verification, before [_submitNewPassword])
+  /// would otherwise be locked out with no self-service recovery. Requests
+  /// a fresh OTP for the phone and, once verified, routes to
+  /// [_buildSetPasswordStep] instead of signing straight in.
+  Future<void> _startPasswordReset() async {
+    final phone = _fullPhone ?? '+222${_phoneController.text}';
+    if (_phoneController.text.trim().isEmpty && _fullPhone == null) {
+      _showError('أدخل رقم هاتفك أولاً.');
+      return;
+    }
+    if (_phoneController.text.isNotEmpty &&
+        _phoneController.text.length != 8) {
+      _showError('رقم الهاتف يجب أن يتكون من 8 أرقام بالضبط.');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      await AuthService.instance.requestPhoneCode(phone);
+      if (!mounted) return;
+      setState(() {
+        _fullPhone = phone;
+        _isNewRealSignup = false;
+        _isPasswordReset = true;
+        _passwordController.clear();
+        _codeController.clear();
+        _step = _Step.otp;
+      });
+    } on AuthException catch (e) {
+      _showError(e.message);
+    } catch (e) {
+      _showError('تعذر إرسال رمز التحقق الآن. حاول مرة أخرى.\n$e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -625,9 +675,9 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 12),
-          const Text(
-            'أنشئ كلمة سر لحسابك',
-            style: TextStyle(
+          Text(
+            _isPasswordReset ? 'أنشئ كلمة سر جديدة' : 'أنشئ كلمة سر لحسابك',
+            style: const TextStyle(
               fontFamily: 'Cairo',
               fontWeight: FontWeight.bold,
               fontSize: 16,
@@ -635,9 +685,11 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'ستستخدمها لتسجيل الدخول لاحقاً بدلاً من طلب رمز تحقق جديد فى كل مرة.',
-            style: TextStyle(
+          Text(
+            _isPasswordReset
+                ? 'ستستبدل كلمة السر القديمة لحسابك.'
+                : 'ستستخدمها لتسجيل الدخول لاحقاً بدلاً من طلب رمز تحقق جديد فى كل مرة.',
+            style: const TextStyle(
               fontSize: 13,
               color: AppColors.secondaryText,
               fontFamily: 'Cairo',
@@ -736,6 +788,13 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
             onFieldSubmitted: (_) => _submitPasswordLogin(),
           ),
           const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: _isLoading ? null : _startPasswordReset,
+              child: const Text('نسيت كلمة السر؟'),
+            ),
+          ),
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton(
@@ -873,6 +932,13 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
             onFieldSubmitted: (_) => _submitDirectLogin(),
           ),
           const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: _isLoading ? null : _startPasswordReset,
+              child: const Text('نسيت كلمة السر؟'),
+            ),
+          ),
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton(
