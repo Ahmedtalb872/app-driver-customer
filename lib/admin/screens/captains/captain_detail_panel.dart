@@ -918,7 +918,7 @@ class _DocumentThumbnail extends StatelessWidget {
           return InkWell(
             onTap: () => showDialog<void>(
               context: context,
-              builder: (_) => Dialog(
+              builder: (dialogContext) => Dialog(
                 backgroundColor: Colors.transparent,
                 insetPadding: const EdgeInsets.all(24),
                 child: Stack(
@@ -932,7 +932,7 @@ class _DocumentThumbnail extends StatelessWidget {
                         backgroundColor: Colors.black54,
                       ),
                       icon: const Icon(Icons.close, color: Colors.white),
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: () => Navigator.of(dialogContext).pop(),
                     ),
                   ],
                 ),
