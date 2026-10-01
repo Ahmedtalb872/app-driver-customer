@@ -71,6 +71,17 @@ class AdminCaptainsRepository {
         .eq('id', captainId);
   }
 
+  /// Marks whether an admin has already reached out to this captain
+  /// (phone call, follow-up SMS, ...) - independent of the approval
+  /// workflow, mainly for working through the pending-review list from a
+  /// recruitment batch without losing track of who's been called already.
+  Future<void> setContacted(String captainId, bool contacted) async {
+    await _client
+        .from('captains')
+        .update({'contacted_by_admin': contacted})
+        .eq('id', captainId);
+  }
+
   /// Throws [CaptainDocumentsIncompleteException] when
   /// `admin_approve_captain` rejects the approval because not all 9
   /// mandatory documents are approved yet (see

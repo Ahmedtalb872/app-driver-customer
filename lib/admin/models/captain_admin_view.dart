@@ -22,6 +22,7 @@ class CaptainAdminView {
   final DateTime? dateOfBirth;
   final String? payoutMethod;
   final String? payoutPhone;
+  final bool contactedByAdmin;
 
   const CaptainAdminView({
     required this.id,
@@ -47,6 +48,7 @@ class CaptainAdminView {
     this.dateOfBirth,
     this.payoutMethod,
     this.payoutPhone,
+    this.contactedByAdmin = false,
   });
 
   factory CaptainAdminView.fromJson(Map<String, dynamic> json) {
@@ -84,6 +86,7 @@ class CaptainAdminView {
           : DateTime.parse(json['date_of_birth'] as String),
       payoutMethod: json['payout_method'] as String?,
       payoutPhone: json['payout_phone'] as String?,
+      contactedByAdmin: json['contacted_by_admin'] as bool? ?? false,
     );
   }
 
