@@ -211,44 +211,71 @@ class _WalletScreenState extends State<WalletScreen> {
     BuildContext sheetContext,
     PaymentProviderConfig p,
   ) {
+    final disabled = p.comingSoon;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => _openPaymentGateway(sheetContext, p),
+        onTap: disabled ? null : () => _openPaymentGateway(sheetContext, p),
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: p.primaryColor.withOpacity(0.06),
+            color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: p.primaryColor.withOpacity(0.2)),
+            border: Border.all(color: AppColors.border),
           ),
           child: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: p.primaryColor,
+                  color: disabled
+                      ? AppColors.secondaryText.withOpacity(0.15)
+                      : p.primaryColor,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(p.logoIcon, color: p.onPrimaryColor, size: 20),
+                child: Icon(
+                  p.logoIcon,
+                  color: disabled ? AppColors.secondaryText : p.onPrimaryColor,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
                   p.displayName,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                     fontFamily: 'Cairo',
-                    color: AppColors.darkText,
+                    color: disabled ? AppColors.secondaryText : AppColors.darkText,
                   ),
                 ),
               ),
-              const Icon(
-                Icons.chevron_left_rounded,
-                color: AppColors.secondaryText,
-              ),
+              if (disabled)
+                Row(
+                  children: const [
+                    Icon(
+                      Icons.hourglass_empty_rounded,
+                      size: 14,
+                      color: AppColors.secondaryText,
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      'قريباً',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontFamily: 'Cairo',
+                        color: AppColors.secondaryText,
+                      ),
+                    ),
+                  ],
+                )
+              else
+                const Icon(
+                  Icons.chevron_left_rounded,
+                  color: AppColors.secondaryText,
+                ),
             ],
           ),
         ),

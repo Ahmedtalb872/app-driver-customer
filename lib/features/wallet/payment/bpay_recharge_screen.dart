@@ -147,7 +147,7 @@ class _BpayRechargeScreenState extends State<BpayRechargeScreen> {
                     vertical: 14,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.background,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: const Text(
@@ -155,7 +155,7 @@ class _BpayRechargeScreenState extends State<BpayRechargeScreen> {
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w900,
-                      color: AppColors.primaryDark,
+                      color: AppColors.darkText,
                     ),
                   ),
                 ),
@@ -165,9 +165,9 @@ class _BpayRechargeScreenState extends State<BpayRechargeScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.08),
+                  color: AppColors.secondary.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                  border: Border.all(color: AppColors.secondary.withOpacity(0.25)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,7 +196,7 @@ class _BpayRechargeScreenState extends State<BpayRechargeScreen> {
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.primaryDark,
+                            color: AppColors.secondary,
                             fontFamily: 'Cairo',
                           ),
                         ),
