@@ -1,7 +1,5 @@
 import 'dart:math' as math;
 
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-
 import '../../../../core/services/google_places_search_service.dart';
 import '../datasources/destinations_remote_datasource.dart';
 import '../models/destination_suggestion.dart';
@@ -23,11 +21,7 @@ class DestinationSearchRepository {
     DestinationsRemoteDataSource? dataSource,
     GooglePlacesSearchService? placesSearch,
   }) : _dataSource = dataSource ?? DestinationsRemoteDataSource(),
-       _placesSearch =
-           placesSearch ??
-           GooglePlacesSearchService(
-             apiKey: dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '',
-           );
+       _placesSearch = placesSearch ?? const GooglePlacesSearchService();
 
   final DestinationsRemoteDataSource _dataSource;
   final GooglePlacesSearchService _placesSearch;
