@@ -421,7 +421,9 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
   }) {
     return Expanded(
       child: OutlinedButton.icon(
-        onPressed: isSaving ? null : onTap,
+        // Already saved (checkmark shown) - nothing left to do, so the chip
+        // stops being tappable instead of inviting a pointless re-save tap.
+        onPressed: (isSaving || saved) ? null : onTap,
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 8),
           backgroundColor: saved ? AppColors.accent.withOpacity(0.12) : null,
