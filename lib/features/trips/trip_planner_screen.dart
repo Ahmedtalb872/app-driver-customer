@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/constants/colors.dart';
+import '../../core/services/saved_places_repository.dart';
 import '../../models/models.dart';
 import '../destinations/data/models/destination_suggestion.dart';
 import '../destinations/presentation/destination_map_picker_screen.dart';
@@ -46,6 +47,46 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
   late String? _openPickupAddress = widget.initialPickupLat == null
       ? null
       : widget.initialPickupAddress;
+
+  /// This customer's saved المنزل/العمل/مكان آخر, if any - fetched once so
+  /// they can be offered as one-tap destination shortcuts below. Best-effort:
+  /// a fetch failure just means the shortcuts don't show, same as having
+  /// none saved, rather than blocking the screen.
+  List<SavedPlace> _savedPlaces = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedPlaces();
+  }
+
+  Future<void> _loadSavedPlaces() async {
+    try {
+      final places = await SavedPlacesRepository.instance.fetchMine();
+      if (mounted) setState(() => _savedPlaces = places);
+    } catch (_) {
+      // Keep whatever's already there (nothing, on first load).
+    }
+  }
+
+  SavedPlace? _savedPlaceByLabel(String label) {
+    for (final place in _savedPlaces) {
+      if (place.label == label) return place;
+    }
+    return null;
+  }
+
+  void _selectNormalDestinationFromSaved(SavedPlace place) {
+    _selectNormalDestination(
+      DestinationSuggestion(
+        resultType: DestinationResultType.place,
+        id: place.id,
+        title: place.address,
+        latitude: place.lat,
+        longitude: place.lng,
+      ),
+    );
+  }
 
   void _selectNormalPickup(DestinationSuggestion result) {
     setState(() {
@@ -217,6 +258,8 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
                 onSelected: _selectNormalDestination,
                 onPickFromMap: _pickNormalDestinationFromMap,
               ),
+              const SizedBox(height: 10),
+              _buildSavedPlacesRow(),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed:
@@ -260,6 +303,76 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  /// One-tap destination shortcuts for the customer's saved المنزل/العمل/
+  /// مكان آخر (see [SavedPlacesRepository]) - a label with nothing saved
+  /// under it yet still shows, greyed out, so the option is discoverable
+  /// rather than silently missing.
+  Widget _buildSavedPlacesRow() {
+    return Row(
+      children: [
+        _buildSavedPlaceChip(
+          label: 'home',
+          icon: Icons.home_rounded,
+          text: 'المنزل',
+        ),
+        const SizedBox(width: 8),
+        _buildSavedPlaceChip(
+          label: 'work',
+          icon: Icons.work_rounded,
+          text: 'العمل',
+        ),
+        const SizedBox(width: 8),
+        _buildSavedPlaceChip(
+          label: 'other',
+          icon: Icons.push_pin_rounded,
+          text: 'مكان آخر',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSavedPlaceChip({
+    required String label,
+    required IconData icon,
+    required String text,
+  }) {
+    final place = _savedPlaceByLabel(label);
+    final isSelected =
+        _normalDestination != null && _normalDestination!.id == place?.id;
+    return Expanded(
+      child: OutlinedButton.icon(
+        onPressed: place == null
+            ? () => ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'لم تحفظ "$text" بعد - يمكنك حفظه من شاشة ملخص الرحلة بعد انتهاء مشوارك القادم.',
+                    style: const TextStyle(fontFamily: 'Cairo'),
+                  ),
+                ),
+              )
+            : () => _selectNormalDestinationFromSaved(place),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          backgroundColor: isSelected ? AppColors.accent.withOpacity(0.12) : null,
+          side: BorderSide(
+            color: isSelected ? AppColors.accent : AppColors.border,
+          ),
+          foregroundColor: place == null
+              ? AppColors.secondaryText
+              : isSelected
+              ? AppColors.secondary
+              : AppColors.darkText,
+        ),
+        icon: Icon(icon, size: 15),
+        label: Text(
+          text,
+          style: const TextStyle(fontFamily: 'Cairo', fontSize: 11),
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
     );
   }

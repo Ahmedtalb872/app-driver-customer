@@ -30,7 +30,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
   /// card while it saves.
   String? _savingSide;
 
-  /// label ('home'/'work'/'school') most recently saved for each side, so
+  /// label ('home'/'work'/'other') most recently saved for each side, so
   /// the matching chip can show a checkmark instead of just going quiet.
   final Map<String, String> _savedLabelBySide = {};
 
@@ -279,7 +279,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
   }
 
   /// Offers to save the pickup and (for a normal trip with a known
-  /// destination) the destination as المنزل/العمل/المدرسة - skipped
+  /// destination) the destination as المنزل/العمل/مكان آخر - skipped
   /// entirely for an open trip's destination, which has no fixed point to
   /// save. Each side saves independently and shows its own saved-label
   /// checkmark once done.
@@ -391,14 +391,14 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
             const SizedBox(width: 8),
             _buildLabelChip(
               side: side,
-              label: 'school',
-              icon: Icons.school_rounded,
-              text: 'المدرسة',
-              saved: savedLabel == 'school',
+              label: 'other',
+              icon: Icons.push_pin_rounded,
+              text: 'مكان آخر',
+              saved: savedLabel == 'other',
               isSaving: isSaving,
               onTap: () => _savePlace(
                 side: side,
-                label: 'school',
+                label: 'other',
                 address: address,
                 lat: lat,
                 lng: lng,

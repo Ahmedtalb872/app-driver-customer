@@ -1,10 +1,11 @@
 import '../config/supabase_config.dart';
 import '../../models/models.dart';
 
-/// A signed-in customer's labeled places (`home`/`work`/`school`) - saved
+/// A signed-in customer's labeled places (`home`/`work`/`other`) - saved
 /// once (typically prompted from [TripSummaryScreen] right after a trip
 /// ends) and reused from then on instead of searching for the same address
-/// every time.
+/// every time. Also surfaced as one-tap destination shortcuts on
+/// [TripPlannerScreen].
 class SavedPlacesRepository {
   SavedPlacesRepository._();
   static final instance = SavedPlacesRepository._();
@@ -22,7 +23,7 @@ class SavedPlacesRepository {
         .toList();
   }
 
-  /// Saves [address]/[lat]/[lng] under [label] ('home'/'work'/'school').
+  /// Saves [address]/[lat]/[lng] under [label] ('home'/'work'/'other').
   /// Overwrites any previous place saved under that same label (see the
   /// unique constraint in 20260816000074_saved_places.sql) - a customer
   /// only ever has one "home", saving a new one replaces the old.
