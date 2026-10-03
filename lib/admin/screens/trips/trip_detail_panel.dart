@@ -415,6 +415,23 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
                 const SizedBox(height: 8),
                 _infoTile('سبب الإلغاء', trip['cancellation_reason'] as String),
               ],
+              if (trip['customer_rating'] != null) ...[
+                const SizedBox(height: 16),
+                const Text(
+                  'تقييم الزبون للكابتن',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                ),
+                const SizedBox(height: 8),
+                _infoTile('التقييم', '${trip['customer_rating']} / 5 ⭐'),
+                if ((trip['customer_rating_note'] as String?)?.isNotEmpty ??
+                    false) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    trip['customer_rating_note'] as String,
+                    style: const TextStyle(fontSize: 13, fontFamily: 'Cairo'),
+                  ),
+                ],
+              ],
               const SizedBox(height: 24),
               const Text(
                 'ملاحظات إدارية',
