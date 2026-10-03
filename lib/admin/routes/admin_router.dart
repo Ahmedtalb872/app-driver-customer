@@ -6,6 +6,7 @@ import '../screens/audit_logs/admin_audit_logs_screen.dart';
 import '../screens/auth/admin_login_screen.dart';
 import '../screens/auth/unauthorized_screen.dart';
 import '../screens/captains/admin_captains_screen.dart';
+import '../screens/customers/admin_customers_screen.dart';
 import '../screens/dashboard/admin_dashboard_screen.dart';
 import '../screens/dispatch/operator_dispatch_screen.dart';
 import '../screens/finance/finance_reports_screen.dart';
@@ -22,6 +23,7 @@ import '../screens/payments/payment_methods_screen.dart';
 import '../screens/pricing/admin_pricing_screen.dart';
 import '../screens/promo_codes/promo_codes_screen.dart';
 import '../screens/reviews/admin_reviews_screen.dart';
+import '../screens/selefli/admin_selefli_screen.dart';
 import '../screens/settings/admin_settings_screen.dart';
 import '../screens/support/admin_support_screen.dart';
 import '../screens/trips/admin_trips_screen.dart';
@@ -31,6 +33,7 @@ import '../widgets/admin_shell.dart';
 const Map<String, String> _routeTitles = {
   '/admin/dashboard': 'الرئيسية',
   '/admin/captains': 'الكباتن',
+  '/admin/customers': 'الزبناء',
   '/admin/trips': 'الرحلات',
   '/admin/live-operations': 'العمليات المباشرة',
   '/admin/dispatch': 'إرسال طلب يدوي',
@@ -39,6 +42,7 @@ const Map<String, String> _routeTitles = {
   '/admin/finance/recharge': 'طلبات الشحن',
   '/admin/finance/withdrawal': 'طلبات السحب',
   '/admin/finance/subscription-disputes': 'مراجعة الاشتراكات الشهرية',
+  '/admin/selefli': 'سلفلي',
   '/admin/payments': 'وسائل الدفع',
   '/admin/pricing': 'التسعير والعمولة',
   '/admin/locations/districts': 'المقاطعات والأحياء',
@@ -105,6 +109,10 @@ GoRouter buildAdminRouter(AdminSession session) {
             builder: (context, state) => const AdminCaptainsScreen(),
           ),
           GoRoute(
+            path: '/admin/customers',
+            builder: (context, state) => const AdminCustomersScreen(),
+          ),
+          GoRoute(
             path: '/admin/trips',
             builder: (context, state) => const AdminTripsScreen(),
           ),
@@ -135,6 +143,10 @@ GoRouter buildAdminRouter(AdminSession session) {
           GoRoute(
             path: '/admin/finance/subscription-disputes',
             builder: (context, state) => const SubscriptionDisputesScreen(),
+          ),
+          GoRoute(
+            path: '/admin/selefli',
+            builder: (context, state) => const AdminSelefliScreen(),
           ),
           GoRoute(
             path: '/admin/payments',

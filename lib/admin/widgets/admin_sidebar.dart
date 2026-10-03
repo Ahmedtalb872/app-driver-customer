@@ -27,6 +27,11 @@ const List<AdminSidebarItem> adminSidebarItems = [
     route: '/admin/captains',
   ),
   AdminSidebarItem(
+    label: 'الزبناء',
+    icon: Icons.people_alt_rounded,
+    route: '/admin/customers',
+  ),
+  AdminSidebarItem(
     label: 'الرحلات',
     icon: Icons.route_rounded,
     route: '/admin/trips',
@@ -65,6 +70,11 @@ const List<AdminSidebarItem> adminSidebarItems = [
     label: 'مراجعة الاشتراكات الشهرية',
     icon: Icons.gpp_maybe_rounded,
     route: '/admin/finance/subscription-disputes',
+  ),
+  AdminSidebarItem(
+    label: 'سلفلي',
+    icon: Icons.bolt_rounded,
+    route: '/admin/selefli',
   ),
   AdminSidebarItem(
     label: 'وسائل الدفع',
