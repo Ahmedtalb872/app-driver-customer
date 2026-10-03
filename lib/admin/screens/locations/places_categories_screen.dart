@@ -72,6 +72,80 @@ class _PlacesCategoriesScreenState extends State<PlacesCategoriesScreen>
     });
   }
 
+  /// Opens a large, full-height map in its own dialog so the operator can
+  /// pan/zoom/drag the pin comfortably - the embedded map inside
+  /// [_addOrEditPlace]'s form is only 260px tall, cramped for pinpointing an
+  /// exact spot next to all the other fields. [onPicked] is the same
+  /// `handlePick` closure the small map already uses (updates the form's
+  /// lat/lng fields and reverse-geocodes the address), so confirming here
+  /// flows back into the form exactly like tapping the small map would.
+  Future<void> _openFullscreenMapPicker(
+    BuildContext context, {
+    required LatLng? initialPoint,
+    required Future<void> Function(LatLng) onPicked,
+  }) async {
+    LatLng? tempPoint = initialPoint;
+    final picked = await showDialog<LatLng>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setMapState) {
+          return Dialog(
+            insetPadding: const EdgeInsets.all(16),
+            child: SizedBox(
+              width: double.infinity,
+              height: MediaQuery.of(dialogContext).size.height * 0.85,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'اضغط على الخريطة أو اسحب العلامة لتحديد الموقع بدقة',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: RealMapWidget(
+                      interactive: true,
+                      destLat: tempPoint?.latitude,
+                      destLng: tempPoint?.longitude,
+                      destDraggable: true,
+                      onMapTap: (point) => setMapState(() => tempPoint = point),
+                      onDestDragged: (point) =>
+                          setMapState(() => tempPoint = point),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: tempPoint == null
+                            ? null
+                            : () => Navigator.pop(dialogContext, tempPoint),
+                        child: const Text('تأكيد هذا الموقع'),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+    if (picked != null) await onPicked(picked);
+  }
+
   Future<void> _addOrEditPlace({Place? existing}) async {
     final nameArController = TextEditingController(
       text: existing?.nameAr ?? '',
@@ -173,12 +247,25 @@ class _PlacesCategoriesScreenState extends State<PlacesCategoriesScreen>
                     decoration: const InputDecoration(labelText: 'العنوان'),
                   ),
                   const SizedBox(height: 12),
-                  const Align(
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      'اضغط على الخريطة لتحديد الموقع، أو عدّل الإحداثيات يدوياً بالأسفل',
-                      style: TextStyle(fontSize: 12),
-                    ),
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'اضغط على الخريطة لتحديد الموقع، أو عدّل الإحداثيات يدوياً بالأسفل',
+                          style: TextStyle(fontSize: 12),
+                          textAlign: TextAlign.right,
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => _openFullscreenMapPicker(
+                          context,
+                          initialPoint: pickedPoint,
+                          onPicked: handlePick,
+                        ),
+                        icon: const Icon(Icons.open_in_full_rounded, size: 16),
+                        label: const Text('تكبير الخريطة'),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   ClipRRect(
