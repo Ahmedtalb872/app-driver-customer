@@ -1,0 +1,53 @@
+{
+  "_comment": "Local place-name alias dataset for the voice-search correction pipeline (lib/core/services/voice_search/place_corrector.dart). Each entry maps ONE canonical, correctly-spelled place name to every spelling a speech recognizer is known to produce for it - typos, dropped/added letters, missing 'ال', a stray 'ل', etc. This file is the only thing you need to edit to teach the app a new neighborhood/street/landmark name or fix a bad transcription - no Dart code changes required, just rebuild the app so the updated asset is bundled. 'category' is free-form and only used for future filtering/telemetry; it is not read by the corrector today. The seed entries below are examples to extend, not a verified gazetteer - add/correct freely.",
+  "version": 1,
+  "places": [
+    {
+      "id": "carrefour_lekbeidat",
+      "canonical": "كرفور لكبيد",
+      "aliases": [
+        "كرفور الكبيد",
+        "كرفور لكبيدات",
+        "كرفور لكبيدة",
+        "الكبيد",
+        "لكبيد",
+        "لكبيدات"
+      ],
+      "category": "landmark"
+    },
+    {
+      "id": "carrefour_bakar",
+      "canonical": "كرفور بكار",
+      "aliases": [
+        "كرفور بكر",
+        "كرفور البكار",
+        "بكار",
+        "بكر",
+        "لبكار"
+      ],
+      "category": "landmark"
+    },
+    {
+      "id": "marche_capitale",
+      "canonical": "السوق المركزي",
+      "aliases": [
+        "السوق المركزية",
+        "سوق المركزي",
+        "الماركي كابيتال",
+        "ماركي كابيتال"
+      ],
+      "category": "market"
+    },
+    {
+      "id": "nouakchott_airport",
+      "canonical": "المطار",
+      "aliases": [
+        "مطار انواكشوط",
+        "المطار الدولي",
+        "مطار ام التونسي",
+        "مطار اموتونسي"
+      ],
+      "category": "landmark"
+    }
+  ]
+}

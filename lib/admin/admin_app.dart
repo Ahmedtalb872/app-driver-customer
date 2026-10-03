@@ -7,9 +7,14 @@ import 'core/admin_theme.dart';
 import 'routes/admin_router.dart';
 import 'services/admin_session.dart';
 
-/// The AL HODHOD admin dashboard, entirely separate from the mobile
-/// customer/captain [MyApp] - only ever reached via the `kIsWeb` branch in
-/// `lib/main.dart`. Arabic RTL by default, admin-only palette/theme.
+/// The AL HODHOD admin dashboard - reached directly on web (the `kIsWeb`
+/// branch in `lib/main.dart`), and pushed on top of the mobile customer
+/// app's navigation stack once `PhoneCodeLoginScreen` sees an `admin`
+/// account sign in. Both entry points share the same `AdminSession`/
+/// `AdminAuthService`, which themselves reuse the app's one Supabase
+/// session - an admin who already verified their phone-OTP on mobile never
+/// sees this dashboard's own login screen. Arabic RTL by default,
+/// admin-only palette/theme.
 class AdminApp extends StatefulWidget {
   const AdminApp({super.key});
 

@@ -40,18 +40,26 @@ class AdminTripsRepository {
     'searching',
     'accepted',
     'arrived',
+    // An open trip's "board passenger" action sets status straight to
+    // 'boarded' rather than 'in_progress' - see the same fix/comment in
+    // RideRepository._activeStatuses.
+    'boarded',
     'in_progress',
   ];
 
   /// Live Operations feed: currently active trips with customer/captain
   /// names embedded via the existing FK relationships (trips -> customers
   /// -> profiles, trips -> captains -> profiles) - no new columns/tables.
+  /// `captains!trips_captain_id_fkey` (not bare `captains(...)`) is
+  /// required: trips gained a second FK to captains (subscribed_captain_id,
+  /// 20260812000056_captain_subscriptions.sql), so an unqualified embed is
+  /// now ambiguous and PostgREST rejects it (PGRST201).
   Future<List<Map<String, dynamic>>> loadActiveTrips() async {
     final rows = await _client
         .from('trips')
         .select(
           '*, customers(profiles(full_name, phone)), '
-          'captains(profiles(full_name, phone))',
+          'captains!trips_captain_id_fkey(profiles(full_name, phone))',
         )
         .inFilter('status', activeStatuses)
         .order('requested_at', ascending: false);
@@ -60,6 +68,37 @@ class AdminTripsRepository {
 
   Future<void> updateAdminNotes(String tripId, String notes) async {
     await _client.from('trips').update({'admin_notes': notes}).eq('id', tripId);
+  }
+
+  /// Corrects a trip's pickup and/or destination (address + coordinates)
+  /// after the fact - e.g. the customer's app dropped the pin in the wrong
+  /// spot, or picked the wrong place from search. A plain owner-or-admin
+  /// update (RLS: `Trip owner, assigned captain, or admin can update`,
+  /// 20260712000026_admin_rls.sql) - no RPC needed, same as
+  /// [updateAdminNotes]. [destinationAddress]/[destinationLat]/
+  /// [destinationLng] are only sent when non-null, so calling this for an
+  /// Open Trip (no destination yet) only ever touches the pickup fields.
+  Future<void> updateRoute(
+    String tripId, {
+    required String pickupAddress,
+    required double pickupLat,
+    required double pickupLng,
+    String? destinationAddress,
+    double? destinationLat,
+    double? destinationLng,
+  }) async {
+    await _client
+        .from('trips')
+        .update({
+          'pickup_address': pickupAddress,
+          'pickup_lat': pickupLat,
+          'pickup_lng': pickupLng,
+          if (destinationAddress != null)
+            'destination_address': destinationAddress,
+          if (destinationLat != null) 'destination_lat': destinationLat,
+          if (destinationLng != null) 'destination_lng': destinationLng,
+        })
+        .eq('id', tripId);
   }
 
   Future<void> cancel(String tripId, String reason) async {
