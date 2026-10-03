@@ -6,7 +6,14 @@
 -- 20260817000079_selefli_promo_toggle.sql). Defaults match the previous
 -- hardcoded values exactly, so this changes nothing for existing
 -- customers until an admin edits it from the new "سلفلي" admin screen.
+-- selefli_promo_enabled/selefli_promo_cap are also repeated here (not just
+-- the two tier columns this migration adds) because 20260817000079's own
+-- `add column if not exists` apparently never ran against this project -
+-- selefli_credit_cap() below references them, so without this they'd be
+-- undefined columns rather than just "still false/default".
 alter table public.app_settings
+  add column if not exists selefli_promo_enabled boolean not null default false,
+  add column if not exists selefli_promo_cap numeric(10, 2) not null default 100,
   add column if not exists selefli_tier1_min_trips integer not null default 10,
   add column if not exists selefli_tier1_cap numeric(10, 2) not null default 100,
   add column if not exists selefli_tier2_min_trips integer not null default 30,
