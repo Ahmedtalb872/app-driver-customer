@@ -345,9 +345,15 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
 
     return Card(
       child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          columns: const [
+        // Vertical scroll wraps the horizontal one - DataTable has no
+        // built-in vertical scrolling of its own, so without this, any
+        // rows past what fits the Expanded's height were simply clipped
+        // with no way to reach them (only left-right panning worked).
+        scrollDirection: Axis.vertical,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: DataTable(
+            columns: const [
             DataColumn(label: Text('#')),
             DataColumn(label: Text('')),
             DataColumn(label: Text('الاسم')),
@@ -458,6 +464,7 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
               ],
             );
           }).toList(),
+          ),
         ),
       ),
     );
