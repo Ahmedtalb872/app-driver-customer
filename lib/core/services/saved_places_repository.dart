@@ -23,16 +23,12 @@ class SavedPlacesRepository {
         .toList();
   }
 
-  /// Saves [address]/[lat]/[lng] under [label] ('home'/'work'/'other').
-  ///
-  /// 'work'/'other' stay single-slot - overwrites any previous place saved
-  /// under that same label (see the partial unique index in
-  /// 20261003000108_saved_places_multiple_homes.sql), same as before.
-  ///
-  /// 'home' is different: a customer can save any number of them (e.g.
-  /// "بيت الوالد" and "بيت الزوجة"), each identified by [customName] - that
-  /// index doesn't govern 'home' rows at all, so this always inserts a new
-  /// one rather than overwriting.
+  /// Saves [address]/[lat]/[lng] under [label] ('home'/'work'/'other'),
+  /// named by [customName] (e.g. "بيت الوالد", "مكتب الفرع الثاني"). A
+  /// customer can save any number of places under the same label - this
+  /// always inserts a new row rather than overwriting a previous one (see
+  /// 20261003000109_saved_places_all_multiple.sql, which lifted the
+  /// one-per-label limit that used to apply to 'work'/'other').
   Future<void> savePlace({
     required String label,
     required String address,
@@ -42,21 +38,14 @@ class SavedPlacesRepository {
   }) async {
     final userId = SupabaseConfig.client.auth.currentUser?.id;
     if (userId == null) return;
-    final row = {
+    await SupabaseConfig.client.from('saved_places').insert({
       'customer_id': userId,
       'label': label,
-      'custom_name': label == 'home' ? customName : null,
+      'custom_name': customName,
       'address': address,
       'lat': lat,
       'lng': lng,
-    };
-    if (label == 'home') {
-      await SupabaseConfig.client.from('saved_places').insert(row);
-    } else {
-      await SupabaseConfig.client
-          .from('saved_places')
-          .upsert(row, onConflict: 'customer_id,label');
-    }
+    });
   }
 
   Future<void> deletePlace(String id) async {

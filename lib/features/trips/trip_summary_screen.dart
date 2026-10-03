@@ -105,13 +105,17 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
     }
   }
 
-  /// "المنزل" is the one label a customer can save more than once under
-  /// (see SavedPlacesRepository.savePlace) - so unlike "العمل"/"مكان آخر",
-  /// which just overwrite their single slot, this asks for a short name
-  /// first (e.g. "بيت الوالد") so the new entry is distinguishable from any
-  /// other home already saved, then saves through the same [_savePlace].
-  Future<void> _promptHomeNameAndSave({
+  /// A customer can save any number of places under the same label (see
+  /// SavedPlacesRepository.savePlace), so this asks for a short name first
+  /// (e.g. "بيت الوالد", "مكتب الفرع الثاني") so the new entry is
+  /// distinguishable from any other already saved under the same label,
+  /// then saves through [_savePlace]. [hint] gives label-appropriate
+  /// examples in the text field's placeholder.
+  Future<void> _promptNameAndSave({
     required String side,
+    required String label,
+    required String dialogTitle,
+    required String hint,
     required String address,
     required double lat,
     required double lng,
@@ -120,13 +124,11 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
     final name = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('اسم هذا المنزل'),
+        title: Text(dialogTitle),
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'مثال: بيت الوالد، بيت الزوجة...',
-          ),
+          decoration: InputDecoration(hintText: hint),
           onSubmitted: (v) => Navigator.pop(dialogContext, v),
         ),
         actions: [
@@ -145,7 +147,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
     if (name == null) return; // Cancelled.
     await _savePlace(
       side: side,
-      label: 'home',
+      label: label,
       address: address,
       lat: lat,
       lng: lng,
@@ -414,8 +416,11 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
               text: 'المنزل',
               saved: savedLabel == 'home',
               isSaving: isSaving,
-              onTap: () => _promptHomeNameAndSave(
+              onTap: () => _promptNameAndSave(
                 side: side,
+                label: 'home',
+                dialogTitle: 'اسم هذا المنزل',
+                hint: 'مثال: بيت الوالد، بيت الزوجة...',
                 address: address,
                 lat: lat,
                 lng: lng,
@@ -429,9 +434,11 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
               text: 'العمل',
               saved: savedLabel == 'work',
               isSaving: isSaving,
-              onTap: () => _savePlace(
+              onTap: () => _promptNameAndSave(
                 side: side,
                 label: 'work',
+                dialogTitle: 'اسم هذا المكان',
+                hint: 'مثال: مكتب الفرع الثاني...',
                 address: address,
                 lat: lat,
                 lng: lng,
@@ -445,9 +452,11 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
               text: 'مكان آخر',
               saved: savedLabel == 'other',
               isSaving: isSaving,
-              onTap: () => _savePlace(
+              onTap: () => _promptNameAndSave(
                 side: side,
                 label: 'other',
+                dialogTitle: 'اسم هذا المكان',
+                hint: 'مثال: بيت صديق، نادي رياضي...',
                 address: address,
                 lat: lat,
                 lng: lng,

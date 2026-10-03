@@ -69,20 +69,19 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
     }
   }
 
-  SavedPlace? _savedPlaceByLabel(String label) {
-    for (final place in _savedPlaces) {
-      if (place.label == label) return place;
-    }
-    return null;
-  }
-
   List<SavedPlace> _savedPlacesByLabel(String label) =>
       _savedPlaces.where((p) => p.label == label).toList();
 
-  /// Shows a pick-list when the customer has saved more than one "home"
-  /// (see SavedPlacesRepository.savePlace) - each named by [SavedPlace.
-  /// displayLabel] so "بيت الوالد" and "بيت الزوجة" are distinguishable.
-  Future<SavedPlace?> _pickAmongSavedHomes(List<SavedPlace> homes) {
+  /// Shows a pick-list when the customer has saved more than one place
+  /// under the same label (see SavedPlacesRepository.savePlace) - each
+  /// named by [SavedPlace.displayLabel] so e.g. "بيت الوالد" and "بيت
+  /// الزوجة" are distinguishable. [title] is the label's own text (e.g.
+  /// "المنزل") for the sheet's heading.
+  Future<SavedPlace?> _pickAmongSaved(
+    List<SavedPlace> places, {
+    required String title,
+    required IconData icon,
+  }) {
     return showModalBottomSheet<SavedPlace>(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -92,33 +91,33 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Padding(
-              padding: EdgeInsets.all(16),
+            Padding(
+              padding: const EdgeInsets.all(16),
               child: Text(
-                'اختر أحد منازلك المحفوظة',
-                style: TextStyle(
+                'اختر أحد أماكن "$title" المحفوظة',
+                style: const TextStyle(
                   fontFamily: 'Cairo',
                   fontWeight: FontWeight.bold,
                   fontSize: 15,
                 ),
               ),
             ),
-            ...homes.map(
-              (home) => ListTile(
-                leading: const Icon(Icons.home_rounded, color: AppColors.accent),
+            ...places.map(
+              (place) => ListTile(
+                leading: Icon(icon, color: AppColors.accent),
                 title: Text(
-                  home.displayLabel,
+                  place.displayLabel,
                   style: const TextStyle(fontFamily: 'Cairo'),
                 ),
-                subtitle: home.customName != null
+                subtitle: place.customName != null
                     ? Text(
-                        home.address,
+                        place.address,
                         style: const TextStyle(fontFamily: 'Cairo', fontSize: 11),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       )
                     : null,
-                onTap: () => Navigator.of(context).pop(home),
+                onTap: () => Navigator.of(context).pop(place),
               ),
             ),
             const SizedBox(height: 8),
@@ -392,37 +391,13 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
     required IconData icon,
     required String text,
   }) {
-    final List<SavedPlace> homes =
-        label == 'home' ? _savedPlacesByLabel('home') : const [];
-    final place = label == 'home'
-        ? (homes.isEmpty ? null : homes.first)
-        : _savedPlaceByLabel(label);
+    final saved = _savedPlacesByLabel(label);
     final isSelected =
         _normalDestination != null &&
-        (label == 'home'
-            ? homes.any((h) => h.id == _normalDestination!.id)
-            : _normalDestination!.id == place?.id);
+        saved.any((p) => p.id == _normalDestination!.id);
 
     Future<void> onTap() async {
-      if (label == 'home') {
-        if (homes.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'لم تحفظ "$text" بعد - يمكنك حفظه من شاشة ملخص الرحلة بعد انتهاء مشوارك القادم.',
-                style: const TextStyle(fontFamily: 'Cairo'),
-              ),
-            ),
-          );
-          return;
-        }
-        final chosen = homes.length == 1
-            ? homes.first
-            : await _pickAmongSavedHomes(homes);
-        if (chosen != null) _selectNormalDestinationFromSaved(chosen);
-        return;
-      }
-      if (place == null) {
+      if (saved.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -433,10 +408,13 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
         );
         return;
       }
-      _selectNormalDestinationFromSaved(place);
+      final chosen = saved.length == 1
+          ? saved.first
+          : await _pickAmongSaved(saved, title: text, icon: icon);
+      if (chosen != null) _selectNormalDestinationFromSaved(chosen);
     }
 
-    final hasSaved = label == 'home' ? homes.isNotEmpty : place != null;
+    final hasSaved = saved.isNotEmpty;
     return Expanded(
       child: OutlinedButton.icon(
         onPressed: onTap,
