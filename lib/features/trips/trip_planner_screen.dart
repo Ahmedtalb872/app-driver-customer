@@ -76,6 +76,58 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
     return null;
   }
 
+  List<SavedPlace> _savedPlacesByLabel(String label) =>
+      _savedPlaces.where((p) => p.label == label).toList();
+
+  /// Shows a pick-list when the customer has saved more than one "home"
+  /// (see SavedPlacesRepository.savePlace) - each named by [SavedPlace.
+  /// displayLabel] so "بيت الوالد" and "بيت الزوجة" are distinguishable.
+  Future<SavedPlace?> _pickAmongSavedHomes(List<SavedPlace> homes) {
+    return showModalBottomSheet<SavedPlace>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'اختر أحد منازلك المحفوظة',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+            ...homes.map(
+              (home) => ListTile(
+                leading: const Icon(Icons.home_rounded, color: AppColors.accent),
+                title: Text(
+                  home.displayLabel,
+                  style: const TextStyle(fontFamily: 'Cairo'),
+                ),
+                subtitle: home.customName != null
+                    ? Text(
+                        home.address,
+                        style: const TextStyle(fontFamily: 'Cairo', fontSize: 11),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      )
+                    : null,
+                onTap: () => Navigator.of(context).pop(home),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _selectNormalDestinationFromSaved(SavedPlace place) {
     _selectNormalDestination(
       DestinationSuggestion(
@@ -340,28 +392,61 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
     required IconData icon,
     required String text,
   }) {
-    final place = _savedPlaceByLabel(label);
+    final List<SavedPlace> homes =
+        label == 'home' ? _savedPlacesByLabel('home') : const [];
+    final place = label == 'home'
+        ? (homes.isEmpty ? null : homes.first)
+        : _savedPlaceByLabel(label);
     final isSelected =
-        _normalDestination != null && _normalDestination!.id == place?.id;
+        _normalDestination != null &&
+        (label == 'home'
+            ? homes.any((h) => h.id == _normalDestination!.id)
+            : _normalDestination!.id == place?.id);
+
+    Future<void> onTap() async {
+      if (label == 'home') {
+        if (homes.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'لم تحفظ "$text" بعد - يمكنك حفظه من شاشة ملخص الرحلة بعد انتهاء مشوارك القادم.',
+                style: const TextStyle(fontFamily: 'Cairo'),
+              ),
+            ),
+          );
+          return;
+        }
+        final chosen = homes.length == 1
+            ? homes.first
+            : await _pickAmongSavedHomes(homes);
+        if (chosen != null) _selectNormalDestinationFromSaved(chosen);
+        return;
+      }
+      if (place == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'لم تحفظ "$text" بعد - يمكنك حفظه من شاشة ملخص الرحلة بعد انتهاء مشوارك القادم.',
+              style: const TextStyle(fontFamily: 'Cairo'),
+            ),
+          ),
+        );
+        return;
+      }
+      _selectNormalDestinationFromSaved(place);
+    }
+
+    final hasSaved = label == 'home' ? homes.isNotEmpty : place != null;
     return Expanded(
       child: OutlinedButton.icon(
-        onPressed: place == null
-            ? () => ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'لم تحفظ "$text" بعد - يمكنك حفظه من شاشة ملخص الرحلة بعد انتهاء مشوارك القادم.',
-                    style: const TextStyle(fontFamily: 'Cairo'),
-                  ),
-                ),
-              )
-            : () => _selectNormalDestinationFromSaved(place),
+        onPressed: onTap,
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 8),
           backgroundColor: isSelected ? AppColors.accent.withOpacity(0.12) : null,
           side: BorderSide(
             color: isSelected ? AppColors.accent : AppColors.border,
           ),
-          foregroundColor: place == null
+          foregroundColor: !hasSaved
               ? AppColors.secondaryText
               : isSelected
               ? AppColors.secondary

@@ -75,6 +75,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
     required String address,
     required double lat,
     required double lng,
+    String? customName,
   }) async {
     setState(() => _savingSide = side);
     try {
@@ -83,6 +84,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
         address: address,
         lat: lat,
         lng: lng,
+        customName: customName,
       );
       if (!mounted) return;
       setState(() {
@@ -101,6 +103,54 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
         ),
       );
     }
+  }
+
+  /// "المنزل" is the one label a customer can save more than once under
+  /// (see SavedPlacesRepository.savePlace) - so unlike "العمل"/"مكان آخر",
+  /// which just overwrite their single slot, this asks for a short name
+  /// first (e.g. "بيت الوالد") so the new entry is distinguishable from any
+  /// other home already saved, then saves through the same [_savePlace].
+  Future<void> _promptHomeNameAndSave({
+    required String side,
+    required String address,
+    required double lat,
+    required double lng,
+  }) async {
+    final controller = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('اسم هذا المنزل'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'مثال: بيت الوالد، بيت الزوجة...',
+          ),
+          onSubmitted: (v) => Navigator.pop(dialogContext, v),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            child: const Text('حفظ'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (name == null) return; // Cancelled.
+    await _savePlace(
+      side: side,
+      label: 'home',
+      address: address,
+      lat: lat,
+      lng: lng,
+      customName: name.trim().isEmpty ? null : name.trim(),
+    );
   }
 
   @override
@@ -364,9 +414,8 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
               text: 'المنزل',
               saved: savedLabel == 'home',
               isSaving: isSaving,
-              onTap: () => _savePlace(
+              onTap: () => _promptHomeNameAndSave(
                 side: side,
-                label: 'home',
                 address: address,
                 lat: lat,
                 lng: lng,

@@ -1178,9 +1178,11 @@ class SupportTicketMessage {
   }
 }
 
-/// One of the labeled spots (`home`/`work`/`school`/`other`) a customer has
-/// saved for one-tap reuse instead of searching for the same address every
-/// time - see SavedPlacesRepository.
+/// One of the labeled spots (`home`/`work`/`other`) a customer has saved
+/// for one-tap reuse instead of searching for the same address every time -
+/// see SavedPlacesRepository. `work`/`other` are single-slot (one each,
+/// [customName] always null), but a customer can save any number of
+/// `home` entries, each distinguished by [customName] (e.g. "بيت الوالد").
 class SavedPlace {
   const SavedPlace({
     required this.id,
@@ -1188,6 +1190,7 @@ class SavedPlace {
     required this.address,
     required this.lat,
     required this.lng,
+    this.customName,
   });
 
   final String id;
@@ -1195,6 +1198,14 @@ class SavedPlace {
   final String address;
   final double lat;
   final double lng;
+  final String? customName;
+
+  /// What to show in a pick-list or chip - the customer's own name for
+  /// this place when they gave one, falling back to the address.
+  String get displayLabel =>
+      (customName != null && customName!.trim().isNotEmpty)
+      ? customName!
+      : address;
 
   factory SavedPlace.fromJson(Map<String, dynamic> json) {
     return SavedPlace(
@@ -1203,6 +1214,7 @@ class SavedPlace {
       address: json['address'] as String,
       lat: (json['lat'] as num).toDouble(),
       lng: (json['lng'] as num).toDouble(),
+      customName: json['custom_name'] as String?,
     );
   }
 }
