@@ -5,9 +5,9 @@
 		<key>CADisableMinimumFrameDurationOnPhone</key>
 		<true/>
 		<key>NSLocationWhenInUseUsageDescription</key>
-		<string>This app needs access to location when open.</string>
+		<string>يستخدم الهدهد موقعك الجغرافي لتحديد نقطة انطلاق رحلتك تلقائياً، وعرض الكباتن القريبين منك على الخريطة، وحساب المسافة والسعر التقديري للرحلة.</string>
 		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-		<string>This app needs access to location when open.</string>
+		<string>يستخدم الهدهد موقعك الجغرافي لتحديد نقطة انطلاق رحلتك تلقائياً، وعرض الكباتن القريبين منك على الخريطة، وحساب المسافة والسعر التقديري للرحلة.</string>
 		<key>NSMicrophoneUsageDescription</key>
 		<string>يستخدم الهدهد الميكروفون للبحث الصوتي عن مكان أو مقاطعة، وللمكالمات داخل التطبيق مع الكابتن.</string>
 		<key>NSPhotoLibraryUsageDescription</key>
