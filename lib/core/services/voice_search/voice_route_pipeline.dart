@@ -7,15 +7,22 @@ import 'place_alias_catalog.dart';
 import 'place_corrector.dart';
 
 /// One resolved leg (pickup or destination) of a spoken route: the phrase
-/// [FromToExtractor] pulled out (already place-corrected by Stage 3) and the
-/// matched [DestinationSuggestion] from Stage 5 - null if nothing was found.
+/// [FromToExtractor] pulled out (already place-corrected by Stage 3) and
+/// every plausible [DestinationSuggestion] match from Stage 5, ranked
+/// best-first - empty when nothing was found. Kept as a list rather than a
+/// single pick so the caller can let the customer choose among genuinely
+/// ambiguous candidates instead of silently committing to a guess that
+/// might be wrong; [bestMatch] remains available for auto-filling the
+/// single-candidate (or "good enough to not ask") case.
 class ResolvedLeg {
-  const ResolvedLeg({required this.text, this.suggestion});
+  const ResolvedLeg({required this.text, this.candidates = const []});
 
   final String text;
-  final DestinationSuggestion? suggestion;
+  final List<DestinationSuggestion> candidates;
 
-  bool get isResolved => suggestion != null;
+  bool get isResolved => candidates.isNotEmpty;
+  DestinationSuggestion? get bestMatch =>
+      candidates.isEmpty ? null : candidates.first;
 }
 
 class VoiceRouteResult {
@@ -95,36 +102,38 @@ class VoiceRoutePipeline {
     ]);
 
     return VoiceRouteResult(
-      from: ResolvedLeg(text: split.from, suggestion: results[0]),
-      to: ResolvedLeg(text: split.to, suggestion: results[1]),
+      from: ResolvedLeg(text: split.from, candidates: results[0]),
+      to: ResolvedLeg(text: split.to, candidates: results[1]),
     );
   }
 
-  /// Resolves one spoken leg against the real place search. Two tolerances
-  /// on top of a plain top-1 lookup, both aimed at the "محرك البحث الصوتي
-  /// كثيرا ما يظهر لم أجد مكان" complaint - speech-to-text mishears a word
-  /// or two far more often than it mishears an entire phrase:
+  /// Resolves one spoken leg against the real place search, returning every
+  /// plausible candidate (best-first, capped at [_maxCandidates]) rather
+  /// than committing to a single pick - a misheard word or two is far more
+  /// common than a misheard whole phrase, so the few candidates closest to
+  /// what was actually heard are usually either the right place or contain
+  /// it, and the caller can offer them as a pick list instead of silently
+  /// trusting a possibly-wrong top-1 guess (the "من أين تريد؟" voice sheet)
+  /// or failing outright.
   ///
-  ///  - Pulls a handful of candidates (not just 1) and picks whichever one's
-  ///    *name* is actually closest to what was heard, rather than trusting
-  ///    the server's relevance order alone - a short exact-ish name can
-  ///    rank behind a longer loosely-related result otherwise.
-  ///  - If the full phrase finds nothing at all, retries with shorter
-  ///    suffixes of it (dropping leading words one at a time) - Arabic
-  ///    place names are typically "[generic word] [proper noun]" ("موقف
-  ///    الصوبة", "كرفور بكار"), and a mis-transcribed leading word can sink
-  ///    the whole-phrase search even though the actual place name at the
-  ///    end would have matched on its own.
-  Future<DestinationSuggestion?> _searchOne(
+  /// If the full phrase finds nothing at all, retries with shorter suffixes
+  /// of it (dropping leading words one at a time) - Arabic place names are
+  /// typically "[generic word] [proper noun]" ("موقف الصوبة", "كرفور
+  /// بكار"), and a mis-transcribed leading word can sink the whole-phrase
+  /// search even though the actual place name at the end would have
+  /// matched on its own.
+  Future<List<DestinationSuggestion>> _searchOne(
     String query, {
     double? nearLat,
     double? nearLng,
   }) async {
-    final tokens = query.trim().split(RegExp(r'\s+')).where((t) => t.isNotEmpty).toList();
+    final tokens = query
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((t) => t.isNotEmpty)
+        .toList();
     for (var start = 0; start < (tokens.isEmpty ? 1 : tokens.length); start++) {
-      final attempt = tokens.isEmpty
-          ? query
-          : tokens.sublist(start).join(' ');
+      final attempt = tokens.isEmpty ? query : tokens.sublist(start).join(' ');
       if (attempt.trim().isEmpty) continue;
 
       final matches = await _searchRepository.search(
@@ -134,19 +143,18 @@ class VoiceRoutePipeline {
         nearLng: nearLng,
       );
       if (matches.isEmpty) continue;
-      if (matches.length == 1) return matches.first;
+      if (matches.length == 1) return matches;
 
-      var best = matches.first;
-      var bestScore = FuzzyMatcher.similarity(attempt, best.title);
-      for (final candidate in matches.skip(1)) {
-        final score = FuzzyMatcher.similarity(attempt, candidate.title);
-        if (score > bestScore) {
-          best = candidate;
-          bestScore = score;
-        }
-      }
-      return best;
+      final ranked = [...matches]..sort(
+        (a, b) => FuzzyMatcher.similarity(
+          attempt,
+          b.title,
+        ).compareTo(FuzzyMatcher.similarity(attempt, a.title)),
+      );
+      return ranked.take(_maxCandidates).toList();
     }
-    return null;
+    return const [];
   }
+
+  static const _maxCandidates = 4;
 }

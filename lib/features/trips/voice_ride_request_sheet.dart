@@ -42,6 +42,13 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
   String? _errorMessage;
   DestinationSuggestion? _pickupResult;
   DestinationSuggestion? _destinationResult;
+  // Every plausible match the pipeline found for each leg (best-first,
+  // [_pickupResult]/[_destinationResult] is always candidates.first) - lets
+  // the customer pick a different one in two taps when the auto-selected
+  // top match is wrong, instead of only being able to accept it or fall
+  // back to typing the whole thing manually.
+  List<DestinationSuggestion> _pickupCandidates = [];
+  List<DestinationSuggestion> _destinationCandidates = [];
   // What was actually heard for each leg, kept even when the search below
   // couldn't resolve it - prefills the manual-edit search box so the
   // customer fixes a typo/mis-hearing instead of retyping from scratch.
@@ -130,9 +137,11 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
       if (!mounted) return;
 
       setState(() {
-        _pickupResult = result.from.suggestion;
+        _pickupCandidates = result.from.candidates;
+        _pickupResult = result.from.bestMatch;
         _pickupHeardText = result.from.text;
-        _destinationResult = result.to.suggestion;
+        _destinationCandidates = result.to.candidates;
+        _destinationResult = result.to.bestMatch;
         _destinationHeardText = result.to.text;
         _step = _VoiceStep.confirm;
       });
@@ -176,7 +185,12 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
         ),
       ),
     );
-    if (result != null && mounted) setState(() => _pickupResult = result);
+    if (result != null && mounted) {
+      setState(() {
+        _pickupResult = result;
+        _pickupCandidates = [result];
+      });
+    }
   }
 
   Future<void> _editDestination() async {
@@ -190,7 +204,69 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
         ),
       ),
     );
-    if (result != null && mounted) setState(() => _destinationResult = result);
+    if (result != null && mounted) {
+      setState(() {
+        _destinationResult = result;
+        _destinationCandidates = [result];
+      });
+    }
+  }
+
+  /// Lets the customer pick a different match than the auto-selected top
+  /// one, from [candidates] the pipeline already found - no new search
+  /// round-trip needed.
+  Future<void> _pickAmongCandidates({
+    required List<DestinationSuggestion> candidates,
+    required String title,
+    required ValueChanged<DestinationSuggestion> onPicked,
+  }) async {
+    final chosen = await showModalBottomSheet<DestinationSuggestion>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'أي "$title" تقصد؟',
+                style: const TextStyle(
+                  fontFamily: 'Cairo',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+            ...candidates.map(
+              (c) => ListTile(
+                leading: const Icon(
+                  Icons.place_rounded,
+                  color: AppColors.accent,
+                ),
+                title: Text(c.title, style: const TextStyle(fontFamily: 'Cairo')),
+                subtitle: c.subtitle != null
+                    ? Text(
+                        c.subtitle!,
+                        style: const TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 11,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      )
+                    : null,
+                onTap: () => Navigator.of(context).pop(c),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (chosen != null) onPicked(chosen);
   }
 
   /// Escape hatch for when the pipeline couldn't even find a "من X إلى Y"
@@ -224,8 +300,10 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
 
     setState(() {
       _pickupResult = pickup;
+      _pickupCandidates = [pickup];
       _pickupHeardText = null;
       _destinationResult = destination;
+      _destinationCandidates = destination == null ? [] : [destination];
       _destinationHeardText = null;
       _step = _VoiceStep.confirm;
     });
@@ -238,6 +316,8 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
       _errorMessage = null;
       _pickupResult = null;
       _destinationResult = null;
+      _pickupCandidates = [];
+      _destinationCandidates = [];
       _pickupHeardText = null;
       _destinationHeardText = null;
     });
@@ -407,6 +487,12 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
               label: 'نقطة الانطلاق',
               title: _pickupResult?.title,
               onEdit: _editPickup,
+              alternativesCount: _pickupCandidates.length,
+              onPickAlternative: () => _pickAmongCandidates(
+                candidates: _pickupCandidates,
+                title: 'نقطة الانطلاق',
+                onPicked: (c) => setState(() => _pickupResult = c),
+              ),
             ),
             const SizedBox(height: 10),
             _buildResultRow(
@@ -415,6 +501,12 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
               label: 'الوجهة',
               title: _destinationResult?.title,
               onEdit: _editDestination,
+              alternativesCount: _destinationCandidates.length,
+              onPickAlternative: () => _pickAmongCandidates(
+                candidates: _destinationCandidates,
+                title: 'الوجهة',
+                onPicked: (c) => setState(() => _destinationResult = c),
+              ),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
@@ -454,15 +546,21 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
   /// [title] is null when this leg wasn't resolved - shown as a prompt to
   /// pick it manually instead of leaving the row looking identical to a
   /// resolved one, and [onEdit] (same handler either way) opens the search
-  /// screen pre-filled with whatever was heard.
+  /// screen pre-filled with whatever was heard. When [alternativesCount] is
+  /// more than 1, a "ليس هذا؟" link is shown so the customer can pick among
+  /// the other candidates the pipeline found instead of only being able to
+  /// accept the auto-selected top one or fall back to a full manual search.
   Widget _buildResultRow({
     required IconData icon,
     required Color iconColor,
     required String label,
     required String? title,
     required VoidCallback onEdit,
+    int alternativesCount = 0,
+    VoidCallback? onPickAlternative,
   }) {
     final unresolved = title == null;
+    final hasAlternatives = !unresolved && alternativesCount > 1;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
@@ -472,46 +570,72 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
             ? Border.all(color: AppColors.error.withOpacity(0.4))
             : null,
       ),
-      child: Row(
+      child: Column(
         children: [
-          Icon(icon, color: iconColor, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 10.5,
-                    color: AppColors.secondaryText,
-                  ),
+          Row(
+            children: [
+              Icon(icon, color: iconColor, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 10.5,
+                        color: AppColors.secondaryText,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      unresolved
+                          ? 'لم يتم التعرف - اضغط للاختيار يدويًا'
+                          : title!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: unresolved
+                            ? AppColors.error
+                            : AppColors.darkText,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  unresolved ? 'لم يتم التعرف - اضغط للاختيار يدويًا' : title!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                    color: unresolved ? AppColors.error : AppColors.darkText,
-                  ),
+              ),
+              IconButton(
+                icon: Icon(
+                  unresolved ? Icons.search_rounded : Icons.edit_rounded,
+                  size: 18,
+                  color: unresolved
+                      ? AppColors.error
+                      : AppColors.secondaryText,
                 ),
-              ],
-            ),
+                tooltip: unresolved ? 'اختيار يدوي' : 'تعديل',
+                onPressed: onEdit,
+              ),
+            ],
           ),
-          IconButton(
-            icon: Icon(
-              unresolved ? Icons.search_rounded : Icons.edit_rounded,
-              size: 18,
-              color: unresolved ? AppColors.error : AppColors.secondaryText,
+          if (hasAlternatives)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: onPickAlternative,
+                style: TextButton.styleFrom(
+                  minimumSize: Size.zero,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  'ليس هذا؟ عرض $alternativesCount نتائج محتملة',
+                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 11.5),
+                ),
+              ),
             ),
-            tooltip: unresolved ? 'اختيار يدوي' : 'تعديل',
-            onPressed: onEdit,
-          ),
         ],
       ),
     );
