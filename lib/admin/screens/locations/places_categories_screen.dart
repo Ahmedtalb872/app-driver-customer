@@ -156,6 +156,9 @@ class _PlacesCategoriesScreenState extends State<PlacesCategoriesScreen>
     final addressArController = TextEditingController(
       text: existing?.addressAr ?? '',
     );
+    final altNamesController = TextEditingController(
+      text: existing?.altNames.join('، ') ?? '',
+    );
     final latController = TextEditingController(
       text: existing?.latitude.toString() ?? '',
     );
@@ -245,6 +248,15 @@ class _PlacesCategoriesScreenState extends State<PlacesCategoriesScreen>
                   TextField(
                     controller: addressArController,
                     decoration: const InputDecoration(labelText: 'العنوان'),
+                  ),
+                  TextField(
+                    controller: altNamesController,
+                    decoration: const InputDecoration(
+                      labelText: 'أسماء/نطق بديل (مفصولة بفاصلة)',
+                      helperText:
+                          'يساعد البحث الصوتي على إيجاد هذا المكان حتى لو نُطق بشكل مختلف، مثال: بكار، بكر',
+                      helperMaxLines: 2,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -363,6 +375,12 @@ class _PlacesCategoriesScreenState extends State<PlacesCategoriesScreen>
     final lng = double.tryParse(lngController.text);
     if (lat == null || lng == null) return;
 
+    final altNames = altNamesController.text
+        .split(RegExp('[,،]'))
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+
     if (existing == null) {
       await _placesRepo.adminAddOfficialPlace(
         districtId: districtId!,
@@ -372,6 +390,7 @@ class _PlacesCategoriesScreenState extends State<PlacesCategoriesScreen>
             ? null
             : nameFrController.text.trim(),
         addressAr: addressArController.text.trim(),
+        altNames: altNames,
         latitude: lat,
         longitude: lng,
         isPopular: isPopular,
@@ -382,6 +401,7 @@ class _PlacesCategoriesScreenState extends State<PlacesCategoriesScreen>
         nameAr: nameArController.text.trim(),
         nameFr: nameFrController.text.trim(),
         addressAr: addressArController.text.trim(),
+        altNames: altNames,
         latitude: lat,
         longitude: lng,
         isPopular: isPopular,
