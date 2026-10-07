@@ -2,6 +2,7 @@ import '../../../features/destinations/data/models/destination_suggestion.dart';
 import '../../../features/destinations/data/repositories/destination_search_repository.dart';
 import 'arabic_text_normalizer.dart';
 import 'from_to_extractor.dart';
+import 'fuzzy_matcher.dart';
 import 'place_alias_catalog.dart';
 import 'place_corrector.dart';
 
@@ -99,17 +100,53 @@ class VoiceRoutePipeline {
     );
   }
 
+  /// Resolves one spoken leg against the real place search. Two tolerances
+  /// on top of a plain top-1 lookup, both aimed at the "محرك البحث الصوتي
+  /// كثيرا ما يظهر لم أجد مكان" complaint - speech-to-text mishears a word
+  /// or two far more often than it mishears an entire phrase:
+  ///
+  ///  - Pulls a handful of candidates (not just 1) and picks whichever one's
+  ///    *name* is actually closest to what was heard, rather than trusting
+  ///    the server's relevance order alone - a short exact-ish name can
+  ///    rank behind a longer loosely-related result otherwise.
+  ///  - If the full phrase finds nothing at all, retries with shorter
+  ///    suffixes of it (dropping leading words one at a time) - Arabic
+  ///    place names are typically "[generic word] [proper noun]" ("موقف
+  ///    الصوبة", "كرفور بكار"), and a mis-transcribed leading word can sink
+  ///    the whole-phrase search even though the actual place name at the
+  ///    end would have matched on its own.
   Future<DestinationSuggestion?> _searchOne(
     String query, {
     double? nearLat,
     double? nearLng,
   }) async {
-    final matches = await _searchRepository.search(
-      query: query,
-      limit: 1,
-      nearLat: nearLat,
-      nearLng: nearLng,
-    );
-    return matches.isEmpty ? null : matches.first;
+    final tokens = query.trim().split(RegExp(r'\s+')).where((t) => t.isNotEmpty).toList();
+    for (var start = 0; start < (tokens.isEmpty ? 1 : tokens.length); start++) {
+      final attempt = tokens.isEmpty
+          ? query
+          : tokens.sublist(start).join(' ');
+      if (attempt.trim().isEmpty) continue;
+
+      final matches = await _searchRepository.search(
+        query: attempt,
+        limit: 5,
+        nearLat: nearLat,
+        nearLng: nearLng,
+      );
+      if (matches.isEmpty) continue;
+      if (matches.length == 1) return matches.first;
+
+      var best = matches.first;
+      var bestScore = FuzzyMatcher.similarity(attempt, best.title);
+      for (final candidate in matches.skip(1)) {
+        final score = FuzzyMatcher.similarity(attempt, candidate.title);
+        if (score > bestScore) {
+          best = candidate;
+          bestScore = score;
+        }
+      }
+      return best;
+    }
+    return null;
   }
 }

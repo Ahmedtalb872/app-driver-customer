@@ -30,10 +30,17 @@ class DestinationSearchScreen extends StatefulWidget {
     this.mapPickerTitle = 'اختر الموقع من الخريطة',
     this.nearLat,
     this.nearLng,
+    this.initialQuery,
   });
 
   final String title;
   final String mapPickerTitle;
+
+  /// Pre-fills the search box and runs a search immediately on open -
+  /// used when arriving here after a voice search couldn't resolve a leg,
+  /// so whatever was heard is still there to fix/retype instead of
+  /// starting from a blank box.
+  final String? initialQuery;
 
   /// The customer's current/pickup location, when known - passed straight
   /// through to [DestinationSearchRepository.search] so results are ranked
@@ -95,6 +102,11 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
           if (mounted) setState(() => _speechAvailable = available);
         });
     _loadExtras();
+    final initialQuery = widget.initialQuery;
+    if (initialQuery != null && initialQuery.trim().isNotEmpty) {
+      _controller.text = initialQuery;
+      _onQueryChanged(initialQuery);
+    }
   }
 
   @override

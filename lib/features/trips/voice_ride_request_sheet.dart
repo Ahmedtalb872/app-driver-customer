@@ -42,6 +42,11 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
   String? _errorMessage;
   DestinationSuggestion? _pickupResult;
   DestinationSuggestion? _destinationResult;
+  // What was actually heard for each leg, kept even when the search below
+  // couldn't resolve it - prefills the manual-edit search box so the
+  // customer fixes a typo/mis-hearing instead of retyping from scratch.
+  String? _pickupHeardText;
+  String? _destinationHeardText;
 
   @override
   void initState() {
@@ -100,9 +105,12 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
 
   /// Runs the full Text Normalization -> Place Correction -> From/To
   /// Extraction -> Place Search pipeline on [transcript] (see
-  /// [VoiceRoutePipeline]) and lands on either the confirm step or an error
-  /// message naming exactly which side (or the sentence shape itself)
-  /// couldn't be resolved.
+  /// [VoiceRoutePipeline]). Lands on the confirm step even when one (or
+  /// both) legs couldn't be resolved - that leg just shows as "not found"
+  /// there with a direct edit action pre-filled with what was heard,
+  /// instead of discarding a leg that *did* resolve correctly just because
+  /// the other one didn't, and instead of forcing a full voice retry for a
+  /// name the recognizer is likely to mishear again anyway.
   Future<void> _resolve(String transcript) async {
     if (transcript.trim().isEmpty) {
       setState(() {
@@ -121,19 +129,11 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
       );
       if (!mounted) return;
 
-      if (!result.from.isResolved || !result.to.isResolved) {
-        setState(() {
-          _step = _VoiceStep.error;
-          _errorMessage = !result.from.isResolved
-              ? 'لم أجد "${result.from.text}". حاول أن تنطقها بوضوح أكبر أو استخدم اسمًا مختلفًا.'
-              : 'لم أجد "${result.to.text}". حاول أن تنطقها بوضوح أكبر أو استخدم اسمًا مختلفًا.';
-        });
-        return;
-      }
-
       setState(() {
         _pickupResult = result.from.suggestion;
+        _pickupHeardText = result.from.text;
         _destinationResult = result.to.suggestion;
+        _destinationHeardText = result.to.text;
         _step = _VoiceStep.confirm;
       });
     } on VoiceRouteParseException catch (e) {
@@ -159,10 +159,11 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
     Navigator.of(context).pop((pickup: pickup, destination: destination));
   }
 
-  /// Manual correction for a misrecognized pickup - opens the same typed/
-  /// map search screen [TripPlannerScreen] itself uses, so picking a
-  /// different place here follows the exact same trusted path as the rest
-  /// of the app.
+  /// Manual correction for a misrecognized (or entirely unresolved) pickup -
+  /// opens the same typed/map search screen [TripPlannerScreen] itself
+  /// uses, pre-filled with whatever was heard so a near-miss is a quick fix
+  /// rather than a blank search, so picking a different place here follows
+  /// the exact same trusted path as the rest of the app.
   Future<void> _editPickup() async {
     final result = await Navigator.of(context).push<DestinationSuggestion>(
       MaterialPageRoute(
@@ -171,6 +172,7 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
           mapPickerTitle: 'اختر نقطة الانطلاق من الخريطة',
           nearLat: widget.nearLat,
           nearLng: widget.nearLng,
+          initialQuery: _pickupHeardText,
         ),
       ),
     );
@@ -184,10 +186,49 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
           mapPickerTitle: 'اختر الوجهة من الخريطة',
           nearLat: _pickupResult?.latitude ?? widget.nearLat,
           nearLng: _pickupResult?.longitude ?? widget.nearLng,
+          initialQuery: _destinationHeardText,
         ),
       ),
     );
     if (result != null && mounted) setState(() => _destinationResult = result);
+  }
+
+  /// Escape hatch for when the pipeline couldn't even find a "من X إلى Y"
+  /// shape in the transcript (so there's no per-leg text to prefill a
+  /// search with) - picks pickup then destination manually, landing on the
+  /// same confirm step as a fully-resolved voice request.
+  Future<void> _pickManually() async {
+    final pickup = await Navigator.of(context).push<DestinationSuggestion>(
+      MaterialPageRoute(
+        builder: (context) => DestinationSearchScreen(
+          title: 'نقطة الانطلاق',
+          mapPickerTitle: 'اختر نقطة الانطلاق من الخريطة',
+          nearLat: widget.nearLat,
+          nearLng: widget.nearLng,
+        ),
+      ),
+    );
+    if (pickup == null || !mounted) return;
+
+    final destination = await Navigator.of(context)
+        .push<DestinationSuggestion>(
+          MaterialPageRoute(
+            builder: (context) => DestinationSearchScreen(
+              mapPickerTitle: 'اختر الوجهة من الخريطة',
+              nearLat: pickup.latitude,
+              nearLng: pickup.longitude,
+            ),
+          ),
+        );
+    if (!mounted) return;
+
+    setState(() {
+      _pickupResult = pickup;
+      _pickupHeardText = null;
+      _destinationResult = destination;
+      _destinationHeardText = null;
+      _step = _VoiceStep.confirm;
+    });
   }
 
   void _retry() {
@@ -197,6 +238,8 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
       _errorMessage = null;
       _pickupResult = null;
       _destinationResult = null;
+      _pickupHeardText = null;
+      _destinationHeardText = null;
     });
   }
 
@@ -344,17 +387,25 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
                 minimumSize: const Size(double.infinity, 46),
               ),
             ),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: _pickManually,
+              icon: const Icon(Icons.edit_location_alt_rounded, size: 18),
+              label: const Text('اختيار الأماكن يدويًا'),
+            ),
           ],
         );
 
       case _VoiceStep.confirm:
+        final bothResolved =
+            _pickupResult != null && _destinationResult != null;
         return Column(
           children: [
             _buildResultRow(
               icon: Icons.radio_button_checked_rounded,
               iconColor: AppColors.success,
               label: 'نقطة الانطلاق',
-              title: _pickupResult!.title,
+              title: _pickupResult?.title,
               onEdit: _editPickup,
             ),
             const SizedBox(height: 10),
@@ -362,12 +413,12 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
               icon: Icons.location_on_rounded,
               iconColor: AppColors.error,
               label: 'الوجهة',
-              title: _destinationResult!.title,
+              title: _destinationResult?.title,
               onEdit: _editDestination,
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: _confirm,
+              onPressed: bothResolved ? _confirm : null,
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 48),
                 backgroundColor: AppColors.warning,
@@ -400,18 +451,26 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
     );
   }
 
+  /// [title] is null when this leg wasn't resolved - shown as a prompt to
+  /// pick it manually instead of leaving the row looking identical to a
+  /// resolved one, and [onEdit] (same handler either way) opens the search
+  /// screen pre-filled with whatever was heard.
   Widget _buildResultRow({
     required IconData icon,
     required Color iconColor,
     required String label,
-    required String title,
+    required String? title,
     required VoidCallback onEdit,
   }) {
+    final unresolved = title == null;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(12),
+        border: unresolved
+            ? Border.all(color: AppColors.error.withOpacity(0.4))
+            : null,
       ),
       child: Row(
         children: [
@@ -431,26 +490,26 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  title,
+                  unresolved ? 'لم يتم التعرف - اضغط للاختيار يدويًا' : title!,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Cairo',
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
-                    color: AppColors.darkText,
+                    color: unresolved ? AppColors.error : AppColors.darkText,
                   ),
                 ),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(
-              Icons.edit_rounded,
+            icon: Icon(
+              unresolved ? Icons.search_rounded : Icons.edit_rounded,
               size: 18,
-              color: AppColors.secondaryText,
+              color: unresolved ? AppColors.error : AppColors.secondaryText,
             ),
-            tooltip: 'تعديل',
+            tooltip: unresolved ? 'اختيار يدوي' : 'تعديل',
             onPressed: onEdit,
           ),
         ],
