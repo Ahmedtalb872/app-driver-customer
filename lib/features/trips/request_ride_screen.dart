@@ -342,11 +342,13 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
     );
   }
 
-  /// A small, read-only map showing exactly the pickup pin (and destination
-  /// pin + route line, for a normal ride) this request is about to be sent
-  /// with - so the customer can visually confirm both points before
-  /// committing, not just read their text addresses in
-  /// [_buildRouteSummary] below.
+  /// A small map showing exactly the pickup pin (and destination pin +
+  /// route line, for a normal ride) this request is about to be sent with -
+  /// so the customer can visually confirm both points before committing,
+  /// not just read their text addresses in [_buildRouteSummary] below.
+  /// Pannable/zoomable (no [RealMapWidget.onMapTap] given, so tapping it
+  /// never changes either point - purely for looking around) so the
+  /// customer can check the surrounding area without leaving this screen.
   Widget _buildRouteMap() {
     final destination = widget.destination;
     return ClipRRect(
@@ -354,7 +356,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
       child: SizedBox(
         height: 190,
         child: RealMapWidget(
-          interactive: false,
+          interactive: true,
           pickupLat: widget.pickupLat,
           pickupLng: widget.pickupLng,
           destLat: destination?.latitude,
