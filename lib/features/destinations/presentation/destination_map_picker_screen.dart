@@ -67,10 +67,19 @@ class _DestinationMapPickerScreenState
       return;
     }
     setState(() {
-      _address = address ?? 'الموقع المحدد على الخريطة';
+      _address = address ?? _coordinatesLabel(point);
       _isGeocoding = false;
     });
   }
+
+  /// Fallback shown (and sent to the captain as the pickup/destination
+  /// address) when reverse geocoding finds nothing - previously a generic
+  /// "الموقع المحدد على الخريطة" label that told the captain nothing
+  /// useful about where to actually go. Precise coordinates, short enough
+  /// to read at a glance, are directly actionable (paste into any maps
+  /// app) even with no resolvable street address.
+  String _coordinatesLabel(LatLng point) =>
+      '${point.latitude.toStringAsFixed(5)}, ${point.longitude.toStringAsFixed(5)}';
 
   @override
   void dispose() {
@@ -85,7 +94,7 @@ class _DestinationMapPickerScreenState
       DestinationSuggestion(
         resultType: DestinationResultType.place,
         id: 'map_${point.latitude}_${point.longitude}',
-        title: _address ?? 'الموقع المحدد على الخريطة',
+        title: _address ?? _coordinatesLabel(point),
         latitude: point.latitude,
         longitude: point.longitude,
       ),
