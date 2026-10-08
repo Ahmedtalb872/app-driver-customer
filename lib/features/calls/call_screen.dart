@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 import '../../core/constants/colors.dart';
 import '../../core/services/call_log_service.dart';
@@ -295,6 +296,18 @@ class _CallScreenState extends State<CallScreen> {
       body: SafeArea(
         child: Column(
           children: [
+            // Invisible on purpose - this call is audio-only and nothing
+            // here should ever look like a video call. It still has to be
+            // an actually-built (if 1x1) RTCVideoView, not left out
+            // entirely: that's what makes the browser create the
+            // underlying media element the remote party's voice is
+            // actually audible through on Flutter Web - see
+            // CallService.remoteRenderer's doc comment.
+            SizedBox(
+              width: 1,
+              height: 1,
+              child: RTCVideoView(_call.remoteRenderer),
+            ),
             const SizedBox(height: 56),
             _buildAvatar(),
             const SizedBox(height: 20),

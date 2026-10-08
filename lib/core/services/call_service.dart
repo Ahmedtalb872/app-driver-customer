@@ -26,6 +26,20 @@ class CallService {
   final _pendingRemoteCandidates = <RTCIceCandidate>[];
   bool _remoteDescriptionSet = false;
 
+  /// Nothing in this class ever played the remote party's incoming audio
+  /// anywhere - there was no `onTrack` handler at all, so the connection
+  /// itself could succeed while neither side heard the other. Native
+  /// platforms often get away with this (the OS audio pipeline plays an
+  /// inbound WebRTC audio track automatically once it's on the
+  /// connection), but the browser does not - Flutter Web needs the remote
+  /// stream explicitly attached to a renderer, which in turn needs an
+  /// actual (if invisible) [RTCVideoView] built somewhere for the browser
+  /// to create the underlying `<audio>`/`<video>` element at all - see
+  /// [CallScreen]'s hidden 1x1 `RTCVideoView(remoteRenderer)`. Kept
+  /// unconditional (not web-only) so the exact same code path is used on
+  /// every platform instead of a second, untested one just for native.
+  final remoteRenderer = RTCVideoRenderer();
+
   StreamSubscription<CallSignal>? _answerSub;
   StreamSubscription<CallSignal>? _iceSub;
   StreamSubscription<CallSignal>? _hangupSub;
@@ -65,6 +79,7 @@ class CallService {
       'video': false,
     });
     final configFuture = _buildConfig();
+    final rendererFuture = remoteRenderer.initialize();
 
     _localStream = await mediaFuture;
     // Applies a mute toggled while the call was still connecting (before
@@ -76,12 +91,19 @@ class CallService {
     }
 
     final config = await configFuture;
+    await rendererFuture;
     final pc = await createPeerConnection(config);
     _pc = pc;
 
     for (final track in _localStream!.getAudioTracks()) {
       await pc.addTrack(track, _localStream!);
     }
+
+    pc.onTrack = (event) {
+      if (event.track.kind == 'audio' && event.streams.isNotEmpty) {
+        remoteRenderer.srcObject = event.streams.first;
+      }
+    };
 
     pc.onIceCandidate = (candidate) {
       if (candidate.candidate == null) return;
@@ -197,6 +219,7 @@ class CallService {
     }
     await _localStream?.dispose();
     await _pc?.close();
+    await remoteRenderer.dispose();
     await _statusController.close();
     await _hangupController.close();
   }
