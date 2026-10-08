@@ -3,16 +3,19 @@ import 'dart:async';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 import 'call_signaling_service.dart';
+import 'turn_credentials_service.dart';
 
 enum CallConnectionStatus { connecting, connected, failed, ended }
 
 /// Wraps a single audio-only [RTCPeerConnection] for one call and drives it
-/// from a [CallSignalingService]'s offer/answer/ICE messages. STUN-only
-/// (Google's public servers) - no TURN relay, so a call between two
-/// networks that both do strict/symmetric NAT (some corporate or carrier
-/// networks) may fail to connect; there's no free, reliable TURN option to
-/// fall back to. Good enough for the common case of two phones on normal
-/// mobile data or home/office wifi.
+/// from a [CallSignalingService]'s offer/answer/ICE messages. Tries
+/// Cloudflare Realtime TURN first (see [TurnCredentialsService]) so a call
+/// between two networks that both do strict/symmetric NAT (some corporate
+/// or carrier networks) can still relay through Cloudflare's network
+/// instead of failing outright, falling back to Google's public STUN
+/// servers alone - the only thing this ever used before TURN was set up -
+/// whenever TURN isn't configured or the credential fetch fails for any
+/// reason.
 class CallService {
   CallService(this._signaling);
 
@@ -33,18 +36,37 @@ class CallService {
   final _hangupController = StreamController<void>.broadcast();
   Stream<void> get onRemoteHangup => _hangupController.stream;
 
-  static const _config = {
-    'iceServers': [
-      {'urls': 'stun:stun.l.google.com:19302'},
-      {'urls': 'stun:stun1.l.google.com:19302'},
-    ],
-  };
+  static const _stunOnlyFallback = [
+    {'urls': 'stun:stun.l.google.com:19302'},
+    {'urls': 'stun:stun1.l.google.com:19302'},
+  ];
+
+  /// Cloudflare's TURN credentials already include their own STUN URL
+  /// (see the edge function's doc comment), so Google's servers are only
+  /// appended as a second, independent option rather than relied on
+  /// alone - if TURN fetch fails outright, they're all this list has, same
+  /// as the whole app before TURN existed.
+  Future<Map<String, dynamic>> _buildConfig() async {
+    final turnServers = await TurnCredentialsService.instance.fetchIceServers();
+    return {
+      'iceServers': [...?turnServers, ..._stunOnlyFallback],
+    };
+  }
 
   Future<void> _setUp() async {
-    _localStream = await navigator.mediaDevices.getUserMedia({
+    // Started together, not one after the other - fetching TURN
+    // credentials (a network round trip to the edge function, which
+    // itself calls out to Cloudflare) would otherwise add its own latency
+    // on top of getUserMedia's instead of overlapping with it, directly
+    // undercutting the rest of this app's "make calls connect faster"
+    // work.
+    final mediaFuture = navigator.mediaDevices.getUserMedia({
       'audio': true,
       'video': false,
     });
+    final configFuture = _buildConfig();
+
+    _localStream = await mediaFuture;
     // Applies a mute toggled while the call was still connecting (before
     // this stream existed) - toggleMute() below only flips tracks that
     // already exist, so a mute tapped early would otherwise be silently
@@ -53,7 +75,8 @@ class CallService {
       track.enabled = !_muted;
     }
 
-    final pc = await createPeerConnection(_config);
+    final config = await configFuture;
+    final pc = await createPeerConnection(config);
     _pc = pc;
 
     for (final track in _localStream!.getAudioTracks()) {
