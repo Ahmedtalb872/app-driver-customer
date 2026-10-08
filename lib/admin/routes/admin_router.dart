@@ -5,6 +5,7 @@ import '../screens/admins/admin_users_screen.dart';
 import '../screens/audit_logs/admin_audit_logs_screen.dart';
 import '../screens/auth/admin_login_screen.dart';
 import '../screens/auth/unauthorized_screen.dart';
+import '../screens/calls/admin_call_logs_screen.dart';
 import '../screens/captains/admin_captains_screen.dart';
 import '../screens/customers/admin_customers_screen.dart';
 import '../screens/dashboard/admin_dashboard_screen.dart';
@@ -51,6 +52,7 @@ const Map<String, String> _routeTitles = {
   '/admin/notifications': 'الإشعارات',
   '/admin/sms-campaigns': 'حملات SMS',
   '/admin/support': 'الدعم والشكاوى',
+  '/admin/call-logs': 'سجل المكالمات',
   '/admin/reviews': 'التقييمات',
   '/admin/admins': 'المستخدمون الإداريون',
   '/admin/audit-logs': 'سجل العمليات',
@@ -179,6 +181,10 @@ GoRouter buildAdminRouter(AdminSession session) {
           GoRoute(
             path: '/admin/support',
             builder: (context, state) => const AdminSupportScreen(),
+          ),
+          GoRoute(
+            path: '/admin/call-logs',
+            builder: (context, state) => const AdminCallLogsScreen(),
           ),
           GoRoute(
             path: '/admin/reviews',

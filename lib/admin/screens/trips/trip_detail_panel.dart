@@ -257,6 +257,7 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
         builder: (context) => CallScreen(
           signaling: signaling,
           peerName: _customerLabel,
+          peerRole: 'customer',
         ),
       ),
     );

@@ -4,8 +4,10 @@ import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/colors.dart';
+import '../../core/services/app_settings_repository.dart';
 import '../../core/services/geocoding_service.dart';
 import '../../core/services/ride_repository.dart';
+import '../../core/widgets/call_options_sheet.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/models.dart';
 import '../../providers/app_state_provider.dart';
@@ -210,15 +212,33 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
     );
   }
 
-  /// "اتصل لطلب مشوار" - skips the whole typing/choosing flow: requests an
-  /// open trip (same as the trip planner's "مشوار مفتوح", just without
-  /// that screen's extra form) at the customer's current location, then
-  /// lands straight on the call screen talking to admin, who takes the
-  /// actual destination/details verbally and can edit the trip accordingly
-  /// (the same route-editing tools already used for a phone-in dispatch -
-  /// see TripDetailPanel/OperatorDispatchScreen). The closest this app gets
-  /// to just picking up a phone and calling a dispatcher.
+  /// "اتصل لطلب مشوار" - offers the admin's configured support_phone as a
+  /// real, regular phone call first (same choice sheet every other call
+  /// button in this app offers) before the in-app flow below: a customer
+  /// who'd rather just dial a human (or whose connection/mic can't manage
+  /// a WebRTC call) still gets a dispatcher, exactly like calling any taxi
+  /// company - the admin just enters the trip manually afterward via the
+  /// existing phone-in dispatch tools (OperatorDispatchScreen), same as a
+  /// plain phone call always worked before this feature existed.
   Future<void> _callToRequestRide() async {
+    if (_isCallingSupport) return;
+    final phone = await AppSettingsRepository.instance.fetchSupportPhone();
+    if (!mounted) return;
+    await showCallOptionsSheet(
+      context,
+      phone: phone,
+      onInAppCall: _requestRideThenCall,
+    );
+  }
+
+  /// The in-app half of [_callToRequestRide]: requests an open trip (same
+  /// as the trip planner's "مشوار مفتوح", just without that screen's extra
+  /// form) at the customer's current location, then lands straight on the
+  /// call screen already dialing admin, who takes the actual destination/
+  /// details verbally and can edit the trip accordingly (the same
+  /// route-editing tools already used for a phone-in dispatch - see
+  /// TripDetailPanel/OperatorDispatchScreen).
+  Future<void> _requestRideThenCall() async {
     if (_isCallingSupport) return;
     setState(() => _isCallingSupport = true);
     final l10n = AppLocalizations.of(context)!;

@@ -10,6 +10,7 @@ import '../core/admin_colors.dart';
 import '../repositories/admin_trips_repository.dart';
 import '../services/admin_incoming_call_listener.dart';
 import '../services/admin_session.dart';
+import '../utils/tab_title_alert.dart';
 import 'admin_sidebar.dart';
 import 'admin_topbar.dart';
 
@@ -70,9 +71,14 @@ class _AdminShellState extends State<AdminShell> {
   Future<void> _onIncomingOffer(AdminIncomingOffer offer) async {
     if (!mounted || _callScreenOpen) return;
     _callScreenOpen = true;
+    // Noticeable even if the admin is looking at a different browser tab -
+    // the call screen's own ringtone only helps if this tab is the focused
+    // one. Stopped in the `finally` below regardless of how the call ends.
+    startTabTitleAlert('📞 مكالمة واردة...');
     final label = await _tripsRepository.loadCallerLabel(offer.tripId);
     if (!mounted) {
       _callScreenOpen = false;
+      stopTabTitleAlert();
       return;
     }
     // Backdated just before the offer's own timestamp: the caller may
@@ -86,17 +92,22 @@ class _AdminShellState extends State<AdminShell> {
       selfRole: 'admin',
       sinceOverride: offer.createdAt.subtract(const Duration(seconds: 2)),
     )..start();
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => CallScreen(
-          signaling: signaling,
-          peerName: label,
-          incomingOfferSdp: offer.offerSdp,
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => CallScreen(
+            signaling: signaling,
+            peerName: label,
+            peerRole: 'customer',
+            incomingOfferSdp: offer.offerSdp,
+          ),
         ),
-      ),
-    );
-    signaling.dispose();
-    _callScreenOpen = false;
+      );
+    } finally {
+      stopTabTitleAlert();
+      signaling.dispose();
+      _callScreenOpen = false;
+    }
   }
 
   @override

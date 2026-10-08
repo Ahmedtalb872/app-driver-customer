@@ -117,6 +117,11 @@ const List<AdminSidebarItem> adminSidebarItems = [
     route: '/admin/support',
   ),
   AdminSidebarItem(
+    label: 'سجل المكالمات',
+    icon: Icons.call_rounded,
+    route: '/admin/call-logs',
+  ),
+  AdminSidebarItem(
     label: 'التقييمات',
     icon: Icons.star_rounded,
     route: '/admin/reviews',

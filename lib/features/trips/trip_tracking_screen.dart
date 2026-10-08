@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/colors.dart';
+import '../../core/services/app_settings_repository.dart';
 import '../../core/services/call_signaling_service.dart';
 import '../../core/services/ride_repository.dart';
 import '../../core/services/route_estimator.dart';
@@ -111,6 +112,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
             builder: (context) => CallScreen(
               signaling: _callSignaling,
               peerName: isAdminCall ? 'الهدهد - الدعم' : (trip.captainName ?? 'الكابتن'),
+              peerRole: isAdminCall ? 'admin' : 'captain',
               peerAvatarUrl: isAdminCall ? null : trip.captainAvatar,
               incomingOfferSdp: incomingOfferSdp,
             ),
@@ -124,7 +126,21 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
   /// (see trip_detail_panel.dart's "اتصال بالزبون"). Available throughout
   /// the trip, including while still searching for a captain, since that's
   /// often exactly when a customer most needs help.
-  void _callSupport() => _openCallScreen(toAdmin: true);
+  ///
+  /// Offers a regular phone fallback first (admin's configured
+  /// support_phone, see AppSettingsRepository) in case the in-app call
+  /// can't connect - no mic permission, a restrictive network, or simply
+  /// no TURN server configured for a strict-NAT case STUN alone can't
+  /// cross. Same choice sheet the captain-call button already uses.
+  Future<void> _callSupport() async {
+    final phone = await AppSettingsRepository.instance.fetchSupportPhone();
+    if (!mounted) return;
+    showCallOptionsSheet(
+      context,
+      phone: phone,
+      onInAppCall: () => _openCallScreen(toAdmin: true),
+    );
+  }
 
   /// Straight-line ETA/remaining-distance from the captain's last known
   /// position to whatever point is currently relevant: the pickup while the
@@ -162,8 +178,15 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
 
     if (widget.autoCallSupport && !_autoCalled && trip != null) {
       _autoCalled = true;
+      // Straight to the in-app call screen, not _callSupport()'s regular-
+      // vs-in-app choice sheet - the customer already made that choice on
+      // the home screen before this trip even existed (see
+      // CustomerHomeScreen._callToRequestRide, which only ever creates the
+      // trip and sets autoCallSupport after "مكالمة داخل التطبيق" was
+      // picked there). Prompting again here would just be a confusing
+      // second copy of the same choice.
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _callSupport();
+        if (mounted) _openCallScreen(toAdmin: true);
       });
     }
 

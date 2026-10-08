@@ -4,15 +4,27 @@ import 'package:url_launcher/url_launcher.dart';
 import '../constants/colors.dart';
 
 /// Lets the customer choose between the device's regular phone dialer and
-/// the in-app WebRTC call (see call_service.dart) before either call
-/// button (currently just the trip-tracking one) actually places a call -
-/// requested explicitly instead of the in-app call silently replacing the
-/// old tel: behavior.
+/// the in-app WebRTC call (see call_service.dart) before a call button
+/// actually places a call - requested explicitly instead of the in-app
+/// call silently replacing the old tel: behavior. Used by the captain-call
+/// button (trip_tracking_screen.dart, always has a real phone) and by
+/// both admin-support call entry points (same file's "اتصال بالدعم", and
+/// customer_home_screen.dart's "اتصل لطلب مشوار" - phone optional there,
+/// see [showCallOptionsSheet]'s own null handling below).
 Future<void> showCallOptionsSheet(
   BuildContext context, {
   required String? phone,
   required VoidCallback onInAppCall,
 }) {
+  // No real choice to offer without a number - e.g. admin support calls
+  // (AppSettingsRepository.fetchSupportPhone) fall back to null whenever
+  // that's left unconfigured, unlike a captain's phone, which is always
+  // present. Skipping straight to the in-app call avoids showing a sheet
+  // with one dead option that does nothing when tapped.
+  if (phone == null || phone.trim().isEmpty) {
+    onInAppCall();
+    return Future.value();
+  }
   return showModalBottomSheet(
     context: context,
     shape: const RoundedRectangleBorder(

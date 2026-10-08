@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/constants/colors.dart';
+import '../../core/services/call_log_service.dart';
 import '../../core/services/call_service.dart';
 import '../../core/services/call_signaling_service.dart';
 
@@ -29,12 +31,19 @@ class CallScreen extends StatefulWidget {
     super.key,
     required this.signaling,
     required this.peerName,
+    required this.peerRole,
     this.peerAvatarUrl,
     this.incomingOfferSdp,
   });
 
   final CallSignalingService signaling;
   final String peerName;
+
+  /// 'customer', 'captain' or 'admin' - the *other* party, purely for
+  /// call_logs attribution (see [CallLogService]). [signaling.selfRole]
+  /// already says who *we* are; this is the one thing it doesn't carry.
+  final String peerRole;
+
   final String? peerAvatarUrl;
   final String? incomingOfferSdp;
 
@@ -43,13 +52,18 @@ class CallScreen extends StatefulWidget {
 }
 
 class _CallScreenState extends State<CallScreen> {
-  late final CallService _call;
+  late CallService _call;
   late _CallPhase _phase;
   Timer? _durationTimer;
   Timer? _ringTimeoutTimer;
   Duration _elapsed = Duration.zero;
   bool _muted = false;
   bool _speakerOn = false;
+
+  final _logService = CallLogService();
+  int? _logId;
+
+  final _ringPlayer = AudioPlayer();
 
   StreamSubscription<CallConnectionStatus>? _statusSub;
   StreamSubscription<void>? _remoteHangupSub;
@@ -58,15 +72,56 @@ class _CallScreenState extends State<CallScreen> {
   void initState() {
     super.initState();
     _call = CallService(widget.signaling);
-    _phase = widget.incomingOfferSdp != null
-        ? _CallPhase.ringingIncoming
-        : _CallPhase.ringingOutgoing;
-    _statusSub = _call.onStatusChange.listen(_onStatusChange);
-    _remoteHangupSub = _call.onRemoteHangup.listen((_) => _endCall(notifyPeer: false));
+    final isOutgoing = widget.incomingOfferSdp == null;
+    _phase = isOutgoing ? _CallPhase.ringingOutgoing : _CallPhase.ringingIncoming;
+    _subscribeCall();
 
-    if (widget.incomingOfferSdp == null) {
+    final selfRole = widget.signaling.selfRole;
+    unawaited(
+      _logService
+          .logStarted(
+            tripId: widget.signaling.tripId,
+            callerRole: isOutgoing ? selfRole : widget.peerRole,
+            calleeRole: isOutgoing ? widget.peerRole : selfRole,
+          )
+          .then((id) => _logId = id),
+    );
+
+    if (isOutgoing) {
       _startOutgoingCall();
       _ringTimeoutTimer = Timer(_ringTimeout, _onRingTimeout);
+    } else {
+      _playRingtone();
+    }
+  }
+
+  void _subscribeCall() {
+    _statusSub = _call.onStatusChange.listen(_onStatusChange);
+    _remoteHangupSub = _call.onRemoteHangup.listen((_) => _endCall(notifyPeer: false));
+  }
+
+  /// Loops the same "new request" sound already bundled for the captain
+  /// app (assets/audio/hudhud_ride_request.wav) while this screen is
+  /// ringing for the person being called - a silent full-screen UI is easy
+  /// to miss entirely if the phone/tab isn't being looked at right now.
+  /// Browsers can block audio that doesn't follow a user gesture (Flutter
+  /// Web's autoplay policy), so this is best-effort like everything else
+  /// here - a blocked ring just means the tab-title flash (see
+  /// AdminShell/tab_title_alert.dart) is the only alert left, not a crash.
+  Future<void> _playRingtone() async {
+    try {
+      await _ringPlayer.setReleaseMode(ReleaseMode.loop);
+      await _ringPlayer.play(AssetSource('audio/hudhud_ride_request.wav'));
+    } catch (_) {
+      // Best effort - see doc comment above.
+    }
+  }
+
+  Future<void> _stopRingtone() async {
+    try {
+      await _ringPlayer.stop();
+    } catch (_) {
+      // Best effort.
     }
   }
 
@@ -80,6 +135,7 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Future<void> _acceptIncomingCall() async {
+    unawaited(_stopRingtone());
     setState(() => _phase = _CallPhase.connecting);
     try {
       await _call.startAsCallee(widget.incomingOfferSdp!);
@@ -88,13 +144,14 @@ class _CallScreenState extends State<CallScreen> {
     }
   }
 
-  void _declineIncomingCall() => _endCall(notifyPeer: true);
+  void _declineIncomingCall() => _endCall(notifyPeer: true, outcomeOverride: 'declined');
 
   void _onStatusChange(CallConnectionStatus status) {
     if (!mounted) return;
     switch (status) {
       case CallConnectionStatus.connected:
         _ringTimeoutTimer?.cancel();
+        unawaited(_logService.logAnswered(_logId));
         setState(() => _phase = _CallPhase.inCall);
         _startTimer();
       case CallConnectionStatus.failed:
@@ -105,17 +162,46 @@ class _CallScreenState extends State<CallScreen> {
     }
   }
 
-  /// The other side never answered within [_ringTimeout] - ends the call
-  /// (still tells them, in case they open their call screen a moment
-  /// later) and shows "لم يتم الرد" briefly instead of popping instantly,
-  /// so the customer/captain actually sees why the call stopped.
+  /// The other side never answered within [_ringTimeout] - unlike every
+  /// other way a call ends, this deliberately does NOT auto-pop: see
+  /// [_buildControls]'s `noAnswer` branch, which offers "إعادة الاتصال"
+  /// (retry) right here instead of bouncing the customer back to the
+  /// previous screen just to tap the same call button again.
   void _onRingTimeout() {
     if (_phase != _CallPhase.ringingOutgoing && _phase != _CallPhase.connecting) return;
     _call.hangUp();
+    unawaited(_logService.logEnded(_logId, outcome: 'missed'));
     setState(() => _phase = _CallPhase.noAnswer);
-    Future.delayed(const Duration(milliseconds: 1600), () {
-      if (mounted) Navigator.of(context).pop();
+  }
+
+  /// Re-dials from the "لم يتم الرد" screen - a fresh [CallService] (the
+  /// previous one already tore down its peer connection) and a fresh
+  /// call_logs row (this is a new call attempt, not a continuation of the
+  /// missed one), otherwise identical to the first attempt.
+  Future<void> _retryCall() async {
+    await _statusSub?.cancel();
+    await _remoteHangupSub?.cancel();
+    await _call.dispose();
+    _call = CallService(widget.signaling);
+    _subscribeCall();
+
+    final selfRole = widget.signaling.selfRole;
+    unawaited(
+      _logService
+          .logStarted(
+            tripId: widget.signaling.tripId,
+            callerRole: selfRole,
+            calleeRole: widget.peerRole,
+          )
+          .then((id) => _logId = id),
+    );
+
+    setState(() {
+      _phase = _CallPhase.ringingOutgoing;
+      _elapsed = Duration.zero;
     });
+    _startOutgoingCall();
+    _ringTimeoutTimer = Timer(_ringTimeout, _onRingTimeout);
   }
 
   void _startTimer() {
@@ -130,8 +216,18 @@ class _CallScreenState extends State<CallScreen> {
   /// locally - true for every user-initiated end on this side (hang up,
   /// decline, back button, a failed dial); false when we're reacting to a
   /// message/status that already means the other side is gone.
-  void _endCall({required bool notifyPeer}) {
+  ///
+  /// [outcomeOverride] is set only where the generic phase-based guess
+  /// below would be wrong - explicit decline, specifically (which happens
+  /// from the same `ringingIncoming` phase a remote hangup mid-ring would
+  /// also be caught in, but means something different: "missed" there
+  /// means the call was never acted on, not that it was actively turned
+  /// down).
+  void _endCall({required bool notifyPeer, String? outcomeOverride}) {
     if (_phase == _CallPhase.ended || _phase == _CallPhase.noAnswer) return;
+    unawaited(_stopRingtone());
+    final wasInCall = _phase == _CallPhase.inCall;
+    final wasRingingIncoming = _phase == _CallPhase.ringingIncoming;
     _durationTimer?.cancel();
     _ringTimeoutTimer?.cancel();
     if (notifyPeer) {
@@ -139,6 +235,14 @@ class _CallScreenState extends State<CallScreen> {
     } else {
       _call.dispose();
     }
+    unawaited(
+      _logService.logEnded(
+        _logId,
+        outcome:
+            outcomeOverride ?? (wasInCall ? 'answered' : (wasRingingIncoming ? 'missed' : 'failed')),
+        durationSeconds: wasInCall ? _elapsed.inSeconds : null,
+      ),
+    );
     setState(() => _phase = _CallPhase.ended);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) Navigator.of(context).pop();
@@ -151,6 +255,7 @@ class _CallScreenState extends State<CallScreen> {
     _ringTimeoutTimer?.cancel();
     _statusSub?.cancel();
     _remoteHangupSub?.cancel();
+    unawaited(_ringPlayer.dispose());
     // Covers every way off this screen that isn't already-handled by
     // _endCall (back button, swipe-back, a parent navigator popping this
     // route) - hangUp (not just dispose) so the other party is told the
@@ -267,12 +372,32 @@ class _CallScreenState extends State<CallScreen> {
       );
     }
 
-    if (_phase == _CallPhase.noAnswer || _phase == _CallPhase.ended) {
+    if (_phase == _CallPhase.noAnswer) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _CallButton(
+            icon: Icons.call_end_rounded,
+            label: 'إنهاء',
+            color: Colors.white.withOpacity(0.2),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          _CallButton(
+            icon: Icons.refresh_rounded,
+            label: 'إعادة الاتصال',
+            color: AppColors.success,
+            onPressed: _retryCall,
+          ),
+        ],
+      );
+    }
+
+    if (_phase == _CallPhase.ended) {
       return _CallButton(
         icon: Icons.call_end_rounded,
         label: 'إنهاء',
         color: AppColors.error,
-        onPressed: () => _endCall(notifyPeer: true),
+        onPressed: () => Navigator.of(context).pop(),
       );
     }
 
