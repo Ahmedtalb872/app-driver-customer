@@ -69,7 +69,7 @@ dependencies:
   # a separate dependency rather than replacing speech_to_text everywhere -
   # destination_search_screen.dart's own quick voice-search mic button
   # still uses the free on-device recognizer, unchanged.
-  record: ^5.0.0
+  record: ^7.1.1
   # In-app voice calling between customer and captain over a trip - see
   # lib/core/services/call_service.dart. Signaling rides on a Supabase
   # Realtime broadcast channel (call_signaling_service.dart), no new
