@@ -179,9 +179,9 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
     if (widget.autoCallSupport && !_autoCalled && trip != null) {
       _autoCalled = true;
       // Straight to the in-app call screen, not _callSupport()'s regular-
-      // vs-in-app choice sheet - the customer already made that choice on
-      // the home screen before this trip even existed (see
-      // CustomerHomeScreen._callToRequestRide, which only ever creates the
+      // vs-in-app choice sheet - the customer already made that choice in
+      // the trip planner before this trip even existed (see
+      // TripPlannerScreen._callToRequestRide, which only ever creates the
       // trip and sets autoCallSupport after "مكالمة داخل التطبيق" was
       // picked there). Prompting again here would just be a confusing
       // second copy of the same choice.

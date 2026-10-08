@@ -4,10 +4,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/colors.dart';
-import '../../core/services/app_settings_repository.dart';
 import '../../core/services/geocoding_service.dart';
 import '../../core/services/ride_repository.dart';
-import '../../core/widgets/call_options_sheet.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/models.dart';
 import '../../providers/app_state_provider.dart';
@@ -35,7 +33,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
   double? _pickupLng;
   String? _pickupAddress;
   bool _isLocating = false;
-  bool _isCallingSupport = false;
 
   @override
   void initState() {
@@ -210,80 +207,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => const CaptainsBrowseScreen()),
     );
-  }
-
-  /// "اتصل لطلب مشوار" - offers the admin's configured support_phone as a
-  /// real, regular phone call first (same choice sheet every other call
-  /// button in this app offers) before the in-app flow below: a customer
-  /// who'd rather just dial a human (or whose connection/mic can't manage
-  /// a WebRTC call) still gets a dispatcher, exactly like calling any taxi
-  /// company - the admin just enters the trip manually afterward via the
-  /// existing phone-in dispatch tools (OperatorDispatchScreen), same as a
-  /// plain phone call always worked before this feature existed.
-  Future<void> _callToRequestRide() async {
-    if (_isCallingSupport) return;
-    final phone = await AppSettingsRepository.instance.fetchSupportPhone();
-    if (!mounted) return;
-    await showCallOptionsSheet(
-      context,
-      phone: phone,
-      onInAppCall: _requestRideThenCall,
-    );
-  }
-
-  /// The in-app half of [_callToRequestRide]: requests an open trip (same
-  /// as the trip planner's "مشوار مفتوح", just without that screen's extra
-  /// form) at the customer's current location, then lands straight on the
-  /// call screen already dialing admin, who takes the actual destination/
-  /// details verbally and can edit the trip accordingly (the same
-  /// route-editing tools already used for a phone-in dispatch - see
-  /// TripDetailPanel/OperatorDispatchScreen).
-  Future<void> _requestRideThenCall() async {
-    if (_isCallingSupport) return;
-    setState(() => _isCallingSupport = true);
-    final l10n = AppLocalizations.of(context)!;
-    try {
-      var lat = _pickupLat;
-      var lng = _pickupLng;
-      if (lat == null || lng == null) {
-        await _determinePickup();
-        lat = _pickupLat;
-        lng = _pickupLng;
-      }
-      if (lat == null || lng == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.callToRequestRideLocationError)),
-          );
-        }
-        return;
-      }
-      final trip = await RideRepository.instance.requestTrip(
-        pickupAddress: _pickupAddress ?? l10n.myCurrentLocation,
-        pickupLat: lat,
-        pickupLng: lng,
-        tripType: TripType.open,
-        vehicleType: VehicleType.economy,
-        paymentMethod: 'نقداً',
-      );
-      if (!mounted) return;
-      context.read<AppStateProvider>().setActiveTripFromBackend(trip);
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (context) =>
-              TripTrackingScreen(tripId: trip.id, autoCallSupport: true),
-        ),
-        (route) => route.isFirst,
-      );
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.callToRequestRideFailedError)),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isCallingSupport = false);
-    }
   }
 
   @override
@@ -480,21 +403,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
         ),
         const SizedBox(height: 12),
         _ServiceCard(
-          onTap: _isCallingSupport ? null : _callToRequestRide,
-          leadingColor: AppColors.accent,
-          leadingIcon: Icons.support_agent_rounded,
-          title: l10n.callToRequestRideTitle,
-          subtitle: l10n.callToRequestRideSubtitle,
-          trailing: _isCallingSupport
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : null,
-        ),
-        const SizedBox(height: 12),
-        _ServiceCard(
           onTap: _startDeliveryRequest,
           leadingColor: AppColors.accent,
           leadingIcon: Icons.local_shipping_rounded,
@@ -664,8 +572,8 @@ class _ServiceCard extends StatelessWidget {
   final String subtitle;
 
   /// Replaces the trailing arrow - used to show a small spinner in place of
-  /// it while a card's action (e.g. [_callToRequestRide]) is already
-  /// running, instead of just disabling the whole card with no feedback.
+  /// it while a card's action is already running, instead of just
+  /// disabling the whole card with no feedback.
   final Widget? trailing;
 
   const _ServiceCard({
