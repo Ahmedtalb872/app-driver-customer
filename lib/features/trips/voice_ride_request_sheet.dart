@@ -1,12 +1,16 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:speech_to_text/speech_to_text.dart';
+import 'package:record/record.dart';
 
 import '../../core/constants/colors.dart';
 import '../../core/services/voice_search/voice_route_pipeline.dart';
+import '../../core/services/voice_search/voice_transcription_service.dart';
 import '../destinations/data/models/destination_suggestion.dart';
 import '../destinations/presentation/destination_search_screen.dart';
 
-enum _VoiceStep { idle, listening, searching, error, confirm }
+enum _VoiceStep { idle, listening, transcribing, searching, error, confirm }
 
 /// Bottom sheet for [TripPlannerScreen]'s "مشوار عادي" section - lets the
 /// customer say pickup and destination in one sentence ("من X إلى Y")
@@ -14,11 +18,13 @@ enum _VoiceStep { idle, listening, searching, error, confirm }
 /// Pops with a (pickup, destination) record on success, or null if the
 /// customer backs out.
 ///
-/// Speech recognition ([SpeechToText], Stage 1) stays local to this widget;
-/// everything after the raw transcript - normalizing the text, correcting
-/// misheard local place names against `assets/data/places.json`, splitting
-/// "from"/"to", and searching for each - is [VoiceRoutePipeline], so it can
-/// be unit-tested and reused on its own.
+/// Recording ([AudioRecorder], Stage 1) stays local to this widget; the
+/// clip is sent to [VoiceTranscriptionService] (Google Cloud Speech-to-Text,
+/// server-side, fed this app's own place names as recognition hints) for
+/// the actual transcript. Everything after that - normalizing the text,
+/// correcting misheard local place names against `assets/data/places.json`,
+/// splitting "from"/"to", and searching for each - is [VoiceRoutePipeline],
+/// so it can be unit-tested and reused on its own.
 class VoiceRideRequestSheet extends StatefulWidget {
   const VoiceRideRequestSheet({super.key, this.nearLat, this.nearLng});
 
@@ -33,12 +39,14 @@ class VoiceRideRequestSheet extends StatefulWidget {
 }
 
 class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
-  final _speech = SpeechToText();
+  final _recorder = AudioRecorder();
+  final _transcriptionService = const VoiceTranscriptionService();
   final _pipeline = VoiceRoutePipeline();
 
   _VoiceStep _step = _VoiceStep.idle;
-  bool _speechAvailable = false;
-  String _transcript = '';
+  String? _recordingPath;
+  int _recordedSeconds = 0;
+  Timer? _recordingTimer;
   String? _errorMessage;
   DestinationSuggestion? _pickupResult;
   DestinationSuggestion? _destinationResult;
@@ -55,59 +63,85 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
   String? _pickupHeardText;
   String? _destinationHeardText;
 
-  @override
-  void initState() {
-    super.initState();
-    // Best-effort, same as DestinationSearchScreen - if this fails (denied
-    // permission, no recognizer on the device), the mic button just stays
-    // disabled with an explanatory line instead of the sheet erroring.
-    _speech
-        .initialize(
-          onStatus: (status) {
-            if ((status == 'done' || status == 'notListening') &&
-                _step == _VoiceStep.listening) {
-              _finishListening();
-            }
-          },
-          onError: (_) {
-            if (mounted) {
-              setState(() {
-                _step = _VoiceStep.error;
-                _errorMessage =
-                    'تعذر الاستماع الآن، تحقق من إذن الميكروفون وحاول مرة أخرى.';
-              });
-            }
-          },
-        )
-        .then((available) {
-          if (mounted) setState(() => _speechAvailable = available);
-        });
-  }
+  /// Hard cap on a single recording - long enough for "من X إلى Y" said at
+  /// a normal pace with some hesitation, short enough to keep the uploaded
+  /// clip small on what's often a slow mobile connection.
+  static const _maxRecordSeconds = 15;
 
   @override
   void dispose() {
-    _speech.stop();
+    _recordingTimer?.cancel();
+    _recorder.dispose();
+    _cleanupRecording();
     super.dispose();
   }
 
+  void _cleanupRecording() {
+    final path = _recordingPath;
+    if (path == null) return;
+    File(path).delete().catchError((_) => File(path));
+  }
+
+  /// Permission is requested here, right as the customer taps the mic -
+  /// not proactively in [initState] - so the system prompt appears at the
+  /// moment it's actually relevant instead of the instant this sheet opens.
   Future<void> _startListening() async {
+    final hasPermission = await _recorder.hasPermission();
+    if (!mounted) return;
+    if (!hasPermission) {
+      setState(() {
+        _step = _VoiceStep.error;
+        _errorMessage =
+            'تحتاج السماح بالوصول إلى الميكروفون من إعدادات الهاتف لاستخدام البحث الصوتي.';
+      });
+      return;
+    }
+
+    _cleanupRecording();
+    final path =
+        '${Directory.systemTemp.path}/hudhud_voice_${DateTime.now().millisecondsSinceEpoch}.wav';
+    await _recorder.start(
+      const RecordConfig(
+        encoder: AudioEncoder.wav,
+        sampleRate: 16000,
+        numChannels: 1,
+      ),
+      path: path,
+    );
+    if (!mounted) return;
+
     setState(() {
       _step = _VoiceStep.listening;
-      _transcript = '';
+      _recordingPath = path;
+      _recordedSeconds = 0;
       _errorMessage = null;
     });
-    await _speech.listen(
-      localeId: 'ar',
-      onResult: (result) {
-        if (mounted) setState(() => _transcript = result.recognizedWords);
-      },
-    );
+
+    _recordingTimer?.cancel();
+    _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() => _recordedSeconds++);
+      if (_recordedSeconds >= _maxRecordSeconds) _finishListening();
+    });
   }
 
   Future<void> _finishListening() async {
-    await _speech.stop();
+    _recordingTimer?.cancel();
+    final path = await _recorder.stop();
     if (!mounted) return;
-    await _resolve(_transcript);
+
+    setState(() => _step = _VoiceStep.transcribing);
+    final file = path == null ? null : File(path);
+    final bytes = (file != null && await file.exists())
+        ? await file.readAsBytes()
+        : const <int>[];
+    final transcript = await _transcriptionService.transcribe(bytes);
+    _cleanupRecording();
+    if (!mounted) return;
+    await _resolve(transcript);
   }
 
   /// Runs the full Text Normalization -> Place Correction -> From/To
@@ -310,9 +344,12 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
   }
 
   void _retry() {
+    _recordingTimer?.cancel();
+    _cleanupRecording();
     setState(() {
       _step = _VoiceStep.idle;
-      _transcript = '';
+      _recordingPath = null;
+      _recordedSeconds = 0;
       _errorMessage = null;
       _pickupResult = null;
       _destinationResult = null;
@@ -380,52 +417,41 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
   Widget _buildBody() {
     switch (_step) {
       case _VoiceStep.idle:
-        return Column(
-          children: [
-            _buildMicButton(onTap: _speechAvailable ? _startListening : null),
-            if (!_speechAvailable) ...[
-              const SizedBox(height: 12),
-              const Text(
-                'البحث الصوتي غير متاح على هذا الجهاز حاليًا.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 12,
-                  color: AppColors.error,
-                ),
-              ),
-            ],
-          ],
-        );
+        return _buildMicButton(onTap: _startListening);
 
       case _VoiceStep.listening:
         return Column(
           children: [
             _buildMicButton(onTap: _finishListening, active: true),
             const SizedBox(height: 12),
-            const Text(
-              'جاري إنشاء طلب...',
-              style: TextStyle(
+            Text(
+              'جاري الاستماع... ($_recordedSeconds/$_maxRecordSeconds ث) - اضغط لإنهاء',
+              style: const TextStyle(
                 fontFamily: 'Cairo',
                 fontSize: 12,
                 color: AppColors.error,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            if (_transcript.isNotEmpty) ...[
-              const SizedBox(height: 10),
+          ],
+        );
+
+      case _VoiceStep.transcribing:
+        return const Padding(
+          padding: EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 12),
               Text(
-                _transcript,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
+                'جاري تحويل الصوت إلى نص...',
+                style: TextStyle(
                   fontFamily: 'Cairo',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.darkText,
+                  color: AppColors.secondaryText,
                 ),
               ),
             ],
-          ],
+          ),
         );
 
       case _VoiceStep.searching:
