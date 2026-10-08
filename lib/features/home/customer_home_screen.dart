@@ -33,6 +33,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
   double? _pickupLng;
   String? _pickupAddress;
   bool _isLocating = false;
+  bool _isCallingSupport = false;
 
   @override
   void initState() {
@@ -207,6 +208,62 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => const CaptainsBrowseScreen()),
     );
+  }
+
+  /// "اتصل لطلب مشوار" - skips the whole typing/choosing flow: requests an
+  /// open trip (same as the trip planner's "مشوار مفتوح", just without
+  /// that screen's extra form) at the customer's current location, then
+  /// lands straight on the call screen talking to admin, who takes the
+  /// actual destination/details verbally and can edit the trip accordingly
+  /// (the same route-editing tools already used for a phone-in dispatch -
+  /// see TripDetailPanel/OperatorDispatchScreen). The closest this app gets
+  /// to just picking up a phone and calling a dispatcher.
+  Future<void> _callToRequestRide() async {
+    if (_isCallingSupport) return;
+    setState(() => _isCallingSupport = true);
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      var lat = _pickupLat;
+      var lng = _pickupLng;
+      if (lat == null || lng == null) {
+        await _determinePickup();
+        lat = _pickupLat;
+        lng = _pickupLng;
+      }
+      if (lat == null || lng == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.callToRequestRideLocationError)),
+          );
+        }
+        return;
+      }
+      final trip = await RideRepository.instance.requestTrip(
+        pickupAddress: _pickupAddress ?? l10n.myCurrentLocation,
+        pickupLat: lat,
+        pickupLng: lng,
+        tripType: TripType.open,
+        vehicleType: VehicleType.economy,
+        paymentMethod: 'نقداً',
+      );
+      if (!mounted) return;
+      context.read<AppStateProvider>().setActiveTripFromBackend(trip);
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (context) =>
+              TripTrackingScreen(tripId: trip.id, autoCallSupport: true),
+        ),
+        (route) => route.isFirst,
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.callToRequestRideFailedError)),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isCallingSupport = false);
+    }
   }
 
   @override
@@ -403,6 +460,21 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
         ),
         const SizedBox(height: 12),
         _ServiceCard(
+          onTap: _isCallingSupport ? null : _callToRequestRide,
+          leadingColor: AppColors.accent,
+          leadingIcon: Icons.support_agent_rounded,
+          title: l10n.callToRequestRideTitle,
+          subtitle: l10n.callToRequestRideSubtitle,
+          trailing: _isCallingSupport
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : null,
+        ),
+        const SizedBox(height: 12),
+        _ServiceCard(
           onTap: _startDeliveryRequest,
           leadingColor: AppColors.accent,
           leadingIcon: Icons.local_shipping_rounded,
@@ -565,11 +637,16 @@ class _IconBadge extends StatelessWidget {
 /// One of the home dashboard's service entry points - its own elevated,
 /// rounded card (see [_CustomerHomeScreenState._buildServiceCards]).
 class _ServiceCard extends StatelessWidget {
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final Color leadingColor;
   final IconData leadingIcon;
   final String title;
   final String subtitle;
+
+  /// Replaces the trailing arrow - used to show a small spinner in place of
+  /// it while a card's action (e.g. [_callToRequestRide]) is already
+  /// running, instead of just disabling the whole card with no feedback.
+  final Widget? trailing;
 
   const _ServiceCard({
     required this.onTap,
@@ -577,6 +654,7 @@ class _ServiceCard extends StatelessWidget {
     required this.leadingIcon,
     required this.title,
     required this.subtitle,
+    this.trailing,
   });
 
   @override
@@ -622,11 +700,12 @@ class _ServiceCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 14,
-                color: AppColors.secondaryText,
-              ),
+              trailing ??
+                  const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 14,
+                    color: AppColors.secondaryText,
+                  ),
             ],
           ),
         ),

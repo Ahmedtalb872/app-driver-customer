@@ -20,9 +20,23 @@ import 'trip_summary_screen.dart';
 /// customer requests it through to completion or cancellation, rendering
 /// the matching UI for each [TripStatus] along the way.
 class TripTrackingScreen extends StatefulWidget {
-  const TripTrackingScreen({super.key, required this.tripId});
+  const TripTrackingScreen({
+    super.key,
+    required this.tripId,
+    this.autoCallSupport = false,
+  });
 
   final String tripId;
+
+  /// True only right after "اتصل لطلب مشوار" on the home screen created
+  /// this trip with no destination/details at all - the whole point of
+  /// that entry point is skipping straight to a call with admin instead of
+  /// landing on an ordinary tracking screen the customer would then have
+  /// to tap "اتصال بالدعم" on themselves. Triggers exactly once, the
+  /// moment the first trip update arrives (see [_onTrip]) - not here in
+  /// initState, since [_openCallScreen] needs a non-null [_trip] it
+  /// doesn't have yet.
+  final bool autoCallSupport;
 
   @override
   State<TripTrackingScreen> createState() => _TripTrackingScreenState();
@@ -36,6 +50,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
   RouteEstimate? _liveEstimate;
   bool _handledTerminal = false;
   bool _isCancelling = false;
+  bool _autoCalled = false;
 
   /// Owns the trip's call-signaling channel for this screen's whole
   /// lifetime (not just while a call is on screen), so an incoming call can
@@ -144,6 +159,14 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
       _trip = trip;
       _liveEstimate = trip != null ? _computeLiveEstimate(trip) : null;
     });
+
+    if (widget.autoCallSupport && !_autoCalled && trip != null) {
+      _autoCalled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _callSupport();
+      });
+    }
+
     if (trip == null || _handledTerminal) return;
 
     context.read<AppStateProvider>().setActiveTripFromBackend(trip);
