@@ -138,23 +138,58 @@ class VoiceRoutePipeline {
 
       final matches = await _searchRepository.search(
         query: attempt,
-        limit: 5,
+        limit: 8,
         nearLat: nearLat,
         nearLng: nearLng,
       );
       if (matches.isEmpty) continue;
       if (matches.length == 1) return matches;
 
-      final ranked = [...matches]..sort(
-        (a, b) => FuzzyMatcher.similarity(
-          attempt,
-          b.title,
-        ).compareTo(FuzzyMatcher.similarity(attempt, a.title)),
-      );
-      return ranked.take(_maxCandidates).toList();
+      return _promoteClearlyBetterMatch(matches, attempt)
+          .take(_maxCandidates)
+          .toList();
     }
     return const [];
   }
 
+  /// [matches] arrives already ordered by the server's own relevance +
+  /// *proximity* ranking (search_destinations orders by sim_score then
+  /// distance from nearLat/nearLng - see 20260811000053_fuzzy_proximity_search.sql) -
+  /// for the pickup leg, nearLat/nearLng is the customer's real location, so
+  /// that order already favors a place actually near them over a
+  /// same/similar-named one across town.
+  ///
+  /// Re-sorting purely by text similarity to [attempt] (an earlier version
+  /// of this method) threw that proximity signal away entirely - a
+  /// text-perfect match three suburbs over could out-rank a nearby
+  /// close-enough one, silently creating a trip with a pickup point no
+  /// captain anywhere near the customer would ever see. Promoting a
+  /// candidate now requires its text match to beat the server's top pick by
+  /// a clear margin ([_promotionMargin]) - enough to fix a genuinely
+  /// mis-ranked short name (the original motivating case), not enough for
+  /// a marginal text difference to override real distance.
+  List<DestinationSuggestion> _promoteClearlyBetterMatch(
+    List<DestinationSuggestion> matches,
+    String attempt,
+  ) {
+    final topScore = FuzzyMatcher.similarity(attempt, matches.first.title);
+    DestinationSuggestion? promoted;
+    var bestScore = topScore;
+    for (final candidate in matches.skip(1)) {
+      final score = FuzzyMatcher.similarity(attempt, candidate.title);
+      if (score > bestScore + _promotionMargin) {
+        promoted = candidate;
+        bestScore = score;
+      }
+    }
+    if (promoted == null) return matches;
+    return [promoted, ...matches.where((m) => m != promoted)];
+  }
+
   static const _maxCandidates = 4;
+
+  /// How much higher a candidate's text-similarity score must be than the
+  /// server-ranked top pick's before it's promoted ahead of it - see
+  /// [_promoteClearlyBetterMatch].
+  static const _promotionMargin = 0.15;
 }

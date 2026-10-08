@@ -494,10 +494,15 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
               ),
             ),
             const SizedBox(height: 8),
-            TextButton.icon(
+            OutlinedButton.icon(
               onPressed: _pickManually,
               icon: const Icon(Icons.edit_location_alt_rounded, size: 18),
               label: const Text('اختيار الأماكن يدويًا'),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 44),
+                foregroundColor: AppColors.darkText,
+                side: const BorderSide(color: AppColors.border),
+              ),
             ),
           ],
         );
@@ -633,16 +638,30 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
                   ],
                 ),
               ),
-              IconButton(
+              OutlinedButton.icon(
+                onPressed: onEdit,
                 icon: Icon(
                   unresolved ? Icons.search_rounded : Icons.edit_rounded,
-                  size: 18,
-                  color: unresolved
-                      ? AppColors.error
-                      : AppColors.secondaryText,
+                  size: 16,
                 ),
-                tooltip: unresolved ? 'اختيار يدوي' : 'تعديل',
-                onPressed: onEdit,
+                label: Text(unresolved ? 'اختيار يدوي' : 'تعديل'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: unresolved
+                      ? AppColors.error
+                      : AppColors.darkText,
+                  side: BorderSide(
+                    color: unresolved
+                        ? AppColors.error
+                        : AppColors.border,
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  minimumSize: const Size(0, 34),
+                  textStyle: const TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ],
           ),
