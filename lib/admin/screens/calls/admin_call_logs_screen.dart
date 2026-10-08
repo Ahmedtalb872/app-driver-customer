@@ -34,6 +34,7 @@ class AdminCallLogsScreen extends StatefulWidget {
 class _AdminCallLogsScreenState extends State<AdminCallLogsScreen> {
   final _repository = AdminCallLogsRepository();
   bool _loading = true;
+  String? _error;
   List<Map<String, dynamic>> _logs = [];
 
   @override
@@ -43,13 +44,31 @@ class _AdminCallLogsScreenState extends State<AdminCallLogsScreen> {
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
-    final logs = await _repository.loadLogs();
-    if (!mounted) return;
     setState(() {
-      _logs = logs;
-      _loading = false;
+      _loading = true;
+      _error = null;
     });
+    try {
+      final logs = await _repository.loadLogs();
+      if (!mounted) return;
+      setState(() {
+        _logs = logs;
+        _loading = false;
+      });
+    } catch (e) {
+      // Without this, a query failure (most likely: the call_logs table/
+      // migration 20261008000114_call_logs.sql hasn't been run on this
+      // project yet) left _loading stuck true forever - a silent spinner
+      // with no way to tell what went wrong. The raw exception is shown
+      // (not a generic message) so a screenshot of this screen is enough
+      // to diagnose it, same reasoning as RequestRideScreen's own
+      // _friendlyErrorFor fallback.
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = '$e';
+      });
+    }
   }
 
   /// Same fallback chain as TripDetailPanel._customerLabel - a registered
@@ -97,15 +116,47 @@ class _AdminCallLogsScreenState extends State<AdminCallLogsScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          Expanded(
-            child: _logs.isEmpty
-                ? const Center(
-                    child: Text(
-                      'لا توجد أي مكالمات مسجّلة بعد.',
-                      style: TextStyle(fontFamily: 'Cairo'),
-                    ),
-                  )
-                : Card(
+          if (_error != null)
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'تعذر تحميل سجل المكالمات.',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _error!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontFamily: 'Cairo', fontSize: 11),
+                      ),
+                      const SizedBox(height: 16),
+                      OutlinedButton(
+                        onPressed: _load,
+                        child: const Text('إعادة المحاولة'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          else
+            Expanded(
+              child: _logs.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'لا توجد أي مكالمات مسجّلة بعد.',
+                        style: TextStyle(fontFamily: 'Cairo'),
+                      ),
+                    )
+                  : Card(
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: DataTable(
