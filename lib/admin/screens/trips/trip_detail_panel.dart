@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../core/config/supabase_config.dart';
+import '../../../core/services/call_signaling_service.dart';
 import '../../../core/services/geocoding_service.dart';
 import '../../../core/widgets/real_map_widget.dart';
+import '../../../features/calls/call_screen.dart';
 import '../../core/admin_colors.dart';
 import '../../repositories/admin_trips_repository.dart';
 import '../../widgets/captain_picker_dialog.dart';
@@ -237,6 +239,30 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
     return '-';
   }
 
+  /// Starts a voice call with this trip's customer - same WebRTC/signaling
+  /// mechanism as the existing customer<->captain in-app call
+  /// ([CallSignalingService]/[CallScreen]), just with 'admin' as the role
+  /// and no [TripTrackingScreen] around to own the signaling channel
+  /// between calls, so this panel owns one for exactly the duration of a
+  /// single call instead. Requires 20261008000112_admin_call_customer.sql
+  /// (widens call_signals to accept an 'admin' sender and lets any admin
+  /// read/send signals for any trip, not just that trip's own participants).
+  Future<void> _callCustomer() async {
+    final signaling = CallSignalingService(
+      tripId: widget.trip['id'] as String,
+      selfRole: 'admin',
+    )..start();
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => CallScreen(
+          signaling: signaling,
+          peerName: _customerLabel,
+        ),
+      ),
+    );
+    signaling.dispose();
+  }
+
   Future<void> _saveNotes() async {
     await _repository.updateAdminNotes(
       widget.trip['id'] as String,
@@ -454,6 +480,11 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
                   ElevatedButton(
                     onPressed: _saveNotes,
                     child: const Text('حفظ الملاحظة'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _callCustomer,
+                    icon: const Icon(Icons.call_outlined),
+                    label: const Text('اتصال بالزبون'),
                   ),
                   if (_canAssign)
                     OutlinedButton.icon(

@@ -76,20 +76,26 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
   /// a new incoming call to prompt for.
   void _onIncomingCallOffer(CallSignal signal) {
     if (!mounted || _callScreenOpen || signal.sdp == null) return;
-    _openCallScreen(incomingOfferSdp: signal.sdp);
+    _openCallScreen(incomingOfferSdp: signal.sdp, from: signal.from);
   }
 
-  void _openCallScreen({String? incomingOfferSdp}) {
+  /// [from] is the caller's role when this call was answered rather than
+  /// started here ('admin' for a support call about this request, as
+  /// opposed to the usual 'captain') - unknown (null) for an outgoing call
+  /// the customer is initiating themselves, which is always to the
+  /// captain.
+  void _openCallScreen({String? incomingOfferSdp, String? from}) {
     final trip = _trip;
     if (trip == null) return;
     _callScreenOpen = true;
+    final isAdminCall = from == 'admin';
     Navigator.of(context)
         .push(
           MaterialPageRoute(
             builder: (context) => CallScreen(
               signaling: _callSignaling,
-              peerName: trip.captainName ?? 'الكابتن',
-              peerAvatarUrl: trip.captainAvatar,
+              peerName: isAdminCall ? 'الهدهد - الدعم' : (trip.captainName ?? 'الكابتن'),
+              peerAvatarUrl: isAdminCall ? null : trip.captainAvatar,
               incomingOfferSdp: incomingOfferSdp,
             ),
           ),
