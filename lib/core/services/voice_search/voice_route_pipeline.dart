@@ -91,7 +91,7 @@ class VoiceRoutePipeline {
     final split = _extractor.extract(corrected.text);
     if (split == null) {
       throw const VoiceRouteParseException(
-        'لم أفهم طلبك. قل مثلاً: "من السوق المركزي إلى المطار".',
+        'قل نقطة الانطلاق والوجهة معًا، مثلاً: "من السوق المركزي إلى المطار"، أو اختر الأماكن يدويًا.',
       );
     }
 

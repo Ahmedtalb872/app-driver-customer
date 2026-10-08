@@ -622,7 +622,7 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
                     const SizedBox(height: 2),
                     Text(
                       unresolved
-                          ? 'لم يتم التعرف - اضغط للاختيار يدويًا'
+                          ? 'اضغط هنا لاختيار المكان'
                           : title!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
