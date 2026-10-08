@@ -89,6 +89,7 @@ class _LocationSearchFieldState extends State<LocationSearchField> {
       setState(() {
         _options = [];
         _searched = false;
+        _searching = false;
       });
       return;
     }
@@ -105,14 +106,20 @@ class _LocationSearchFieldState extends State<LocationSearchField> {
         nearLat: widget.nearLat,
         nearLng: widget.nearLng,
       );
-      if (!mounted) return;
+      // The field's text may have been cleared (or changed to something
+      // else) while this search was in flight - applying it now would
+      // repopulate the results list right after the customer emptied the
+      // field, making it look like clearing the text doesn't close the
+      // suggestions. Only a response that still matches what's actually
+      // typed is still relevant.
+      if (!mounted || _controller.text.trim() != query.trim()) return;
       setState(() {
         _options = results;
         _searching = false;
         _searched = true;
       });
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || _controller.text.trim() != query.trim()) return;
       setState(() {
         _options = [];
         _searching = false;
