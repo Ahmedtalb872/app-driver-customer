@@ -81,14 +81,15 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
 
   /// [from] is the caller's role when this call was answered rather than
   /// started here ('admin' for a support call about this request, as
-  /// opposed to the usual 'captain') - unknown (null) for an outgoing call
-  /// the customer is initiating themselves, which is always to the
-  /// captain.
-  void _openCallScreen({String? incomingOfferSdp, String? from}) {
+  /// opposed to the usual 'captain'). For an outgoing call the customer is
+  /// initiating themselves, [from] is null and [toAdmin] says who it's
+  /// going to instead - the captain by default, or admin support when the
+  /// customer tapped "اتصال بالدعم".
+  void _openCallScreen({String? incomingOfferSdp, String? from, bool toAdmin = false}) {
     final trip = _trip;
     if (trip == null) return;
     _callScreenOpen = true;
-    final isAdminCall = from == 'admin';
+    final isAdminCall = from == 'admin' || toAdmin;
     Navigator.of(context)
         .push(
           MaterialPageRoute(
@@ -102,6 +103,13 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
         )
         .then((_) => _callScreenOpen = false);
   }
+
+  /// "اتصال بالدعم" - lets the customer reach admin support directly about
+  /// this specific request, the same way admin can already call them back
+  /// (see trip_detail_panel.dart's "اتصال بالزبون"). Available throughout
+  /// the trip, including while still searching for a captain, since that's
+  /// often exactly when a customer most needs help.
+  void _callSupport() => _openCallScreen(toAdmin: true);
 
   /// Straight-line ETA/remaining-distance from the captain's last known
   /// position to whatever point is currently relevant: the pickup while the
@@ -214,7 +222,13 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
                     bottom: false,
                     child: Padding(
                       padding: const EdgeInsets.all(16),
-                      child: _buildTopBanner(trip),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildTopBanner(trip),
+                          _buildSupportCallButton(),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -267,22 +281,32 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-            child: SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: _isCancelling ? null : _cancelTrip,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.error,
-                  side: const BorderSide(color: AppColors.error),
+            child: Column(
+              children: [
+                TextButton.icon(
+                  onPressed: _callSupport,
+                  icon: const Icon(Icons.support_agent_outlined, size: 18),
+                  label: const Text('اتصال بالدعم'),
                 ),
-                child: _isCancelling
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('إلغاء الطلب'),
-              ),
+                const SizedBox(height: 4),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: _isCancelling ? null : _cancelTrip,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.error,
+                      side: const BorderSide(color: AppColors.error),
+                    ),
+                    child: _isCancelling
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('إلغاء الطلب'),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -343,6 +367,24 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Sits opposite [_buildTopBanner] (same row, pushed apart by
+  /// [MainAxisAlignment.spaceBetween]) so "اتصال بالدعم" is reachable from
+  /// the main tracking view regardless of trip status, not just from
+  /// inside the captain card (which only ever shows once a captain is
+  /// actually assigned).
+  Widget _buildSupportCallButton() {
+    return Material(
+      color: Colors.white,
+      shape: const CircleBorder(),
+      elevation: 4,
+      child: IconButton(
+        onPressed: _callSupport,
+        icon: const Icon(Icons.support_agent_outlined, color: AppColors.primary),
+        tooltip: 'اتصال بالدعم',
       ),
     );
   }

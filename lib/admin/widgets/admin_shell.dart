@@ -1,8 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/services/call_signaling_service.dart';
+import '../../features/calls/call_screen.dart';
 import '../core/admin_colors.dart';
+import '../repositories/admin_trips_repository.dart';
+import '../services/admin_incoming_call_listener.dart';
 import '../services/admin_session.dart';
 import 'admin_sidebar.dart';
 import 'admin_topbar.dart';
@@ -30,6 +36,68 @@ class AdminShell extends StatefulWidget {
 class _AdminShellState extends State<AdminShell> {
   bool _collapsed = false;
   final _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  final _tripsRepository = AdminTripsRepository();
+  late final AdminIncomingCallListener _incomingCalls;
+  StreamSubscription<AdminIncomingOffer>? _incomingCallSub;
+  bool _callScreenOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Lives for as long as the admin dashboard itself (this shell wraps
+    // every route and isn't rebuilt by navigating between them) rather than
+    // being tied to any one screen - a customer's support call should ring
+    // no matter which admin page happens to be open at the time.
+    _incomingCalls = AdminIncomingCallListener()..start();
+    _incomingCallSub = _incomingCalls.onOffer.listen(_onIncomingOffer);
+  }
+
+  @override
+  void dispose() {
+    _incomingCallSub?.cancel();
+    _incomingCalls.dispose();
+    super.dispose();
+  }
+
+  /// Mirrors `TripTrackingScreen._onIncomingCallOffer` - pushes the same
+  /// [CallScreen] used everywhere else in the app, so accept/decline, mute,
+  /// speaker and the ring timeout all behave identically regardless of
+  /// which side of a call the admin is on. [_callScreenOpen] guards against
+  /// a second offer (a stray retransmit, or a different customer calling in
+  /// at the same moment) popping a second call screen on top of one already
+  /// being handled.
+  Future<void> _onIncomingOffer(AdminIncomingOffer offer) async {
+    if (!mounted || _callScreenOpen) return;
+    _callScreenOpen = true;
+    final label = await _tripsRepository.loadCallerLabel(offer.tripId);
+    if (!mounted) {
+      _callScreenOpen = false;
+      return;
+    }
+    // Backdated just before the offer's own timestamp: the caller may
+    // already have sent a few ICE candidates in the time it took this
+    // listener's poll to notice the offer and fetch the caller's label -
+    // without this they'd be dropped as "stale" the moment this
+    // signaling service actually starts. See CallSignalingService's own
+    // sinceOverride doc for the full reasoning.
+    final signaling = CallSignalingService(
+      tripId: offer.tripId,
+      selfRole: 'admin',
+      sinceOverride: offer.createdAt.subtract(const Duration(seconds: 2)),
+    )..start();
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => CallScreen(
+          signaling: signaling,
+          peerName: label,
+          incomingOfferSdp: offer.offerSdp,
+        ),
+      ),
+    );
+    signaling.dispose();
+    _callScreenOpen = false;
+  }
 
   @override
   Widget build(BuildContext context) {

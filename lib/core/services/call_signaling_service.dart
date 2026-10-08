@@ -48,9 +48,26 @@ class CallSignal {
 /// the *next* incoming call after one ends - see
 /// `TripTrackingScreen._callSignaling`.
 class CallSignalingService {
-  CallSignalingService({required this.tripId, required this.selfRole});
+  CallSignalingService({
+    required this.tripId,
+    required this.selfRole,
+    DateTime? sinceOverride,
+  }) : _sinceOverride = sinceOverride;
 
   final String tripId;
+
+  /// Backdates the "ignore signals from before this service started"
+  /// cutoff (see [_startedAt]) to just before a specific moment instead of
+  /// "now" - needed when this service is created to *answer* a call whose
+  /// offer was already discovered some other way (the admin dashboard's
+  /// global incoming-call listener polls across every trip, finds the
+  /// offer, then creates one of these scoped to just that trip to actually
+  /// run the call) - by the time it starts, the caller may already have
+  /// sent a few ICE candidates that would otherwise be silently dropped as
+  /// "stale". Null (every other caller - a trip-tracking screen's signaling
+  /// starts long before any call on that trip ever could) keeps the
+  /// original "now" behavior exactly.
+  final DateTime? _sinceOverride;
 
   /// 'customer' or 'captain' - tags every message we send, and lets us
   /// ignore our own inserts (both delivery paths return every matching
@@ -78,25 +95,35 @@ class CallSignalingService {
   Stream<CallSignal> get onHangup => _hangups.stream;
 
   void start() {
-    _startedAt = DateTime.now().toUtc();
+    _startedAt = _sinceOverride ?? DateTime.now().toUtc();
     _sub = SupabaseConfig.client
         .from('call_signals')
         .stream(primaryKey: ['id'])
         .eq('trip_id', tripId)
         .listen(_processRows, onError: (_) {});
 
-    _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
-      try {
-        final rows = await SupabaseConfig.client
-            .from('call_signals')
-            .select()
-            .eq('trip_id', tripId);
-        _processRows(List<Map<String, dynamic>>.from(rows));
-      } catch (_) {
-        // Best effort - the realtime stream above is still live, and the
-        // next poll tick tries again regardless.
-      }
-    });
+    // Polled once immediately (not just on the first timer tick) so a
+    // signal already sitting in the table - the common case when this
+    // service is created to *answer* a call whose offer was found a moment
+    // earlier some other way - is picked up right away instead of waiting
+    // a full interval. 1s (not the original 2s) for the same reason: this
+    // interval is the effective worst-case delay for every answer/ICE/
+    // hangup exchange whenever Realtime doesn't fire first.
+    _poll();
+    _pollTimer = Timer.periodic(const Duration(seconds: 1), (_) => _poll());
+  }
+
+  Future<void> _poll() async {
+    try {
+      final rows = await SupabaseConfig.client
+          .from('call_signals')
+          .select()
+          .eq('trip_id', tripId);
+      _processRows(List<Map<String, dynamic>>.from(rows));
+    } catch (_) {
+      // Best effort - the realtime stream above is still live, and the
+      // next poll tick tries again regardless.
+    }
   }
 
   void _processRows(List<Map<String, dynamic>> rows) {
