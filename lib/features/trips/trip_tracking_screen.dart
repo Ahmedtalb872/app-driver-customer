@@ -22,21 +22,9 @@ import 'trip_summary_screen.dart';
 /// customer requests it through to completion or cancellation, rendering
 /// the matching UI for each [TripStatus] along the way.
 class TripTrackingScreen extends StatefulWidget {
-  const TripTrackingScreen({
-    super.key,
-    required this.tripId,
-    this.autoOpenSupportChat = false,
-  });
+  const TripTrackingScreen({super.key, required this.tripId});
 
   final String tripId;
-
-  /// True only right after "راسل لطلب مشوار" on the trip planner created
-  /// this trip with no destination/details at all - the whole point of
-  /// that entry point is skipping straight to the support chat instead of
-  /// landing on an ordinary tracking screen the customer would then have
-  /// to tap "راسل الدعم" on themselves. Triggers exactly once, the moment
-  /// the first trip update arrives (see [_onTrip]).
-  final bool autoOpenSupportChat;
 
   @override
   State<TripTrackingScreen> createState() => _TripTrackingScreenState();
@@ -50,7 +38,6 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
   RouteEstimate? _liveEstimate;
   bool _handledTerminal = false;
   bool _isCancelling = false;
-  bool _autoOpenedSupportChat = false;
 
   /// Owns the trip's call-signaling channel for this screen's whole
   /// lifetime (not just while a call is on screen), so an incoming call can
@@ -165,13 +152,6 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
       _trip = trip;
       _liveEstimate = trip != null ? _computeLiveEstimate(trip) : null;
     });
-
-    if (widget.autoOpenSupportChat && !_autoOpenedSupportChat && trip != null) {
-      _autoOpenedSupportChat = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _messageSupport();
-      });
-    }
 
     if (trip == null || _handledTerminal) return;
 

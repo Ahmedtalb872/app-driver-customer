@@ -1,25 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../../core/constants/colors.dart';
-import '../../core/services/ride_repository.dart';
 import '../../core/services/saved_places_repository.dart';
 import '../../core/services/support_ticket_repository.dart';
 import '../../models/models.dart';
-import '../../providers/app_state_provider.dart';
 import '../destinations/data/models/destination_suggestion.dart';
 import '../destinations/presentation/destination_map_picker_screen.dart';
 import '../destinations/presentation/location_search_field.dart';
+import '../support/support_ticket_chat_screen.dart';
 import 'request_ride_screen.dart';
-import 'trip_tracking_screen.dart';
 import 'voice_ride_request_sheet.dart';
 
 /// Shown after tapping "إلى أين تريد الذهاب؟" on the home screen - three
 /// sections: a normal ride (needs both a pickup and a destination point),
 /// an open ride (just a pickup), and "راسل لطلب مشوار" for a customer who'd
 /// rather just describe it in writing than type/choose anything - see
-/// [_requestRideByMessage], which reuses the open-ride section's own pickup
-/// point rather than asking for one a third time. Each location field is
+/// [_requestRideByMessage], which sends a support message and opens that
+/// conversation directly - no trip exists yet; admin creates one only
+/// after reviewing the request. Each location field is
 /// picked inline, right on this screen, via [LocationSearchField] (type to
 /// search, or the map icon for a full-screen map picker), pre-filled with
 /// the GPS location detected on the home screen but freely changeable
@@ -266,63 +264,35 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
 
   bool _isRequestingByMessage = false;
 
-  /// "راسل لطلب مشوار" - requests an open trip at whatever pickup point the
-  /// "مشوار مفتوح" section above already has (same GPS-detected point,
-  /// freely edited there) - reusing it instead of asking for a pickup a
-  /// second time, exactly like the normal/open ride sections work
-  /// unchanged otherwise. Sends a first message to admin support inviting
-  /// the customer to write both the pickup and destination in their own
-  /// words, and lands on that conversation - no location fields to fill
-  /// in first, admin replies right there once they do.
+  /// "راسل لطلب مشوار" - no trip is created here at all: just a message to
+  /// admin support inviting the customer to write their pickup and
+  /// destination, landing straight on that conversation. Explicitly
+  /// requested: the trip should only come into existence once admin has
+  /// reviewed the request in the chat and dispatches it themselves (the
+  /// same phone-in dispatch tools already used elsewhere), not the moment
+  /// the customer taps this button - unlike the old call-based flow, which
+  /// opened an actual open trip (captain search and all) immediately.
   Future<void> _requestRideByMessage() async {
     if (_isRequestingByMessage) return;
-    final lat = _openPickupLat;
-    final lng = _openPickupLng;
-    if (lat == null || lng == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'حدّد نقطة الانطلاق أولاً (في قسم "مشوار مفتوح" أعلاه) قبل المراسلة.',
-            style: TextStyle(fontFamily: 'Cairo'),
-          ),
-        ),
-      );
-      return;
-    }
     setState(() => _isRequestingByMessage = true);
     try {
-      final pickupAddress = _openPickupAddress ?? 'موقعي الحالي';
-      final trip = await RideRepository.instance.requestTrip(
-        pickupAddress: pickupAddress,
-        pickupLat: lat,
-        pickupLng: lng,
-        tripType: TripType.open,
-        vehicleType: VehicleType.economy,
-        paymentMethod: 'نقداً',
-      );
-      if (!mounted) return;
-      context.read<AppStateProvider>().setActiveTripFromBackend(trip);
-      final ticketId = await SupportTicketRepository.instance.getOrCreateMyTicket(
-        tripId: trip.id,
-      );
+      final ticketId = await SupportTicketRepository.instance.getOrCreateMyTicket();
       await SupportTicketRepository.instance.sendMessage(
         ticketId,
         '🚕 طلب مشوار جديد\nاكتب لنا نقطة الانطلاق والوجهة وسنرد عليك الآن.',
       );
       if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
+      Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) =>
-              TripTrackingScreen(tripId: trip.id, autoOpenSupportChat: true),
+          builder: (context) => SupportTicketChatScreen(ticketId: ticketId),
         ),
-        (route) => route.isFirst,
       );
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'تعذر بدء الطلب حالياً - تحقق من اتصالك وحاول مرة أخرى.',
+              'تعذر فتح المحادثة حالياً - تحقق من اتصالك وحاول مرة أخرى.',
               style: TextStyle(fontFamily: 'Cairo'),
             ),
           ),
