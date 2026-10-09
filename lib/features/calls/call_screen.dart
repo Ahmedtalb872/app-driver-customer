@@ -35,6 +35,8 @@ class CallScreen extends StatefulWidget {
     required this.peerRole,
     this.peerAvatarUrl,
     this.incomingOfferSdp,
+    this.autoAccept = false,
+    this.initialLogId,
   });
 
   final CallSignalingService signaling;
@@ -47,6 +49,22 @@ class CallScreen extends StatefulWidget {
 
   final String? peerAvatarUrl;
   final String? incomingOfferSdp;
+
+  /// True when the decision to answer was already made before this screen
+  /// existed - see AdminShell's incoming-call banner, which answers
+  /// directly from a notification bar rather than opening this screen just
+  /// to ask the same accept/decline question a second time. Skips straight
+  /// to [_acceptIncomingCall] instead of [_playRingtone]/showing the
+  /// accept/decline prompt. Ignored for outgoing calls.
+  final bool autoAccept;
+
+  /// Reuses a `call_logs` row already created by whoever is opening this
+  /// screen (again, the banner - it logs "ringing" the moment it appears,
+  /// before the admin has acted on it at all) instead of calling
+  /// [CallLogService.logStarted] a second time for the same call attempt.
+  /// Null (every other caller) keeps the original behavior of logging it
+  /// here.
+  final int? initialLogId;
 
   @override
   State<CallScreen> createState() => _CallScreenState();
@@ -77,20 +95,26 @@ class _CallScreenState extends State<CallScreen> {
     _phase = isOutgoing ? _CallPhase.ringingOutgoing : _CallPhase.ringingIncoming;
     _subscribeCall();
 
-    final selfRole = widget.signaling.selfRole;
-    unawaited(
-      _logService
-          .logStarted(
-            tripId: widget.signaling.tripId,
-            callerRole: isOutgoing ? selfRole : widget.peerRole,
-            calleeRole: isOutgoing ? widget.peerRole : selfRole,
-          )
-          .then((id) => _logId = id),
-    );
+    if (widget.initialLogId != null) {
+      _logId = widget.initialLogId;
+    } else {
+      final selfRole = widget.signaling.selfRole;
+      unawaited(
+        _logService
+            .logStarted(
+              tripId: widget.signaling.tripId,
+              callerRole: isOutgoing ? selfRole : widget.peerRole,
+              calleeRole: isOutgoing ? widget.peerRole : selfRole,
+            )
+            .then((id) => _logId = id),
+      );
+    }
 
     if (isOutgoing) {
       _startOutgoingCall();
       _ringTimeoutTimer = Timer(_ringTimeout, _onRingTimeout);
+    } else if (widget.autoAccept) {
+      _acceptIncomingCall();
     } else {
       _playRingtone();
     }
