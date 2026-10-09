@@ -42,6 +42,11 @@ const List<AdminSidebarItem> adminSidebarItems = [
     route: '/admin/live-operations',
   ),
   AdminSidebarItem(
+    label: 'الدعم والشكاوى',
+    icon: Icons.support_agent_rounded,
+    route: '/admin/support',
+  ),
+  AdminSidebarItem(
     label: 'إرسال طلب يدوي',
     icon: Icons.add_location_alt_rounded,
     route: '/admin/dispatch',
@@ -110,11 +115,6 @@ const List<AdminSidebarItem> adminSidebarItems = [
     label: 'حملات SMS',
     icon: Icons.sms_rounded,
     route: '/admin/sms-campaigns',
-  ),
-  AdminSidebarItem(
-    label: 'الدعم والشكاوى',
-    icon: Icons.support_agent_rounded,
-    route: '/admin/support',
   ),
   AdminSidebarItem(
     label: 'التقييمات',
