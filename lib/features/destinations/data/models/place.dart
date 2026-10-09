@@ -7,6 +7,11 @@ class Place {
   final String? nameFr;
   final String? addressAr;
   final String? addressFr;
+  /// Alternate spellings/mishearings of [nameAr] (e.g. "بكار" for "كرفور
+  /// بكار") that search_destinations also matches against - lets an admin
+  /// widen voice-search tolerance for this place without an app update
+  /// (see 20261007000111_place_alt_names_search.sql).
+  final List<String> altNames;
   final double latitude;
   final double longitude;
   final String? googlePlaceId;
@@ -28,6 +33,7 @@ class Place {
     this.nameFr,
     this.addressAr,
     this.addressFr,
+    this.altNames = const [],
     required this.latitude,
     required this.longitude,
     this.googlePlaceId,
@@ -51,6 +57,9 @@ class Place {
       nameFr: json['name_fr'] as String?,
       addressAr: json['address_ar'] as String?,
       addressFr: json['address_fr'] as String?,
+      altNames: (json['alt_names'] as List? ?? const [])
+          .map((e) => e as String)
+          .toList(),
       latitude: (json['latitude'] as num).toDouble(),
       longitude: (json['longitude'] as num).toDouble(),
       googlePlaceId: json['google_place_id'] as String?,
@@ -79,6 +88,7 @@ class Place {
       'name_fr': nameFr,
       'address_ar': addressAr,
       'address_fr': addressFr,
+      'alt_names': altNames,
       'latitude': latitude,
       'longitude': longitude,
       'google_place_id': googlePlaceId,
