@@ -81,18 +81,64 @@ class AdminSupportRepository {
     });
   }
 
-  /// Live messages for a thread, oldest first.
+  /// Live messages for a thread, oldest first. Backed by both the
+  /// `.stream()` realtime mechanism and a 2s poll, same dual-path pattern
+  /// as [CallSignalingService] in this exact project - Realtime
+  /// postgres_changes has repeatedly proven unreliable here (see that
+  /// class's own doc comment for the history), including, it turns out,
+  /// for a message not echoing back to the very client that just sent it.
+  /// Whichever path delivers a given message first wins; the other is a
+  /// no-op once deduped by id.
   Stream<List<SupportTicketMessage>> watchMessages(String ticketId) {
-    return _client
-        .from('support_ticket_messages')
-        .stream(primaryKey: ['id'])
-        .eq('ticket_id', ticketId)
-        .order('created_at')
-        .map(
-          (rows) => rows
-              .cast<Map<String, dynamic>>()
-              .map(SupportTicketMessage.fromJson)
-              .toList(),
-        );
+    final controller = StreamController<List<SupportTicketMessage>>.broadcast();
+    final byId = <String, SupportTicketMessage>{};
+    Timer? pollTimer;
+    StreamSubscription<List<Map<String, dynamic>>>? sub;
+
+    void emit() {
+      final list = byId.values.toList()
+        ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      controller.add(list);
+    }
+
+    void ingest(Iterable<Map<String, dynamic>> rows) {
+      for (final row in rows) {
+        final message = SupportTicketMessage.fromJson(row);
+        byId[message.id] = message;
+      }
+      emit();
+    }
+
+    Future<void> poll() async {
+      try {
+        final rows = await _client
+            .from('support_ticket_messages')
+            .select()
+            .eq('ticket_id', ticketId);
+        ingest(List<Map<String, dynamic>>.from(rows));
+      } catch (_) {
+        // Best effort - the realtime stream below is still live, and the
+        // next poll tick tries again regardless.
+      }
+    }
+
+    controller.onListen = () {
+      sub = _client
+          .from('support_ticket_messages')
+          .stream(primaryKey: ['id'])
+          .eq('ticket_id', ticketId)
+          .listen(
+            (rows) => ingest(rows.cast<Map<String, dynamic>>()),
+            onError: (_) {},
+          );
+      poll();
+      pollTimer = Timer.periodic(const Duration(seconds: 2), (_) => poll());
+    };
+    controller.onCancel = () async {
+      pollTimer?.cancel();
+      await sub?.cancel();
+    };
+
+    return controller.stream;
   }
 }
