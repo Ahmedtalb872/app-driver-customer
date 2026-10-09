@@ -8,6 +8,7 @@ import '../../core/services/call_signaling_service.dart';
 import '../../features/calls/call_screen.dart';
 import '../core/admin_colors.dart';
 import '../repositories/admin_trips_repository.dart';
+import '../screens/trips/trip_detail_panel.dart';
 import '../services/admin_incoming_call_listener.dart';
 import '../services/admin_session.dart';
 import '../utils/tab_title_alert.dart';
@@ -75,12 +76,17 @@ class _AdminShellState extends State<AdminShell> {
     // the call screen's own ringtone only helps if this tab is the focused
     // one. Stopped in the `finally` below regardless of how the call ends.
     startTabTitleAlert('📞 مكالمة واردة...');
-    final label = await _tripsRepository.loadCallerLabel(offer.tripId);
+    final results = await Future.wait([
+      _tripsRepository.loadCallerLabel(offer.tripId),
+      _tripsRepository.loadTripById(offer.tripId),
+    ]);
     if (!mounted) {
       _callScreenOpen = false;
       stopTabTitleAlert();
       return;
     }
+    final label = results[0] as String;
+    final trip = results[1] as Map<String, dynamic>?;
     // Backdated just before the offer's own timestamp: the caller may
     // already have sent a few ICE candidates in the time it took this
     // listener's poll to notice the offer and fetch the caller's label -
@@ -93,7 +99,15 @@ class _AdminShellState extends State<AdminShell> {
       sinceOverride: offer.createdAt.subtract(const Duration(seconds: 2)),
     )..start();
     try {
-      await Navigator.of(context).push(
+      // Pushed without awaiting it yet - requested explicitly: the trip's
+      // own details (pickup/destination editor, same tools a phone-in
+      // dispatch already uses) should appear right over the call itself,
+      // not after hanging up, since that's exactly when the admin is
+      // hearing the destination from the customer and needs somewhere to
+      // put it. Both routes stack on the same Navigator: the call screen
+      // underneath, this sheet on top of it, draggable out of the way
+      // without ending the call.
+      final callScreenFuture = Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) => CallScreen(
             signaling: signaling,
@@ -103,6 +117,17 @@ class _AdminShellState extends State<AdminShell> {
           ),
         ),
       );
+      if (trip != null && mounted) {
+        unawaited(
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (context) => TripDetailPanel(trip: trip, onChanged: () {}),
+          ),
+        );
+      }
+      await callScreenFuture;
     } finally {
       stopTabTitleAlert();
       signaling.dispose();

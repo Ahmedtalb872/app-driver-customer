@@ -32,8 +32,18 @@ class AdminTripsRepository {
     return List<Map<String, dynamic>>.from(rows);
   }
 
+  /// Includes the same `customers(profiles(full_name))` embed
+  /// [loadActiveTrips] does - [TripDetailPanel]'s own `_customerLabel`
+  /// only resolves a real name when it's there, otherwise silently
+  /// falling back to the guest phone/a dash. Used to open the panel for a
+  /// single trip that isn't necessarily in the active-trips list (e.g.
+  /// AdminShell's incoming-call overlay, which only ever has a trip id).
   Future<Map<String, dynamic>?> loadTripById(String id) async {
-    return await _client.from('trips').select().eq('id', id).maybeSingle();
+    return await _client
+        .from('trips')
+        .select('*, customers(profiles(full_name, phone))')
+        .eq('id', id)
+        .maybeSingle();
   }
 
   /// A short display label for whoever is calling in on a given trip -
