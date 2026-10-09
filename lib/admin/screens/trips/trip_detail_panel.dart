@@ -4,14 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../core/config/supabase_config.dart';
-import '../../../core/services/call_signaling_service.dart';
 import '../../../core/services/geocoding_service.dart';
 import '../../../core/widgets/real_map_widget.dart';
-import '../../../features/calls/call_screen.dart';
 import '../../core/admin_colors.dart';
+import '../../repositories/admin_support_repository.dart';
 import '../../repositories/admin_trips_repository.dart';
 import '../../widgets/captain_picker_dialog.dart';
 import '../../widgets/confirm_dialog.dart';
+import '../support/admin_support_ticket_panel.dart';
 
 /// Trip statuses a captain is actually en route/on-scene for, matching
 /// captain_locations' own RLS policy (a trip's customer can only read that
@@ -239,29 +239,24 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
     return '-';
   }
 
-  /// Starts a voice call with this trip's customer - same WebRTC/signaling
-  /// mechanism as the existing customer<->captain in-app call
-  /// ([CallSignalingService]/[CallScreen]), just with 'admin' as the role
-  /// and no [TripTrackingScreen] around to own the signaling channel
-  /// between calls, so this panel owns one for exactly the duration of a
-  /// single call instead. Requires 20261008000112_admin_call_customer.sql
-  /// (widens call_signals to accept an 'admin' sender and lets any admin
-  /// read/send signals for any trip, not just that trip's own participants).
-  Future<void> _callCustomer() async {
-    final signaling = CallSignalingService(
+  /// Opens a text conversation with this trip's customer (replaces the old
+  /// in-app voice call button) - reuses their existing open support thread
+  /// if there is one, same as the customer-facing "محادثة مباشرة" button,
+  /// refocused onto this trip so the conversation shows which request it's
+  /// about.
+  Future<void> _messageCustomer() async {
+    final ticket = await AdminSupportRepository().getOrCreateTicketForCustomer(
+      userId: widget.trip['customer_id'] as String,
       tripId: widget.trip['id'] as String,
-      selfRole: 'admin',
-    )..start();
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => CallScreen(
-          signaling: signaling,
-          peerName: _customerLabel,
-          peerRole: 'customer',
-        ),
-      ),
     );
-    signaling.dispose();
+    if (!mounted) return;
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) =>
+          AdminSupportTicketPanel(ticket: ticket, onChanged: () {}),
+    );
   }
 
   Future<void> _saveNotes() async {
@@ -482,11 +477,12 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
                     onPressed: _saveNotes,
                     child: const Text('حفظ الملاحظة'),
                   ),
-                  OutlinedButton.icon(
-                    onPressed: _callCustomer,
-                    icon: const Icon(Icons.call_outlined),
-                    label: const Text('اتصال بالزبون'),
-                  ),
+                  if (widget.trip['customer_id'] != null)
+                    OutlinedButton.icon(
+                      onPressed: _messageCustomer,
+                      icon: const Icon(Icons.chat_bubble_outline_rounded),
+                      label: const Text('مراسلة الزبون'),
+                    ),
                   if (_canAssign)
                     OutlinedButton.icon(
                       onPressed: _assignCaptain,

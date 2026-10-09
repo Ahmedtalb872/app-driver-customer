@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/colors.dart';
-import '../../core/services/app_settings_repository.dart';
 import '../../core/services/ride_repository.dart';
 import '../../core/services/saved_places_repository.dart';
-import '../../core/widgets/call_options_sheet.dart';
+import '../../core/services/support_ticket_repository.dart';
 import '../../models/models.dart';
 import '../../providers/app_state_provider.dart';
 import '../destinations/data/models/destination_suggestion.dart';
@@ -17,9 +16,9 @@ import 'voice_ride_request_sheet.dart';
 
 /// Shown after tapping "إلى أين تريد الذهاب؟" on the home screen - three
 /// sections: a normal ride (needs both a pickup and a destination point),
-/// an open ride (just a pickup), and "اتصل لطلب مشوار" for a customer who'd
-/// rather just phone it in than type/choose anything - see
-/// [_callToRequestRide], which reuses the open-ride section's own pickup
+/// an open ride (just a pickup), and "راسل لطلب مشوار" for a customer who'd
+/// rather just describe it in writing than type/choose anything - see
+/// [_requestRideByMessage], which reuses the open-ride section's own pickup
 /// point rather than asking for one a third time. Each location field is
 /// picked inline, right on this screen, via [LocationSearchField] (type to
 /// search, or the map icon for a full-screen map picker), pre-filled with
@@ -265,51 +264,36 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
     );
   }
 
-  bool _isCallingSupport = false;
+  bool _isRequestingByMessage = false;
 
-  /// "اتصل لطلب مشوار" - offers the admin's configured support_phone as a
-  /// real, regular phone call first (same choice sheet every other call
-  /// button in this app offers); a customer who'd rather just dial a human
-  /// still gets a dispatcher, exactly like calling any taxi company - the
-  /// admin just enters the trip manually afterward via the existing
-  /// phone-in dispatch tools.
-  Future<void> _callToRequestRide() async {
-    if (_isCallingSupport) return;
-    final phone = await AppSettingsRepository.instance.fetchSupportPhone();
-    if (!mounted) return;
-    await showCallOptionsSheet(
-      context,
-      phone: phone,
-      onInAppCall: _requestRideThenCall,
-    );
-  }
-
-  /// The in-app half of [_callToRequestRide]: requests an open trip at
-  /// whatever pickup point the "مشوار مفتوح" section above already has
-  /// (same GPS-detected point, freely edited there) - reusing it instead
-  /// of asking for a pickup a second time - then lands straight on the
-  /// call screen already dialing admin, who takes the actual destination/
-  /// details verbally and can edit the trip accordingly (the same
-  /// route-editing tools already used for a phone-in dispatch).
-  Future<void> _requestRideThenCall() async {
-    if (_isCallingSupport) return;
+  /// "راسل لطلب مشوار" - requests an open trip at whatever pickup point the
+  /// "مشوار مفتوح" section above already has (same GPS-detected point,
+  /// freely edited there) - reusing it instead of asking for a pickup a
+  /// second time - then sends a first message to admin support about it
+  /// and lands on that conversation, where the customer can describe the
+  /// destination/details in writing. Admin fills in the trip accordingly
+  /// (the same route-editing tools already used for a phone-in dispatch),
+  /// reachable right from inside the chat.
+  Future<void> _requestRideByMessage() async {
+    if (_isRequestingByMessage) return;
     final lat = _openPickupLat;
     final lng = _openPickupLng;
     if (lat == null || lng == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'حدّد نقطة الانطلاق أولاً (في قسم "مشوار مفتوح" أعلاه) قبل الاتصال.',
+            'حدّد نقطة الانطلاق أولاً (في قسم "مشوار مفتوح" أعلاه) قبل المراسلة.',
             style: TextStyle(fontFamily: 'Cairo'),
           ),
         ),
       );
       return;
     }
-    setState(() => _isCallingSupport = true);
+    setState(() => _isRequestingByMessage = true);
     try {
+      final pickupAddress = _openPickupAddress ?? 'موقعي الحالي';
       final trip = await RideRepository.instance.requestTrip(
-        pickupAddress: _openPickupAddress ?? 'موقعي الحالي',
+        pickupAddress: pickupAddress,
         pickupLat: lat,
         pickupLng: lng,
         tripType: TripType.open,
@@ -318,10 +302,18 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
       );
       if (!mounted) return;
       context.read<AppStateProvider>().setActiveTripFromBackend(trip);
+      final ticketId = await SupportTicketRepository.instance.getOrCreateMyTicket(
+        tripId: trip.id,
+      );
+      await SupportTicketRepository.instance.sendMessage(
+        ticketId,
+        '🚕 طلب مشوار جديد\nنقطة الانطلاق: $pickupAddress\nالوجهة: ',
+      );
+      if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
           builder: (context) =>
-              TripTrackingScreen(tripId: trip.id, autoCallSupport: true),
+              TripTrackingScreen(tripId: trip.id, autoOpenSupportChat: true),
         ),
         (route) => route.isFirst,
       );
@@ -337,7 +329,7 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => _isCallingSupport = false);
+      if (mounted) setState(() => _isRequestingByMessage = false);
     }
   }
 
@@ -442,12 +434,12 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
           _buildSection(
             icon: Icons.support_agent_rounded,
             color: AppColors.secondary,
-            title: 'اتصل لطلب مشوار',
-            subtitle: 'تحدّث مباشرة مع الإدارة بدل الكتابة أو الاختيار',
+            title: 'راسل لطلب مشوار',
+            subtitle: 'اكتب طلبك للإدارة بدل الكتابة أو الاختيار هنا',
             children: [
               ElevatedButton.icon(
-                onPressed: _isCallingSupport ? null : _callToRequestRide,
-                icon: _isCallingSupport
+                onPressed: _isRequestingByMessage ? null : _requestRideByMessage,
+                icon: _isRequestingByMessage
                     ? const SizedBox(
                         width: 16,
                         height: 16,
@@ -456,8 +448,8 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
                           color: Colors.white,
                         ),
                       )
-                    : const Icon(Icons.call_rounded, size: 18),
-                label: const Text('اتصل الآن'),
+                    : const Icon(Icons.chat_bubble_rounded, size: 18),
+                label: const Text('أرسل الآن'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.secondary,
                   minimumSize: const Size(double.infinity, 48),

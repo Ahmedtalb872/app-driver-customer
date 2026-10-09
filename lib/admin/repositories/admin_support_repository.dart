@@ -21,6 +21,48 @@ class AdminSupportRepository {
     ).map(SupportTicket.fromJson).toList();
   }
 
+  /// Lets an admin start/resume a conversation with a specific customer
+  /// (replacing the old "اتصال بالزبون" call button) - reuses that
+  /// customer's existing open/in_progress ticket if there is one, same
+  /// "at most one live thread" rule SupportTicketRepository.getOrCreateMyTicket
+  /// enforces on the customer side, just initiated from here instead.
+  /// [tripId], when given, refocuses the thread on that specific trip.
+  Future<SupportTicket> getOrCreateTicketForCustomer({
+    required String userId,
+    String? tripId,
+  }) async {
+    final existing = await _client
+        .from('support_tickets')
+        .select('*, profiles!inner(full_name, phone, role)')
+        .eq('user_id', userId)
+        .inFilter('status', ['open', 'in_progress'])
+        .order('updated_at', ascending: false)
+        .limit(1)
+        .maybeSingle();
+
+    if (existing != null) {
+      if (tripId != null && existing['trip_id'] != tripId) {
+        await _client
+            .from('support_tickets')
+            .update({'trip_id': tripId})
+            .eq('id', existing['id'] as String);
+        existing['trip_id'] = tripId;
+      }
+      return SupportTicket.fromJson(existing);
+    }
+
+    final created = await _client
+        .from('support_tickets')
+        .insert({
+          'user_id': userId,
+          'subject': 'محادثة دعم',
+          if (tripId != null) 'trip_id': tripId,
+        })
+        .select('*, profiles!inner(full_name, phone, role)')
+        .single();
+    return SupportTicket.fromJson(created);
+  }
+
   Future<void> setStatus(String ticketId, String status) async {
     await _client
         .from('support_tickets')

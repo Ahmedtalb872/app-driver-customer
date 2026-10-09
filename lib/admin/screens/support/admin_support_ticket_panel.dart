@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../../../models/models.dart';
 import '../../core/admin_colors.dart';
 import '../../repositories/admin_support_repository.dart';
+import '../../repositories/admin_trips_repository.dart';
+import '../trips/trip_detail_panel.dart';
 
 /// Reply chat + status controls for one support ticket, opened as a
 /// bottom sheet from AdminSupportScreen's ticket list.
@@ -25,6 +27,7 @@ class AdminSupportTicketPanel extends StatefulWidget {
 
 class _AdminSupportTicketPanelState extends State<AdminSupportTicketPanel> {
   final _repository = AdminSupportRepository();
+  final _tripsRepository = AdminTripsRepository();
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
 
@@ -91,6 +94,27 @@ class _AdminSupportTicketPanelState extends State<AdminSupportTicketPanel> {
       const SnackBar(
         content: Text('حدث خطأ، حاول مرة أخرى.', style: TextStyle(fontFamily: 'Cairo')),
       ),
+    );
+  }
+
+  /// Opens the same trip editor already used from the trips list/Live
+  /// Operations, stacked on top of this chat sheet - lets the admin fill
+  /// in the destination the customer just described in writing without
+  /// leaving the conversation. Only shown when [SupportTicket.tripId] is
+  /// set (see "راسل لطلب مشوار" on the trip planner).
+  Future<void> _openTripDetails() async {
+    final tripId = widget.ticket.tripId;
+    if (tripId == null) return;
+    final trip = await _tripsRepository.loadTripById(tripId);
+    if (!mounted || trip == null) {
+      if (mounted) _showError();
+      return;
+    }
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => TripDetailPanel(trip: trip, onChanged: () {}),
     );
   }
 
@@ -169,6 +193,21 @@ class _AdminSupportTicketPanelState extends State<AdminSupportTicketPanel> {
                   ],
                 ),
               ),
+              if (ticket.tripId != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _openTripDetails,
+                      icon: const Icon(Icons.local_taxi_rounded, size: 18),
+                      label: const Text(
+                        'فتح تفاصيل المشوار',
+                        style: TextStyle(fontFamily: 'Cairo'),
+                      ),
+                    ),
+                  ),
+                ),
               const Divider(height: 1),
               Expanded(
                 child: _messages.isEmpty

@@ -46,34 +46,6 @@ class AdminTripsRepository {
         .maybeSingle();
   }
 
-  /// A short display label for whoever is calling in on a given trip -
-  /// used by the admin dashboard's global incoming-call listener, which
-  /// only has a trip id to go on (no detail panel necessarily open to
-  /// already have this). Same fallback chain as
-  /// `TripDetailPanel._customerLabel`: registered name, then the guest
-  /// phone number typed in by a dispatch operator, then a plain generic
-  /// label rather than leaving the incoming-call screen blank.
-  Future<String> loadCallerLabel(String tripId) async {
-    try {
-      final row = await _client
-          .from('trips')
-          .select('guest_customer_phone, customers(profiles(full_name))')
-          .eq('id', tripId)
-          .maybeSingle();
-      if (row == null) return 'زبون';
-      final name =
-          (row['customers'] as Map?)?['profiles']?['full_name'] as String?;
-      if (name != null && name.trim().isNotEmpty) return name;
-      final guestPhone = row['guest_customer_phone'] as String?;
-      if (guestPhone != null && guestPhone.trim().isNotEmpty) {
-        return guestPhone;
-      }
-      return 'زبون';
-    } catch (_) {
-      return 'زبون';
-    }
-  }
-
   static const activeStatuses = [
     'searching',
     'accepted',

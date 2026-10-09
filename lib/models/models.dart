@@ -1116,6 +1116,7 @@ class SupportTicket {
     this.userFullName,
     this.userPhone,
     this.userRole,
+    this.tripId,
   });
 
   final String id;
@@ -1127,6 +1128,12 @@ class SupportTicket {
   final String? userFullName;
   final String? userPhone;
   final String? userRole;
+
+  /// Set when this thread is about a specific ride request (e.g. "راسل
+  /// لطلب مشوار" on the trip planner) - lets the admin jump straight to
+  /// that trip's pickup/destination editor from inside the chat. Null for
+  /// a general support conversation with no particular trip attached.
+  final String? tripId;
 
   bool get isOpen => status == 'open';
   bool get isInProgress => status == 'in_progress';
@@ -1145,6 +1152,7 @@ class SupportTicket {
       userFullName: profile?['full_name'] as String?,
       userPhone: profile?['phone'] as String?,
       userRole: profile?['role'] as String?,
+      tripId: json['trip_id'] as String?,
     );
   }
 }

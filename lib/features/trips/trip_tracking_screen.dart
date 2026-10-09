@@ -5,16 +5,17 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/colors.dart';
-import '../../core/services/app_settings_repository.dart';
 import '../../core/services/call_signaling_service.dart';
 import '../../core/services/ride_repository.dart';
 import '../../core/services/route_estimator.dart';
+import '../../core/services/support_ticket_repository.dart';
 import '../../core/services/trip_foreground_service.dart';
 import '../../core/widgets/call_options_sheet.dart';
 import '../../core/widgets/real_map_widget.dart';
 import '../../models/models.dart';
 import '../../providers/app_state_provider.dart';
 import '../calls/call_screen.dart';
+import '../support/support_ticket_chat_screen.dart';
 import 'trip_summary_screen.dart';
 
 /// Watches a single trip (see [RideRepository.watchTrip]) from the moment a
@@ -24,20 +25,18 @@ class TripTrackingScreen extends StatefulWidget {
   const TripTrackingScreen({
     super.key,
     required this.tripId,
-    this.autoCallSupport = false,
+    this.autoOpenSupportChat = false,
   });
 
   final String tripId;
 
-  /// True only right after "اتصل لطلب مشوار" on the home screen created
+  /// True only right after "راسل لطلب مشوار" on the trip planner created
   /// this trip with no destination/details at all - the whole point of
-  /// that entry point is skipping straight to a call with admin instead of
+  /// that entry point is skipping straight to the support chat instead of
   /// landing on an ordinary tracking screen the customer would then have
-  /// to tap "اتصال بالدعم" on themselves. Triggers exactly once, the
-  /// moment the first trip update arrives (see [_onTrip]) - not here in
-  /// initState, since [_openCallScreen] needs a non-null [_trip] it
-  /// doesn't have yet.
-  final bool autoCallSupport;
+  /// to tap "راسل الدعم" on themselves. Triggers exactly once, the moment
+  /// the first trip update arrives (see [_onTrip]).
+  final bool autoOpenSupportChat;
 
   @override
   State<TripTrackingScreen> createState() => _TripTrackingScreenState();
@@ -51,7 +50,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
   RouteEstimate? _liveEstimate;
   bool _handledTerminal = false;
   bool _isCancelling = false;
-  bool _autoCalled = false;
+  bool _autoOpenedSupportChat = false;
 
   /// Owns the trip's call-signaling channel for this screen's whole
   /// lifetime (not just while a call is on screen), so an incoming call can
@@ -92,60 +91,44 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
   /// a new incoming call to prompt for.
   void _onIncomingCallOffer(CallSignal signal) {
     if (!mounted || _callScreenOpen || signal.sdp == null) return;
-    _openCallScreen(incomingOfferSdp: signal.sdp, from: signal.from);
+    _openCallScreen(incomingOfferSdp: signal.sdp);
   }
 
-  /// [from] is the caller's role when this call was answered rather than
-  /// started here ('admin' for a support call about this request, as
-  /// opposed to the usual 'captain'). For an outgoing call the customer is
-  /// initiating themselves, [from] is null and [toAdmin] says who it's
-  /// going to instead - the captain by default, or admin support when the
-  /// customer tapped "اتصال بالدعم".
-  void _openCallScreen({String? incomingOfferSdp, String? from, bool toAdmin = false}) {
+  void _openCallScreen({String? incomingOfferSdp}) {
     final trip = _trip;
     if (trip == null) return;
     _callScreenOpen = true;
-    final isAdminCall = from == 'admin' || toAdmin;
     Navigator.of(context)
         .push(
           MaterialPageRoute(
             builder: (context) => CallScreen(
               signaling: _callSignaling,
-              peerName: isAdminCall ? 'الهدهد - الدعم' : (trip.captainName ?? 'الكابتن'),
-              peerRole: isAdminCall ? 'admin' : 'captain',
-              peerAvatarUrl: isAdminCall ? null : trip.captainAvatar,
+              peerName: trip.captainName ?? 'الكابتن',
+              peerRole: 'captain',
+              peerAvatarUrl: trip.captainAvatar,
               incomingOfferSdp: incomingOfferSdp,
-              // Admin may be mid-task elsewhere in the dashboard when this
-              // call comes in (see AdminShell's incoming-call banner, which
-              // deliberately doesn't interrupt them to answer right away) -
-              // the usual person-to-person patience window (CallScreen's
-              // own default, null here) is too short for that. A captain
-              // call keeps that default.
-              ringTimeout: isAdminCall ? const Duration(seconds: 90) : null,
             ),
           ),
         )
         .then((_) => _callScreenOpen = false);
   }
 
-  /// "اتصال بالدعم" - lets the customer reach admin support directly about
-  /// this specific request, the same way admin can already call them back
-  /// (see trip_detail_panel.dart's "اتصال بالزبون"). Available throughout
+  /// "راسل الدعم" - opens (or resumes) a text conversation with admin
+  /// support about this specific request, refocused onto this trip so the
+  /// admin can see which request it's about and jump to its pickup/
+  /// destination editor from inside the chat (see
+  /// AdminSupportTicketPanel's "فتح تفاصيل المشوار"). Available throughout
   /// the trip, including while still searching for a captain, since that's
   /// often exactly when a customer most needs help.
-  ///
-  /// Offers a regular phone fallback first (admin's configured
-  /// support_phone, see AppSettingsRepository) in case the in-app call
-  /// can't connect - no mic permission, a restrictive network, or simply
-  /// no TURN server configured for a strict-NAT case STUN alone can't
-  /// cross. Same choice sheet the captain-call button already uses.
-  Future<void> _callSupport() async {
-    final phone = await AppSettingsRepository.instance.fetchSupportPhone();
+  Future<void> _messageSupport() async {
+    final ticketId = await SupportTicketRepository.instance.getOrCreateMyTicket(
+      tripId: widget.tripId,
+    );
     if (!mounted) return;
-    showCallOptionsSheet(
-      context,
-      phone: phone,
-      onInAppCall: () => _openCallScreen(toAdmin: true),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => SupportTicketChatScreen(ticketId: ticketId),
+      ),
     );
   }
 
@@ -183,17 +166,10 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
       _liveEstimate = trip != null ? _computeLiveEstimate(trip) : null;
     });
 
-    if (widget.autoCallSupport && !_autoCalled && trip != null) {
-      _autoCalled = true;
-      // Straight to the in-app call screen, not _callSupport()'s regular-
-      // vs-in-app choice sheet - the customer already made that choice in
-      // the trip planner before this trip even existed (see
-      // TripPlannerScreen._callToRequestRide, which only ever creates the
-      // trip and sets autoCallSupport after "مكالمة داخل التطبيق" was
-      // picked there). Prompting again here would just be a confusing
-      // second copy of the same choice.
+    if (widget.autoOpenSupportChat && !_autoOpenedSupportChat && trip != null) {
+      _autoOpenedSupportChat = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _openCallScreen(toAdmin: true);
+        if (mounted) _messageSupport();
       });
     }
 
@@ -337,9 +313,9 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
             child: Column(
               children: [
                 TextButton.icon(
-                  onPressed: _callSupport,
+                  onPressed: _messageSupport,
                   icon: const Icon(Icons.support_agent_outlined, size: 18),
-                  label: const Text('اتصال بالدعم'),
+                  label: const Text('راسل الدعم'),
                 ),
                 const SizedBox(height: 4),
                 SizedBox(
@@ -425,7 +401,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
   }
 
   /// Sits opposite [_buildTopBanner] (same row, pushed apart by
-  /// [MainAxisAlignment.spaceBetween]) so "اتصال بالدعم" is reachable from
+  /// [MainAxisAlignment.spaceBetween]) so "راسل الدعم" is reachable from
   /// the main tracking view regardless of trip status, not just from
   /// inside the captain card (which only ever shows once a captain is
   /// actually assigned).
@@ -435,9 +411,9 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
       shape: const CircleBorder(),
       elevation: 4,
       child: IconButton(
-        onPressed: _callSupport,
+        onPressed: _messageSupport,
         icon: const Icon(Icons.support_agent_outlined, color: AppColors.primary),
-        tooltip: 'اتصال بالدعم',
+        tooltip: 'راسل الدعم',
       ),
     );
   }

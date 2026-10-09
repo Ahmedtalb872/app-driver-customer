@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 import '../../core/constants/colors.dart';
-import '../../core/services/call_log_service.dart';
 import '../../core/services/call_service.dart';
 import '../../core/services/call_signaling_service.dart';
 
@@ -35,45 +34,16 @@ class CallScreen extends StatefulWidget {
     required this.peerRole,
     this.peerAvatarUrl,
     this.incomingOfferSdp,
-    this.autoAccept = false,
-    this.initialLogId,
-    this.ringTimeout,
   });
 
   final CallSignalingService signaling;
   final String peerName;
 
-  /// 'customer', 'captain' or 'admin' - the *other* party, purely for
-  /// call_logs attribution (see [CallLogService]). [signaling.selfRole]
-  /// already says who *we* are; this is the one thing it doesn't carry.
+  /// 'customer' or 'captain' - the *other* party.
   final String peerRole;
 
   final String? peerAvatarUrl;
   final String? incomingOfferSdp;
-
-  /// True when the decision to answer was already made before this screen
-  /// existed - see AdminShell's incoming-call banner, which answers
-  /// directly from a notification bar rather than opening this screen just
-  /// to ask the same accept/decline question a second time. Skips straight
-  /// to [_acceptIncomingCall] instead of [_playRingtone]/showing the
-  /// accept/decline prompt. Ignored for outgoing calls.
-  final bool autoAccept;
-
-  /// Reuses a `call_logs` row already created by whoever is opening this
-  /// screen (again, the banner - it logs "ringing" the moment it appears,
-  /// before the admin has acted on it at all) instead of calling
-  /// [CallLogService.logStarted] a second time for the same call attempt.
-  /// Null (every other caller) keeps the original behavior of logging it
-  /// here.
-  final int? initialLogId;
-
-  /// How long to ring/wait-to-connect before giving up. Null (every caller
-  /// except admin support calls) keeps the default [_ringTimeout]. Admin
-  /// support calls use a longer window (`TripTrackingScreen._openCallScreen`):
-  /// AdminShell's incoming-call banner deliberately lets the admin keep
-  /// working before answering, so the default person-to-person patience
-  /// window is too short for that direction specifically.
-  final Duration? ringTimeout;
 
   @override
   State<CallScreen> createState() => _CallScreenState();
@@ -88,9 +58,6 @@ class _CallScreenState extends State<CallScreen> {
   bool _muted = false;
   bool _speakerOn = false;
 
-  final _logService = CallLogService();
-  int? _logId;
-
   final _ringPlayer = AudioPlayer();
 
   StreamSubscription<CallConnectionStatus>? _statusSub;
@@ -104,26 +71,9 @@ class _CallScreenState extends State<CallScreen> {
     _phase = isOutgoing ? _CallPhase.ringingOutgoing : _CallPhase.ringingIncoming;
     _subscribeCall();
 
-    if (widget.initialLogId != null) {
-      _logId = widget.initialLogId;
-    } else {
-      final selfRole = widget.signaling.selfRole;
-      unawaited(
-        _logService
-            .logStarted(
-              tripId: widget.signaling.tripId,
-              callerRole: isOutgoing ? selfRole : widget.peerRole,
-              calleeRole: isOutgoing ? widget.peerRole : selfRole,
-            )
-            .then((id) => _logId = id),
-      );
-    }
-
     if (isOutgoing) {
       _startOutgoingCall();
-      _ringTimeoutTimer = Timer(widget.ringTimeout ?? _ringTimeout, _onRingTimeout);
-    } else if (widget.autoAccept) {
-      _acceptIncomingCall();
+      _ringTimeoutTimer = Timer(_ringTimeout, _onRingTimeout);
     } else {
       _playRingtone();
     }
@@ -139,9 +89,8 @@ class _CallScreenState extends State<CallScreen> {
   /// ringing for the person being called - a silent full-screen UI is easy
   /// to miss entirely if the phone/tab isn't being looked at right now.
   /// Browsers can block audio that doesn't follow a user gesture (Flutter
-  /// Web's autoplay policy), so this is best-effort like everything else
-  /// here - a blocked ring just means the tab-title flash (see
-  /// AdminShell/tab_title_alert.dart) is the only alert left, not a crash.
+  /// Web's autoplay policy), so this is best-effort - a blocked ring is
+  /// just silent, not a crash.
   Future<void> _playRingtone() async {
     try {
       await _ringPlayer.setReleaseMode(ReleaseMode.loop);
@@ -171,14 +120,13 @@ class _CallScreenState extends State<CallScreen> {
   Future<void> _acceptIncomingCall() async {
     unawaited(_stopRingtone());
     setState(() => _phase = _CallPhase.connecting);
-    // The caller's own CallScreen gives up after _ringTimeout and tears
-    // down its CallService - if we answer any later than that (easy now
-    // that AdminShell's banner lets the admin wait as long as they want
-    // before tapping "رد"), our answer reaches no one and the connection
-    // can never complete. Without this timer nothing ever moved this
-    // screen out of "connecting" in that case - see _onRingTimeout, which
-    // already handles both directions.
-    _ringTimeoutTimer = Timer(widget.ringTimeout ?? _ringTimeout, _onRingTimeout);
+    // The caller's own CallScreen gives up and tears down its CallService
+    // after _ringTimeout too - if we answer any later than that (a slow
+    // network, a backgrounded app) our answer reaches no one and the
+    // connection can never complete. Without this timer nothing ever moved
+    // this screen out of "connecting" in that case - see _onRingTimeout,
+    // which already handles both directions.
+    _ringTimeoutTimer = Timer(_ringTimeout, _onRingTimeout);
     try {
       await _call.startAsCallee(widget.incomingOfferSdp!);
     } catch (_) {
@@ -186,14 +134,13 @@ class _CallScreenState extends State<CallScreen> {
     }
   }
 
-  void _declineIncomingCall() => _endCall(notifyPeer: true, outcomeOverride: 'declined');
+  void _declineIncomingCall() => _endCall(notifyPeer: true);
 
   void _onStatusChange(CallConnectionStatus status) {
     if (!mounted) return;
     switch (status) {
       case CallConnectionStatus.connected:
         _ringTimeoutTimer?.cancel();
-        unawaited(_logService.logAnswered(_logId));
         setState(() => _phase = _CallPhase.inCall);
         _startTimer();
       case CallConnectionStatus.failed:
@@ -208,22 +155,18 @@ class _CallScreenState extends State<CallScreen> {
   /// never answered our outgoing call within [_ringTimeout] ("missed"), or
   /// we accepted an incoming one but it never actually connected within
   /// that same window ("failed" - the caller almost certainly already gave
-  /// up and tore down their own end, most likely because AdminShell's
-  /// banner let us wait past their own ring timeout before answering).
-  /// Unlike every other way a call ends, this deliberately does NOT
-  /// auto-pop: see [_buildControls]'s `noAnswer` branch.
+  /// up and tore down their own end). Unlike every other way a call ends,
+  /// this deliberately does NOT auto-pop: see [_buildControls]'s
+  /// `noAnswer` branch.
   void _onRingTimeout() {
     if (_phase != _CallPhase.ringingOutgoing && _phase != _CallPhase.connecting) return;
-    final wasAccepting = widget.incomingOfferSdp != null;
     _call.hangUp();
-    unawaited(_logService.logEnded(_logId, outcome: wasAccepting ? 'failed' : 'missed'));
     setState(() => _phase = _CallPhase.noAnswer);
   }
 
   /// Re-dials from the "لم يتم الرد" screen - a fresh [CallService] (the
-  /// previous one already tore down its peer connection) and a fresh
-  /// call_logs row (this is a new call attempt, not a continuation of the
-  /// missed one), otherwise identical to the first attempt.
+  /// previous one already tore down its peer connection), otherwise
+  /// identical to the first attempt.
   Future<void> _retryCall() async {
     await _statusSub?.cancel();
     await _remoteHangupSub?.cancel();
@@ -231,23 +174,12 @@ class _CallScreenState extends State<CallScreen> {
     _call = CallService(widget.signaling);
     _subscribeCall();
 
-    final selfRole = widget.signaling.selfRole;
-    unawaited(
-      _logService
-          .logStarted(
-            tripId: widget.signaling.tripId,
-            callerRole: selfRole,
-            calleeRole: widget.peerRole,
-          )
-          .then((id) => _logId = id),
-    );
-
     setState(() {
       _phase = _CallPhase.ringingOutgoing;
       _elapsed = Duration.zero;
     });
     _startOutgoingCall();
-    _ringTimeoutTimer = Timer(widget.ringTimeout ?? _ringTimeout, _onRingTimeout);
+    _ringTimeoutTimer = Timer(_ringTimeout, _onRingTimeout);
   }
 
   void _startTimer() {
@@ -262,18 +194,9 @@ class _CallScreenState extends State<CallScreen> {
   /// locally - true for every user-initiated end on this side (hang up,
   /// decline, back button, a failed dial); false when we're reacting to a
   /// message/status that already means the other side is gone.
-  ///
-  /// [outcomeOverride] is set only where the generic phase-based guess
-  /// below would be wrong - explicit decline, specifically (which happens
-  /// from the same `ringingIncoming` phase a remote hangup mid-ring would
-  /// also be caught in, but means something different: "missed" there
-  /// means the call was never acted on, not that it was actively turned
-  /// down).
-  void _endCall({required bool notifyPeer, String? outcomeOverride}) {
+  void _endCall({required bool notifyPeer}) {
     if (_phase == _CallPhase.ended || _phase == _CallPhase.noAnswer) return;
     unawaited(_stopRingtone());
-    final wasInCall = _phase == _CallPhase.inCall;
-    final wasRingingIncoming = _phase == _CallPhase.ringingIncoming;
     _durationTimer?.cancel();
     _ringTimeoutTimer?.cancel();
     if (notifyPeer) {
@@ -281,14 +204,6 @@ class _CallScreenState extends State<CallScreen> {
     } else {
       _call.dispose();
     }
-    unawaited(
-      _logService.logEnded(
-        _logId,
-        outcome:
-            outcomeOverride ?? (wasInCall ? 'answered' : (wasRingingIncoming ? 'missed' : 'failed')),
-        durationSeconds: wasInCall ? _elapsed.inSeconds : null,
-      ),
-    );
     setState(() => _phase = _CallPhase.ended);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) Navigator.of(context).pop();
