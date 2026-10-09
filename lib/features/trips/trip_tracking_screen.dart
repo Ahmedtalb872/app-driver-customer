@@ -115,6 +115,13 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
               peerRole: isAdminCall ? 'admin' : 'captain',
               peerAvatarUrl: isAdminCall ? null : trip.captainAvatar,
               incomingOfferSdp: incomingOfferSdp,
+              // Admin may be mid-task elsewhere in the dashboard when this
+              // call comes in (see AdminShell's incoming-call banner, which
+              // deliberately doesn't interrupt them to answer right away) -
+              // the usual person-to-person patience window (CallScreen's
+              // own default, null here) is too short for that. A captain
+              // call keeps that default.
+              ringTimeout: isAdminCall ? const Duration(seconds: 90) : null,
             ),
           ),
         )

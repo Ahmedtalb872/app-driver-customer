@@ -37,6 +37,7 @@ class CallScreen extends StatefulWidget {
     this.incomingOfferSdp,
     this.autoAccept = false,
     this.initialLogId,
+    this.ringTimeout,
   });
 
   final CallSignalingService signaling;
@@ -65,6 +66,14 @@ class CallScreen extends StatefulWidget {
   /// Null (every other caller) keeps the original behavior of logging it
   /// here.
   final int? initialLogId;
+
+  /// How long to ring/wait-to-connect before giving up. Null (every caller
+  /// except admin support calls) keeps the default [_ringTimeout]. Admin
+  /// support calls use a longer window (`TripTrackingScreen._openCallScreen`):
+  /// AdminShell's incoming-call banner deliberately lets the admin keep
+  /// working before answering, so the default person-to-person patience
+  /// window is too short for that direction specifically.
+  final Duration? ringTimeout;
 
   @override
   State<CallScreen> createState() => _CallScreenState();
@@ -112,7 +121,7 @@ class _CallScreenState extends State<CallScreen> {
 
     if (isOutgoing) {
       _startOutgoingCall();
-      _ringTimeoutTimer = Timer(_ringTimeout, _onRingTimeout);
+      _ringTimeoutTimer = Timer(widget.ringTimeout ?? _ringTimeout, _onRingTimeout);
     } else if (widget.autoAccept) {
       _acceptIncomingCall();
     } else {
@@ -162,6 +171,14 @@ class _CallScreenState extends State<CallScreen> {
   Future<void> _acceptIncomingCall() async {
     unawaited(_stopRingtone());
     setState(() => _phase = _CallPhase.connecting);
+    // The caller's own CallScreen gives up after _ringTimeout and tears
+    // down its CallService - if we answer any later than that (easy now
+    // that AdminShell's banner lets the admin wait as long as they want
+    // before tapping "رد"), our answer reaches no one and the connection
+    // can never complete. Without this timer nothing ever moved this
+    // screen out of "connecting" in that case - see _onRingTimeout, which
+    // already handles both directions.
+    _ringTimeoutTimer = Timer(widget.ringTimeout ?? _ringTimeout, _onRingTimeout);
     try {
       await _call.startAsCallee(widget.incomingOfferSdp!);
     } catch (_) {
@@ -187,15 +204,19 @@ class _CallScreenState extends State<CallScreen> {
     }
   }
 
-  /// The other side never answered within [_ringTimeout] - unlike every
-  /// other way a call ends, this deliberately does NOT auto-pop: see
-  /// [_buildControls]'s `noAnswer` branch, which offers "إعادة الاتصال"
-  /// (retry) right here instead of bouncing the customer back to the
-  /// previous screen just to tap the same call button again.
+  /// Covers two different timeouts that share one phase/UI: the other side
+  /// never answered our outgoing call within [_ringTimeout] ("missed"), or
+  /// we accepted an incoming one but it never actually connected within
+  /// that same window ("failed" - the caller almost certainly already gave
+  /// up and tore down their own end, most likely because AdminShell's
+  /// banner let us wait past their own ring timeout before answering).
+  /// Unlike every other way a call ends, this deliberately does NOT
+  /// auto-pop: see [_buildControls]'s `noAnswer` branch.
   void _onRingTimeout() {
     if (_phase != _CallPhase.ringingOutgoing && _phase != _CallPhase.connecting) return;
+    final wasAccepting = widget.incomingOfferSdp != null;
     _call.hangUp();
-    unawaited(_logService.logEnded(_logId, outcome: 'missed'));
+    unawaited(_logService.logEnded(_logId, outcome: wasAccepting ? 'failed' : 'missed'));
     setState(() => _phase = _CallPhase.noAnswer);
   }
 
@@ -226,7 +247,7 @@ class _CallScreenState extends State<CallScreen> {
       _elapsed = Duration.zero;
     });
     _startOutgoingCall();
-    _ringTimeoutTimer = Timer(_ringTimeout, _onRingTimeout);
+    _ringTimeoutTimer = Timer(widget.ringTimeout ?? _ringTimeout, _onRingTimeout);
   }
 
   void _startTimer() {
@@ -307,7 +328,7 @@ class _CallScreenState extends State<CallScreen> {
       case _CallPhase.inCall:
         return _formatElapsed();
       case _CallPhase.noAnswer:
-        return 'لم يتم الرد';
+        return widget.incomingOfferSdp != null ? 'تعذر إكمال الاتصال' : 'لم يتم الرد';
       case _CallPhase.ended:
         return 'انتهت المكالمة';
     }
@@ -410,21 +431,28 @@ class _CallScreenState extends State<CallScreen> {
     }
 
     if (_phase == _CallPhase.noAnswer) {
+      // _retryCall only ever re-dials as the outgoing caller (startAsCaller)
+      // - meaningless for a call we were accepting, where "retry" would
+      // have to mean calling the customer back, which nothing here is set
+      // up to do. Only the outgoing side gets that button; the accepting
+      // side just closes.
+      final isAccepting = widget.incomingOfferSdp != null;
       return Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           _CallButton(
             icon: Icons.call_end_rounded,
             label: 'إنهاء',
-            color: Colors.white.withOpacity(0.2),
+            color: isAccepting ? AppColors.error : Colors.white.withOpacity(0.2),
             onPressed: () => Navigator.of(context).pop(),
           ),
-          _CallButton(
-            icon: Icons.refresh_rounded,
-            label: 'إعادة الاتصال',
-            color: AppColors.success,
-            onPressed: _retryCall,
-          ),
+          if (!isAccepting)
+            _CallButton(
+              icon: Icons.refresh_rounded,
+              label: 'إعادة الاتصال',
+              color: AppColors.success,
+              onPressed: _retryCall,
+            ),
         ],
       );
     }
