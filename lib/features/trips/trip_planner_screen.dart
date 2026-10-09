@@ -16,10 +16,12 @@ import 'voice_ride_request_sheet.dart';
 
 /// Shown after tapping "إلى أين تريد الذهاب؟" on the home screen - three
 /// sections: a normal ride (needs both a pickup and a destination point),
-/// an open ride (just a pickup), and "راسل لطلب مشوار" for a customer who'd
-/// rather just describe it in writing than type/choose anything - see
-/// [_requestRideByMessage], which reuses the open-ride section's own pickup
-/// point rather than asking for one a third time. Each location field is
+/// an open ride (just a pickup), and "راسل لطلب مشوار" for a customer who's
+/// already filled in the normal ride's pickup/destination above but would
+/// rather message admin about it than go through the usual vehicle-type/
+/// payment confirmation - see [_requestRideByMessage], which reuses that
+/// same normal-ride section's fields rather than asking for either point a
+/// second time. Each location field is
 /// picked inline, right on this screen, via [LocationSearchField] (type to
 /// search, or the map icon for a full-screen map picker), pre-filled with
 /// the GPS location detected on the home screen but freely changeable
@@ -266,23 +268,24 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
 
   bool _isRequestingByMessage = false;
 
-  /// "راسل لطلب مشوار" - requests an open trip at whatever pickup point the
-  /// "مشوار مفتوح" section above already has (same GPS-detected point,
-  /// freely edited there) - reusing it instead of asking for a pickup a
-  /// second time - then sends a first message to admin support about it
-  /// and lands on that conversation, where the customer can describe the
-  /// destination/details in writing. Admin fills in the trip accordingly
-  /// (the same route-editing tools already used for a phone-in dispatch),
-  /// reachable right from inside the chat.
+  /// "راسل لطلب مشوار" - a normal ride (start *and* end point both known
+  /// upfront, unlike "مشوار مفتوح") at whatever the "مشوار عادي" section
+  /// above already has filled in - reusing those same fields instead of
+  /// asking for either point a second time - then sends a first message to
+  /// admin support about it and lands on that conversation, where the
+  /// customer can add any extra notes in writing. Skips RequestRideScreen's
+  /// own confirmation step (vehicle type/payment) entirely - a customer
+  /// choosing this path wants to talk to someone, not fill out a form.
   Future<void> _requestRideByMessage() async {
     if (_isRequestingByMessage) return;
-    final lat = _openPickupLat;
-    final lng = _openPickupLng;
-    if (lat == null || lng == null) {
+    final lat = _normalPickupLat;
+    final lng = _normalPickupLng;
+    final destination = _normalDestination;
+    if (lat == null || lng == null || destination == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'حدّد نقطة الانطلاق أولاً (في قسم "مشوار مفتوح" أعلاه) قبل المراسلة.',
+            'حدّد نقطتي الانطلاق والوجهة أولاً (في قسم "مشوار عادي" أعلاه) قبل المراسلة.',
             style: TextStyle(fontFamily: 'Cairo'),
           ),
         ),
@@ -291,12 +294,15 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
     }
     setState(() => _isRequestingByMessage = true);
     try {
-      final pickupAddress = _openPickupAddress ?? 'موقعي الحالي';
+      final pickupAddress = _normalPickupAddress ?? destination.title;
       final trip = await RideRepository.instance.requestTrip(
         pickupAddress: pickupAddress,
         pickupLat: lat,
         pickupLng: lng,
-        tripType: TripType.open,
+        destinationAddress: destination.title,
+        destinationLat: destination.latitude,
+        destinationLng: destination.longitude,
+        tripType: TripType.normal,
         vehicleType: VehicleType.economy,
         paymentMethod: 'نقداً',
       );
@@ -307,7 +313,7 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
       );
       await SupportTicketRepository.instance.sendMessage(
         ticketId,
-        '🚕 طلب مشوار جديد\nنقطة الانطلاق: $pickupAddress\nالوجهة: ',
+        '🚕 طلب مشوار جديد\nنقطة الانطلاق: $pickupAddress\nالوجهة: ${destination.title}',
       );
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
@@ -435,7 +441,7 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
             icon: Icons.support_agent_rounded,
             color: AppColors.secondary,
             title: 'راسل لطلب مشوار',
-            subtitle: 'اكتب طلبك للإدارة بدل الكتابة أو الاختيار هنا',
+            subtitle: 'حدّد نقطتي الانطلاق والوجهة أعلاه، ثم راسل الإدارة مباشرة بدل تأكيد الطلب بالطريقة المعتادة',
             children: [
               ElevatedButton.icon(
                 onPressed: _isRequestingByMessage ? null : _requestRideByMessage,
