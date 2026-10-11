@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/auth/auth_service.dart';
 import '../../core/constants/colors.dart';
-import '../../core/services/ride_alert_service.dart';
-import '../../core/services/ride_settings_service.dart';
+import '../../core/services/session_guard_service.dart';
+import '../../l10n/app_localizations.dart';
 import '../../providers/app_state_provider.dart';
-import '../authentication/captain_login_screen.dart';
+import '../../providers/locale_provider.dart';
+import '../authentication/auth_welcome_screen.dart';
 import 'about_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -18,28 +20,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
   bool _darkModeEnabled = false;
   bool _shareLocationEnabled = true;
-  String _selectedLanguage = 'العربية';
-
-  bool _rideSettingsLoaded = false;
-  late bool _rideSoundEnabled;
-  late bool _rideVibrationEnabled;
-  late RideAlertVolume _rideVolume;
-
-  @override
-  void initState() {
-    super.initState();
-    RideSettingsService.instance.load().then((_) {
-      if (!mounted) return;
-      setState(() {
-        _rideSoundEnabled = RideSettingsService.instance.soundEnabled;
-        _rideVibrationEnabled = RideSettingsService.instance.vibrationEnabled;
-        _rideVolume = RideSettingsService.instance.volume;
-        _rideSettingsLoaded = true;
-      });
-    });
-  }
 
   void _showDeleteAccountDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) {
@@ -47,32 +30,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(22),
           ),
-          title: const Text(
-            'حذف الحساب نهائياً',
-            style: TextStyle(
+          title: Text(
+            l10n.deleteAccount,
+            style: const TextStyle(
               fontFamily: 'Cairo',
               fontWeight: FontWeight.bold,
               color: AppColors.error,
             ),
             textAlign: TextAlign.center,
           ),
-          content: const Text(
-            'هل أنت متأكد من رغبتك في حذف حسابك؟ هذا الإجراء نهائي ولا يمكن الرجوع عنه وستفقد جميع بياناتك وأرصدة محفظتك.',
-            style: TextStyle(fontFamily: 'Cairo', fontSize: 13),
+          content: Text(
+            l10n.deleteAccountDialogContent,
+            style: const TextStyle(fontFamily: 'Cairo', fontSize: 13),
             textAlign: TextAlign.center,
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('إلغاء'),
+              child: Text(l10n.cancel),
             ),
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                _handleLogout();
+                _handleDeleteAccount();
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-              child: const Text('نعم، احذف الحساب'),
+              child: Text(l10n.deleteAccountConfirm),
             ),
           ],
         );
@@ -80,149 +63,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _handleLogout() {
+  Future<void> _handleLogout() async {
+    SessionGuardService.instance.stop();
+    await AuthService.instance.signOut();
+    if (!mounted) return;
     final provider = Provider.of<AppStateProvider>(context, listen: false);
     provider.logout();
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => const CaptainLoginScreen()),
+      MaterialPageRoute(builder: (context) => const AuthWelcomeScreen()),
       (route) => false,
     );
   }
 
-  Future<void> _previewAlert() async {
-    await RideAlertService.instance.previewOnce(_rideVolume);
-  }
-
-  Widget _buildRideAlertSettingsCard() {
-    if (!_rideSettingsLoaded) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: Center(child: CircularProgressIndicator()),
+  /// Really deletes the account, unlike before - this button used to just
+  /// call [_handleLogout] while the confirmation dialog promised the data
+  /// was gone forever. See AuthService.deleteAccount.
+  Future<void> _handleDeleteAccount() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+    try {
+      await AuthService.instance.deleteAccount();
+      SessionGuardService.instance.stop();
+      if (!mounted) return;
+      Navigator.of(context).pop(); // the progress dialog
+      final provider = Provider.of<AppStateProvider>(context, listen: false);
+      provider.logout();
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const AuthWelcomeScreen()),
+        (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop(); // the progress dialog
+      final l10n = AppLocalizations.of(context)!;
+      final message = e.toString().contains('ACTIVE_TRIP')
+          ? l10n.deleteAccountErrorActiveTrip
+          : e.toString().contains('OUTSTANDING_DEBT')
+          ? l10n.deleteAccountErrorDebt
+          : l10n.deleteAccountErrorGeneric;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message, style: const TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 6),
+        ),
       );
     }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'تنبيهات طلبات المشاوير',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: AppColors.darkText,
-            fontFamily: 'Cairo',
-          ),
-        ),
-        const SizedBox(height: 8),
-        Card(
-          child: Column(
-            children: [
-              SwitchListTile(
-                activeColor: AppColors.primary,
-                title: const Text(
-                  'صوت تنبيه المشوار الجديد',
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-                value: _rideSoundEnabled,
-                onChanged: (value) {
-                  setState(() => _rideSoundEnabled = value);
-                  RideSettingsService.instance.setSoundEnabled(value);
-                },
-              ),
-              const Divider(height: 1, indent: 16, endIndent: 16),
-              SwitchListTile(
-                activeColor: AppColors.primary,
-                title: const Text(
-                  'الاهتزاز عند وصول طلب جديد',
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-                value: _rideVibrationEnabled,
-                onChanged: (value) {
-                  setState(() => _rideVibrationEnabled = value);
-                  RideSettingsService.instance.setVibrationEnabled(value);
-                },
-              ),
-              const Divider(height: 1, indent: 16, endIndent: 16),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'مستوى الصوت',
-                      style: TextStyle(
-                        fontFamily: 'Cairo',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        _volumeChip('منخفض', RideAlertVolume.low),
-                        const SizedBox(width: 8),
-                        _volumeChip('متوسط', RideAlertVolume.medium),
-                        const SizedBox(width: 8),
-                        _volumeChip('مرتفع', RideAlertVolume.high),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: _previewAlert,
-                      icon: const Icon(Icons.volume_up_rounded),
-                      label: const Text(
-                        'تجربة الصوت',
-                        style: TextStyle(fontFamily: 'Cairo'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-      ],
-    );
-  }
-
-  Widget _volumeChip(String label, RideAlertVolume level) {
-    final selected = _rideVolume == level;
-    return Expanded(
-      child: ChoiceChip(
-        label: Text(label, style: const TextStyle(fontFamily: 'Cairo')),
-        selected: selected,
-        selectedColor: AppColors.primary.withOpacity(0.15),
-        onSelected: (_) {
-          setState(() => _rideVolume = level);
-          RideSettingsService.instance.setVolume(level);
-        },
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final localeProvider = context.watch<LocaleProvider>();
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
-          child: ClipOval(
-            child: Image.asset(
-              'assets/images/al-houdhoud-logo.png',
-              fit: BoxFit.cover,
-            ),
+          child: Image.asset(
+            'assets/images/al-houdhoud-logo-mark.png',
+            fit: BoxFit.contain,
           ),
         ),
-        title: const Text('الإعدادات العامة'),
+        title: Text(l10n.settingsTitle),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
@@ -235,16 +141,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   // Language Selection
                   ListTile(
-                    title: const Text(
-                      'لغة التطبيق',
-                      style: TextStyle(
+                    title: Text(
+                      l10n.appLanguage,
+                      style: const TextStyle(
                         fontFamily: 'Cairo',
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
                     ),
                     trailing: DropdownButton<String>(
-                      value: _selectedLanguage,
+                      value: localeProvider.locale.languageCode,
                       underline: Container(),
                       style: const TextStyle(
                         fontFamily: 'Cairo',
@@ -254,16 +160,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       onChanged: (String? newValue) {
                         if (newValue != null) {
-                          setState(() {
-                            _selectedLanguage = newValue;
-                          });
+                          context.read<LocaleProvider>().setLocale(
+                            Locale(newValue),
+                          );
                         }
                       },
-                      items: <String>['العربية', 'Français', 'English']
-                          .map<DropdownMenuItem<String>>((String value) {
+                      items: const <String, String>{
+                        'ar': 'العربية',
+                        'fr': 'Français',
+                      }.entries
+                          .map<DropdownMenuItem<String>>((entry) {
                             return DropdownMenuItem<String>(
-                              value: value,
-                              child: Text(value),
+                              value: entry.key,
+                              child: Text(entry.value),
                             );
                           })
                           .toList(),
@@ -274,17 +183,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   // Notifications Switch
                   SwitchListTile(
                     activeColor: AppColors.primary,
-                    title: const Text(
-                      'تفعيل الإشعارات',
-                      style: TextStyle(
+                    title: Text(
+                      l10n.enableNotifications,
+                      style: const TextStyle(
                         fontFamily: 'Cairo',
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
                     ),
-                    subtitle: const Text(
-                      'استلام تحديثات الرحلات والعروض المتاحة.',
-                      style: TextStyle(fontFamily: 'Cairo', fontSize: 11),
+                    subtitle: Text(
+                      l10n.notificationsSubtitle,
+                      style: const TextStyle(fontFamily: 'Cairo', fontSize: 11),
                     ),
                     value: _notificationsEnabled,
                     onChanged: (bool value) {
@@ -298,17 +207,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   // Dark Mode Switch
                   SwitchListTile(
                     activeColor: AppColors.primary,
-                    title: const Text(
-                      'الوضع الداكن (Dark Mode)',
-                      style: TextStyle(
+                    title: Text(
+                      l10n.darkMode,
+                      style: const TextStyle(
                         fontFamily: 'Cairo',
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
                     ),
-                    subtitle: const Text(
-                      'تفعيل مظهر مريح للعينين ليلاً (تجريبي).',
-                      style: TextStyle(fontFamily: 'Cairo', fontSize: 11),
+                    subtitle: Text(
+                      l10n.darkModeSubtitle,
+                      style: const TextStyle(fontFamily: 'Cairo', fontSize: 11),
                     ),
                     value: _darkModeEnabled,
                     onChanged: (bool value) {
@@ -316,12 +225,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         _darkModeEnabled = value;
                       });
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
+                        SnackBar(
                           content: Text(
-                            'الوضع الداكن سيتم دعمه بشكل كامل في التحديثات القادمة.',
-                            style: TextStyle(fontFamily: 'Cairo'),
+                            l10n.darkModeSnack,
+                            style: const TextStyle(fontFamily: 'Cairo'),
                           ),
-                          duration: Duration(seconds: 1),
+                          duration: const Duration(seconds: 1),
                         ),
                       );
                     },
@@ -331,17 +240,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   // Location Share Switch
                   SwitchListTile(
                     activeColor: AppColors.primary,
-                    title: const Text(
-                      'مشاركة الموقع الجغرافي',
-                      style: TextStyle(
+                    title: Text(
+                      l10n.shareLocation,
+                      style: const TextStyle(
                         fontFamily: 'Cairo',
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
                     ),
-                    subtitle: const Text(
-                      'السماح للتطبيق بمشاركة موقعك لتسهيل الالتقاء.',
-                      style: TextStyle(fontFamily: 'Cairo', fontSize: 11),
+                    subtitle: Text(
+                      l10n.shareLocationSubtitle,
+                      style: const TextStyle(fontFamily: 'Cairo', fontSize: 11),
                     ),
                     value: _shareLocationEnabled,
                     onChanged: (bool value) {
@@ -355,12 +264,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 20),
 
-            _buildRideAlertSettingsCard(),
-
             // Security Card
-            const Text(
-              'الأمان والحساب',
-              style: TextStyle(
+            Text(
+              l10n.securityAndAccount,
+              style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: AppColors.darkText,
@@ -373,35 +280,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   ListTile(
                     leading: const Icon(
-                      Icons.lock_reset_rounded,
-                      color: AppColors.secondaryText,
-                    ),
-                    title: const Text(
-                      'تغيير كلمة المرور',
-                      style: TextStyle(fontFamily: 'Cairo', fontSize: 14),
-                    ),
-                    trailing: const Icon(Icons.chevron_left_rounded),
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'تم إرسال رابط تغيير كلمة المرور لهاتفك.',
-                            style: TextStyle(fontFamily: 'Cairo'),
-                          ),
-                          backgroundColor: AppColors.primary,
-                        ),
-                      );
-                    },
-                  ),
-                  const Divider(height: 1, indent: 16, endIndent: 16),
-                  ListTile(
-                    leading: const Icon(
                       Icons.delete_forever_rounded,
                       color: AppColors.error,
                     ),
-                    title: const Text(
-                      'حذف الحساب نهائياً',
-                      style: TextStyle(
+                    title: Text(
+                      l10n.deleteAccount,
+                      style: const TextStyle(
                         fontFamily: 'Cairo',
                         fontSize: 14,
                         color: AppColors.error,
@@ -421,17 +305,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // About Card
             Card(
               child: ListTile(
-                leading: ClipOval(
+                leading: SizedBox(
+                  width: 32,
+                  height: 32,
                   child: Image.asset(
-                    'assets/images/al-houdhoud-logo.png',
-                    width: 32,
-                    height: 32,
-                    fit: BoxFit.cover,
+                    'assets/images/al-houdhoud-logo-mark.png',
+                    fit: BoxFit.contain,
                   ),
                 ),
-                title: const Text(
-                  'عن التطبيق',
-                  style: TextStyle(
+                title: Text(
+                  l10n.aboutApp,
+                  style: const TextStyle(
                     fontFamily: 'Cairo',
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
@@ -457,7 +341,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 foregroundColor: Colors.white,
               ),
               icon: const Icon(Icons.logout_rounded),
-              label: const Text('تسجيل الخروج'),
+              label: Text(l10n.logout),
             ),
           ],
         ),

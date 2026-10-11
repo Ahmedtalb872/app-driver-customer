@@ -132,6 +132,79 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
     _load();
   }
 
+  /// Only refuses server-side when the captain has trip history (see
+  /// admin_delete_captain / [CaptainHasTripHistoryException]) - a captain
+  /// with none, regardless of status, can be deleted from here.
+  Future<void> _delete(CaptainAdminView captain) async {
+    final reason = await showReasonDialog(
+      context,
+      title: 'حذف ملف ${captain.fullName} نهائياً - سبب الحذف (إلزامي)',
+      hint: 'هذا الإجراء لا يمكن التراجع عنه',
+    );
+    if (reason == null) return;
+    try {
+      await _repository.delete(captain.id, reason);
+      _load();
+    } on CaptainHasTripHistoryException {
+      _showError(
+        'لا يمكن حذف كابتن له سجل رحلات سابقة - استخدم إيقاف الحساب بدلاً من ذلك.',
+      );
+    } catch (_) {
+      _showError();
+    }
+  }
+
+  /// Optimistically flips the local row's contacted flag, then persists -
+  /// reverts and shows an error if the update fails, same pattern as the
+  /// rest of this screen's actions but without a full reload (nothing else
+  /// about the row changes, so there's no need to refetch the whole page).
+  Future<void> _toggleContacted(CaptainAdminView captain) async {
+    final index = _captains.indexWhere((c) => c.id == captain.id);
+    if (index == -1) return;
+    final newValue = !captain.contactedByAdmin;
+    setState(
+      () => _captains[index] = _copyWithContacted(captain, newValue),
+    );
+    try {
+      await _repository.setContacted(captain.id, newValue);
+    } catch (_) {
+      if (!mounted) return;
+      setState(
+        () => _captains[index] = _copyWithContacted(captain, !newValue),
+      );
+      _showError();
+    }
+  }
+
+  CaptainAdminView _copyWithContacted(CaptainAdminView captain, bool value) {
+    return CaptainAdminView(
+      id: captain.id,
+      fullName: captain.fullName,
+      phone: captain.phone,
+      email: captain.email,
+      avatarUrl: captain.avatarUrl,
+      status: captain.status,
+      rejectionReason: captain.rejectionReason,
+      adminNotes: captain.adminNotes,
+      city: captain.city,
+      address: captain.address,
+      isOnline: captain.isOnline,
+      vehicleType: captain.vehicleType,
+      vehicleBrand: captain.vehicleBrand,
+      vehicleModel: captain.vehicleModel,
+      vehicleYear: captain.vehicleYear,
+      vehicleColor: captain.vehicleColor,
+      vehiclePlate: captain.vehiclePlate,
+      vehicleSeats: captain.vehicleSeats,
+      walletBalance: captain.walletBalance,
+      createdAt: captain.createdAt,
+      dateOfBirth: captain.dateOfBirth,
+      payoutMethod: captain.payoutMethod,
+      payoutPhone: captain.payoutPhone,
+      contactedByAdmin: value,
+    );
+  }
+
   void _showError([String? message]) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -272,20 +345,36 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
 
     return Card(
       child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          columns: const [
+        // Vertical scroll wraps the horizontal one - DataTable has no
+        // built-in vertical scrolling of its own, so without this, any
+        // rows past what fits the Expanded's height were simply clipped
+        // with no way to reach them (only left-right panning worked).
+        scrollDirection: Axis.vertical,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: DataTable(
+            columns: const [
+            DataColumn(label: Text('#')),
+            DataColumn(label: Text('')),
             DataColumn(label: Text('الاسم')),
             DataColumn(label: Text('الهاتف')),
             DataColumn(label: Text('الحالة')),
             DataColumn(label: Text('الاتصال')),
             DataColumn(label: Text('السيارة')),
             DataColumn(label: Text('الرصيد')),
+            DataColumn(label: Text('تم التواصل؟')),
             DataColumn(label: Text('إجراءات')),
           ],
-          rows: _captains.map((captain) {
+          rows: _captains.asMap().entries.map((entry) {
+            final index = entry.key;
+            final captain = entry.value;
             return DataRow(
               cells: [
+                DataCell(Text('${_offset + index + 1}')),
+                DataCell(
+                  _CaptainAvatar(captain: captain),
+                  onTap: () => _openDetails(captain),
+                ),
                 DataCell(
                   Text(captain.fullName.isEmpty ? '-' : captain.fullName),
                   onTap: () => _openDetails(captain),
@@ -299,6 +388,23 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
                 ),
                 DataCell(Text(captain.vehicleModel ?? '-')),
                 DataCell(Text(captain.walletBalance.toStringAsFixed(0))),
+                DataCell(
+                  IconButton(
+                    tooltip: captain.contactedByAdmin
+                        ? 'تم التواصل معه - اضغط لإلغاء'
+                        : 'لم يتم التواصل معه بعد - اضغط للتأكيد',
+                    icon: Icon(
+                      captain.contactedByAdmin
+                          ? Icons.check_box
+                          : Icons.check_box_outline_blank,
+                      color: captain.contactedByAdmin
+                          ? AdminColors.success
+                          : AdminColors.textSecondary,
+                      size: 20,
+                    ),
+                    onPressed: () => _toggleContacted(captain),
+                  ),
+                ),
                 DataCell(
                   Row(
                     children: [
@@ -343,12 +449,22 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
                         icon: const Icon(Icons.visibility_outlined, size: 20),
                         onPressed: () => _openDetails(captain),
                       ),
+                      IconButton(
+                        tooltip: 'حذف الملف',
+                        icon: const Icon(
+                          Icons.delete_outline_rounded,
+                          size: 20,
+                          color: AdminColors.error,
+                        ),
+                        onPressed: () => _delete(captain),
+                      ),
                     ],
                   ),
                 ),
               ],
             );
           }).toList(),
+          ),
         ),
       ),
     );
@@ -367,5 +483,30 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
       default:
         return StatusBadge.neutral(captain.status);
     }
+  }
+}
+
+/// Circular profile-photo thumbnail for the captains table's leading
+/// column. Falls back to a generic person icon when the captain has no
+/// approved profile photo yet (avatar_url only gets set once one is
+/// approved - see AdminCaptainsRepository.syncApprovedProfilePhotoToAvatar).
+class _CaptainAvatar extends StatelessWidget {
+  const _CaptainAvatar({required this.captain});
+
+  final CaptainAdminView captain;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = captain.avatarUrl;
+    return CircleAvatar(
+      radius: 18,
+      backgroundColor: AdminColors.primary.withValues(alpha: 0.1),
+      backgroundImage: (url == null || url.isEmpty)
+          ? null
+          : NetworkImage(url),
+      child: (url == null || url.isEmpty)
+          ? Icon(Icons.person_outline, size: 18, color: AdminColors.primary)
+          : null,
+    );
   }
 }
