@@ -142,6 +142,50 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
     }
   }
 
+  /// Mirrors AdminCaptainsScreen's own `_approve` - duplicated here (rather
+  /// than lifted into the repository/a shared helper) so this panel can
+  /// close itself and point the admin straight at the documents section
+  /// on the one error that matters, same confirm-dialog/exception shape as
+  /// the list screen's row action.
+  Future<void> _approveCaptainAccount() async {
+    final ok = await showConfirmDialog(
+      context,
+      title: 'اعتماد الكابتن',
+      message: 'هل تريد اعتماد ${widget.captain.fullName}؟',
+    );
+    if (!ok) return;
+    try {
+      await _repository.approve(widget.captain.id);
+      widget.onChanged();
+      if (mounted) Navigator.of(context).pop();
+    } on CaptainDocumentsIncompleteException {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'لا يمكن تفعيل الحساب قبل اعتماد جميع المستندات الإلزامية (٩ مستندات) أدناه.',
+              style: TextStyle(fontFamily: 'Cairo'),
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      _showDocError();
+    }
+  }
+
+  Future<void> _rejectCaptainAccount() async {
+    final reason = await showReasonDialog(context, title: 'سبب الرفض (إلزامي)');
+    if (reason == null) return;
+    try {
+      await _repository.reject(widget.captain.id, reason);
+      widget.onChanged();
+      if (mounted) Navigator.of(context).pop();
+    } catch (_) {
+      _showDocError();
+    }
+  }
+
   Future<void> _saveNotes() async {
     await _repository.updateAdminNotes(
       widget.captain.id,
@@ -329,6 +373,35 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
                   fontFamily: 'Cairo',
                 ),
               ),
+              if (captain.isPending) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _approveCaptainAccount,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AdminColors.success,
+                        ),
+                        icon: const Icon(Icons.check_circle_outline),
+                        label: const Text('تفعيل الحساب'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _rejectCaptainAccount,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AdminColors.error,
+                          side: const BorderSide(color: AdminColors.error),
+                        ),
+                        icon: const Icon(Icons.cancel_outlined),
+                        label: const Text('رفض الحساب'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               const Divider(height: 32),
 
               _sectionTitle('البيانات الشخصية'),
