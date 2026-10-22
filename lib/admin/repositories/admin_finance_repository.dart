@@ -113,4 +113,26 @@ class AdminFinanceRepository {
       },
     );
   }
+
+  /// Captain-subscription cycles flagged for manual review (an early
+  /// cancellation before the captain's escrowed share was fully paid out,
+  /// or a trusted-mode renewal neither side confirmed in time) - see
+  /// admin_list_subscription_disputes(),
+  /// 20260812000057_subscription_staged_payout.sql. The actual wallet fix
+  /// is made separately via [adjustWalletBalance]; this dispute row just
+  /// tracks that something needs a human decision.
+  Future<List<Map<String, dynamic>>> loadSubscriptionDisputes() async {
+    final rows = await _client.rpc('admin_list_subscription_disputes');
+    return List<Map<String, dynamic>>.from(rows as List);
+  }
+
+  Future<void> dismissSubscriptionDispute(
+    String subscriptionId,
+    String notes,
+  ) async {
+    await _client.rpc(
+      'admin_dismiss_subscription_dispute',
+      params: {'p_subscription_id': subscriptionId, 'p_notes': notes},
+    );
+  }
 }

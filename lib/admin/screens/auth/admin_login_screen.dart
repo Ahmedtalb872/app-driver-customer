@@ -159,7 +159,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
                       child: Image.asset(
-                        'assets/images/al-houdhoud-logo.png',
+                        'assets/images/al-houdhoud-logo-mark.png',
                         height: 96,
                         fit: BoxFit.contain,
                       ),
@@ -236,6 +236,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               controller: _identifierController,
               decoration: const InputDecoration(
                 labelText: 'رقم الهاتف أو البريد الإلكتروني',
+                helperText: 'رقم الهاتف بدون +222 (مثال: 20522064)',
               ),
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? 'مطلوب' : null,

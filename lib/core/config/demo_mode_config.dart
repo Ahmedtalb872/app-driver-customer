@@ -26,6 +26,12 @@ class DemoModeConfig {
       : <String, DemoAccount>{};
 
   static const Map<String, DemoAccount> _demoAccounts = {
+    '+22240000001': DemoAccount(
+      code: '111111',
+      fullName: 'زبون تجريبي',
+      role: AppRole.customer,
+      internalPassword: 'hudhud_demo_22240000001_111111_2026',
+    ),
     '+22240000002': DemoAccount(
       code: '222222',
       fullName: 'كابتن تجريبي',
@@ -45,18 +51,6 @@ class DemoModeConfig {
 
   static bool verifyCode(String phone, String code) =>
       isEnabled && demoAccounts[phone]?.code == code;
-
-  /// Phone number of the demo captain account that should always report
-  /// (and stay) online during development - see [CaptainSession] - so
-  /// testers don't have to remember to flip it on after every sign-in.
-  /// Null outside debug/profile builds since [demoAccounts] is empty there.
-  static String? get alwaysOnlineCaptainPhone {
-    if (!isEnabled) return null;
-    for (final entry in demoAccounts.entries) {
-      if (entry.value.role == AppRole.captain) return entry.key;
-    }
-    return null;
-  }
 }
 
 class DemoAccount {

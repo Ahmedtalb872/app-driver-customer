@@ -44,6 +44,7 @@ class AdminDashboardRepository {
             'searching',
             'accepted',
             'arrived',
+            'boarded',
             'in_progress',
           ])
           .count(CountOption.exact),
