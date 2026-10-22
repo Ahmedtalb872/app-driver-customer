@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/config/supabase_config.dart';
+import '../../core/services/captain_documents_repository.dart';
 import '../../models/models.dart';
 import '../models/captain_admin_view.dart';
 
@@ -135,6 +137,66 @@ class AdminCaptainsRepository {
       'admin_reject_document',
       params: {'p_document_id': documentId, 'p_reason': reason},
     );
+  }
+
+  /// Registers a document on [captainId]'s behalf - for a captain who sent
+  /// their ID/license/vehicle photos over WhatsApp or by hand instead of
+  /// uploading them through the app themselves. Mirrors
+  /// [CaptainDocumentsRepository.uploadDocument]'s validation and Storage
+  /// path convention exactly, just uploading under the given captain's
+  /// folder (via the storage policy "Admins can upload documents for any
+  /// captain") and registering through admin_upload_captain_document
+  /// instead of the captain's own RPC. Lands as 'pending' like any other
+  /// upload - the admin still reviews/approves it separately afterward.
+  Future<CaptainDocument> uploadDocumentForCaptain({
+    required String captainId,
+    required DocumentType documentType,
+    required Uint8List bytes,
+    required String fileName,
+    required String mimeType,
+    DateTime? expiresAt,
+  }) async {
+    if (bytes.length > CaptainDocumentsRepository.maxFileSizeBytes) {
+      throw ArgumentError('File exceeds the 10MB limit');
+    }
+    if (!CaptainDocumentsRepository.allowedMimeTypes.contains(mimeType)) {
+      throw ArgumentError('Unsupported file type: $mimeType');
+    }
+
+    final sanitizedFileName = fileName.replaceAll(
+      RegExp(r'[^A-Za-z0-9._-]'),
+      '_',
+    );
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final path =
+        'captains/$captainId/${documentType.dbValue}/${timestamp}_$sanitizedFileName';
+
+    await _client.storage
+        .from(CaptainDocumentsRepository.bucket)
+        .uploadBinary(
+          path,
+          bytes,
+          fileOptions: FileOptions(contentType: mimeType, upsert: false),
+        );
+
+    final row = await _client.rpc(
+      'admin_upload_captain_document',
+      params: {
+        'p_captain_id': captainId,
+        'p_document_type': documentType.dbValue,
+        'p_file_path': path,
+        'p_file_name': fileName,
+        'p_mime_type': mimeType,
+        'p_file_size': bytes.length,
+        'p_expires_at': expiresAt?.toUtc().toIso8601String(),
+      },
+    );
+    final document = CaptainDocument.fromRow(
+      Map<String, dynamic>.from(row as Map),
+    );
+    // Best effort, same as the captain's own upload path.
+    CaptainDocumentsRepository.instance.triggerExtraction(document.id);
+    return document;
   }
 
   /// Copies an approved "profile_photo" document (private captain-documents

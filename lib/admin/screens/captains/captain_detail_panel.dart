@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -31,6 +32,8 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
 
   Map<DocumentType, CaptainDocument> _documents = {};
   bool _loadingDocuments = true;
+  final Set<DocumentType> _uploadingTypes = {};
+  final _imagePicker = ImagePicker();
 
   @override
   void initState() {
@@ -106,6 +109,37 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
     Future.delayed(const Duration(seconds: 5), () {
       if (mounted) _loadDocuments();
     });
+  }
+
+  /// For a captain who sent their documents over WhatsApp instead of
+  /// uploading through the app - picks an image from the admin's own
+  /// device/computer and registers it under this captain via
+  /// AdminCaptainsRepository.uploadDocumentForCaptain. Replaces any
+  /// existing document of the same type (back to 'pending' review), same as
+  /// a captain re-uploading their own.
+  Future<void> _uploadDocument(DocumentType type) async {
+    final XFile? picked = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
+    if (picked == null) return;
+
+    setState(() => _uploadingTypes.add(type));
+    try {
+      final bytes = await picked.readAsBytes();
+      await _repository.uploadDocumentForCaptain(
+        captainId: widget.captain.id,
+        documentType: type,
+        bytes: bytes,
+        fileName: picked.name,
+        mimeType: picked.mimeType ?? 'image/jpeg',
+      );
+      await _loadDocuments();
+    } catch (_) {
+      _showDocError();
+    } finally {
+      if (mounted) setState(() => _uploadingTypes.remove(type));
+    }
   }
 
   Future<void> _saveNotes() async {
@@ -421,6 +455,8 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
                       onRescan: _documents[type] == null
                           ? null
                           : () => _rescanDocument(_documents[type]!),
+                      onUpload: () => _uploadDocument(type),
+                      isUploading: _uploadingTypes.contains(type),
                     ),
                   ),
                 ),
@@ -584,6 +620,8 @@ class _AdminDocumentCard extends StatelessWidget {
   final VoidCallback? onRequestReplacement;
   final VoidCallback? onSetAsAvatar;
   final VoidCallback? onRescan;
+  final VoidCallback onUpload;
+  final bool isUploading;
 
   const _AdminDocumentCard({
     required this.documentType,
@@ -593,6 +631,8 @@ class _AdminDocumentCard extends StatelessWidget {
     required this.onRequestReplacement,
     required this.onSetAsAvatar,
     required this.onRescan,
+    required this.onUpload,
+    required this.isUploading,
   });
 
   @override
@@ -714,6 +754,11 @@ class _AdminDocumentCard extends StatelessWidget {
                         onRequestReplacement,
                       ),
                       _actionChip(
+                        isUploading ? 'جارٍ الرفع...' : 'رفع بديل من الجهاز',
+                        AdminColors.primary,
+                        isUploading ? null : onUpload,
+                      ),
+                      _actionChip(
                         'تنزيل',
                         AdminColors.textSecondary,
                         () => _openDocument(context, doc),
@@ -728,15 +773,26 @@ class _AdminDocumentCard extends StatelessWidget {
                     ],
                   ),
                 ] else
-                  const Padding(
-                    padding: EdgeInsets.only(top: 4),
-                    child: Text(
-                      'لم يقم الكابتن برفع هذا المستند بعد.',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AdminColors.textSecondary,
-                        fontFamily: 'Cairo',
-                      ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'لم يقم الكابتن برفع هذا المستند بعد.',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AdminColors.textSecondary,
+                            fontFamily: 'Cairo',
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        _actionChip(
+                          isUploading ? 'جارٍ الرفع...' : 'رفع من الجهاز',
+                          AdminColors.primary,
+                          isUploading ? null : onUpload,
+                        ),
+                      ],
                     ),
                   ),
               ],
