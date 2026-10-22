@@ -281,6 +281,43 @@ class AdminCaptainsRepository {
     }
   }
 
+  /// Live positions from `captain_locations` - the same table the captain
+  /// app's own foreground location service keeps fresh while a captain is
+  /// online or on a trip (see aihoudhoud's AppStateProvider), and the same
+  /// table TripDetailPanel already reads per-trip. Admin read access to
+  /// every row (not just one tied to an active trip) comes from that
+  /// repo's own captain_locations_admin_select policy
+  /// (0030_captain_locations_admin_and_realtime.sql) - nothing to add on
+  /// this side. Keyed by captain_id for an O(1) lookup against the online
+  /// captains list in the live-operations map view.
+  Stream<Map<String, CaptainLocation>> watchCaptainLocations() {
+    final controller = StreamController<Map<String, CaptainLocation>>.broadcast();
+
+    final sub = _client
+        .from('captain_locations')
+        .stream(primaryKey: ['captain_id'])
+        .listen((rows) {
+          final byId = <String, CaptainLocation>{};
+          for (final row in rows) {
+            final lat = (row['lat'] as num?)?.toDouble();
+            final lng = (row['lng'] as num?)?.toDouble();
+            if (lat == null || lng == null) continue;
+            final updatedAt = DateTime.tryParse(
+              row['updated_at'] as String? ?? '',
+            );
+            byId[row['captain_id'] as String] = CaptainLocation(
+              lat: lat,
+              lng: lng,
+              updatedAt: updatedAt,
+            );
+          }
+          controller.add(byId);
+        });
+
+    controller.onCancel = () async => sub.cancel();
+    return controller.stream;
+  }
+
   /// Live version of [loadCaptains](onlineFilter: true): emits the online
   /// captains list immediately, then again on every `captains` row change
   /// (debounced), so Live Operations reflects online/offline toggles
@@ -324,3 +361,13 @@ class CaptainDocumentsIncompleteException implements Exception {
 /// Thrown when `admin_delete_captain` refuses because the captain has trip
 /// history - suspend the account instead of deleting it.
 class CaptainHasTripHistoryException implements Exception {}
+
+/// A captain's last-known position from `captain_locations`, as read by
+/// [AdminCaptainsRepository.watchCaptainLocations].
+class CaptainLocation {
+  final double lat;
+  final double lng;
+  final DateTime? updatedAt;
+
+  const CaptainLocation({required this.lat, required this.lng, this.updatedAt});
+}
