@@ -74,10 +74,19 @@ jobs:
         # rejects a second .aab upload with a versionCode it's already seen
         # - it requires a strictly increasing one per upload. Mirrors the
         # same fix already applied to the captain app's build-apk.yml.
-        # github.run_number strictly increases on every run of this
-        # workflow, so it's a safe, always-fresh versionCode.
+        #
+        # Previously used github.run_number, which turned out not to be
+        # reliable here: if this workflow file is ever deleted/recreated (it
+        # has been, across this repo's history), GitHub resets run_number
+        # back to 1, so a later run can recompute a versionCode Play Console
+        # already has on file from before the reset - exactly what happened
+        # (run #255 collided with an already-uploaded 255). Unix seconds
+        # (minus a fixed offset so the result comfortably fits Android's
+        # signed-32-bit versionCode limit, instead of nearly overflowing it)
+        # only ever increases and has no such reset path.
         run: |
-          sed -i -E "s/^version: [0-9]+\.[0-9]+\.[0-9]+\+[0-9]+/version: 1.1.1+${{ github.run_number }}/" pubspec.yaml
+          version_code=$(( $(date -u +%s) - 1700000000 ))
+          sed -i -E "s/^version: [0-9]+\.[0-9]+\.[0-9]+\+[0-9]+/version: 1.1.1+${version_code}/" pubspec.yaml
 
       - name: Install dependencies
         run: flutter pub get
