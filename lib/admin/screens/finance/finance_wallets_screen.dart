@@ -18,6 +18,7 @@ class _FinanceWalletsScreenState extends State<FinanceWalletsScreen> {
   Timer? _debounce;
   bool _loading = true;
   List<Map<String, dynamic>> _wallets = [];
+  String? _vehicleTypeFilter;
 
   @override
   void initState() {
@@ -36,6 +37,7 @@ class _FinanceWalletsScreenState extends State<FinanceWalletsScreen> {
     setState(() => _loading = true);
     final wallets = await _repository.loadWallets(
       searchQuery: _searchController.text,
+      vehicleTypeFilter: _vehicleTypeFilter,
     );
     if (!mounted) return;
     setState(() {
@@ -135,16 +137,40 @@ class _FinanceWalletsScreenState extends State<FinanceWalletsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 280,
-            child: TextField(
-              controller: _searchController,
-              onChanged: _onSearchChanged,
-              decoration: const InputDecoration(
-                hintText: 'ابحث بالاسم أو الهاتف',
-                prefixIcon: Icon(Icons.search_rounded),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              SizedBox(
+                width: 280,
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: _onSearchChanged,
+                  decoration: const InputDecoration(
+                    hintText: 'ابحث بالاسم أو الهاتف',
+                    prefixIcon: Icon(Icons.search_rounded),
+                  ),
+                ),
               ),
-            ),
+              SizedBox(
+                width: 200,
+                child: DropdownButtonFormField<String?>(
+                  initialValue: _vehicleTypeFilter,
+                  decoration: const InputDecoration(labelText: 'نوع الحساب'),
+                  items: const [
+                    DropdownMenuItem(value: null, child: Text('الكل')),
+                    DropdownMenuItem(
+                      value: 'motorcycle',
+                      child: Text('كباتن الدراجات النارية فقط'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    setState(() => _vehicleTypeFilter = value);
+                    _load();
+                  },
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           Expanded(
@@ -157,6 +183,7 @@ class _FinanceWalletsScreenState extends State<FinanceWalletsScreen> {
                         columns: const [
                           DataColumn(label: Text('الاسم')),
                           DataColumn(label: Text('الهاتف')),
+                          DataColumn(label: Text('النوع')),
                           DataColumn(label: Text('الرصيد')),
                           DataColumn(label: Text('العملة')),
                           DataColumn(label: Text('إجراءات')),
@@ -164,6 +191,9 @@ class _FinanceWalletsScreenState extends State<FinanceWalletsScreen> {
                         rows: _wallets.map((wallet) {
                           final profile =
                               wallet['profiles'] as Map<String, dynamic>?;
+                          final vehicleType = _extractVehicleType(
+                            profile?['captains'],
+                          );
                           return DataRow(
                             cells: [
                               DataCell(
@@ -171,6 +201,12 @@ class _FinanceWalletsScreenState extends State<FinanceWalletsScreen> {
                               ),
                               DataCell(
                                 Text((profile?['phone'] as String?) ?? '-'),
+                              ),
+                              DataCell(
+                                Text(_vehicleTypeLabel(
+                                  profile?['role'] as String?,
+                                  vehicleType,
+                                )),
                               ),
                               DataCell(Text('${wallet['balance']}')),
                               DataCell(Text('${wallet['currency']}')),
@@ -193,5 +229,31 @@ class _FinanceWalletsScreenState extends State<FinanceWalletsScreen> {
         ],
       ),
     );
+  }
+
+  /// `profiles.captains` is a reverse embed through `captains.id references
+  /// profiles(id)` - PostgREST returns it as an object for this kind of
+  /// one-to-one relationship, but defensively also accepts a one-item list
+  /// in case that ever changes. Null for a customer (no matching row).
+  String? _extractVehicleType(dynamic captains) {
+    if (captains is Map<String, dynamic>) {
+      return captains['vehicle_type'] as String?;
+    }
+    if (captains is List && captains.isNotEmpty) {
+      return (captains.first as Map<String, dynamic>)['vehicle_type']
+          as String?;
+    }
+    return null;
+  }
+
+  String _vehicleTypeLabel(String? role, String? vehicleType) {
+    if (role != 'captain') return 'زبون';
+    return switch (vehicleType) {
+      'motorcycle' => 'كابتن - دراجة نارية',
+      'economy' => 'كابتن - اقتصادية',
+      'comfort' => 'كابتن - مريحة',
+      'family' => 'كابتن - عائلية',
+      _ => 'كابتن',
+    };
   }
 }

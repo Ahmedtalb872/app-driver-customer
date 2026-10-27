@@ -16,6 +16,7 @@ class AdminCaptainsRepository {
     String? searchQuery,
     String? statusFilter,
     bool? onlineFilter,
+    String? vehicleTypeFilter,
     int limit = 25,
     int offset = 0,
   }) async {
@@ -26,6 +27,9 @@ class AdminCaptainsRepository {
     }
     if (onlineFilter != null) {
       query = query.eq('is_online', onlineFilter);
+    }
+    if (vehicleTypeFilter != null && vehicleTypeFilter.isNotEmpty) {
+      query = query.eq('vehicle_type', vehicleTypeFilter);
     }
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
       final q = searchQuery.trim();

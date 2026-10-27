@@ -25,6 +25,7 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
   int _offset = 0;
   String? _statusFilter;
   bool? _onlineFilter;
+  String? _vehicleTypeFilter;
   bool _loading = true;
   String? _error;
   List<CaptainAdminView> _captains = [];
@@ -52,6 +53,7 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
         searchQuery: _searchController.text,
         statusFilter: _statusFilter,
         onlineFilter: _onlineFilter,
+        vehicleTypeFilter: _vehicleTypeFilter,
         limit: _pageSize,
         offset: _offset,
       );
@@ -272,6 +274,28 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
                   ],
                   onChanged: (value) {
                     setState(() => _onlineFilter = value);
+                    _offset = 0;
+                    _load();
+                  },
+                ),
+              ),
+              SizedBox(
+                width: 180,
+                child: DropdownButtonFormField<String?>(
+                  initialValue: _vehicleTypeFilter,
+                  decoration: const InputDecoration(labelText: 'نوع المركبة'),
+                  items: const [
+                    DropdownMenuItem(value: null, child: Text('الكل')),
+                    DropdownMenuItem(
+                      value: 'motorcycle',
+                      child: Text('دراجة نارية'),
+                    ),
+                    DropdownMenuItem(value: 'economy', child: Text('اقتصادية')),
+                    DropdownMenuItem(value: 'comfort', child: Text('مريحة')),
+                    DropdownMenuItem(value: 'family', child: Text('عائلية')),
+                  ],
+                  onChanged: (value) {
+                    setState(() => _vehicleTypeFilter = value);
                     _offset = 0;
                     _load();
                   },
