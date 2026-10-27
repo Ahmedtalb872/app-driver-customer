@@ -33,6 +33,7 @@ import '../widgets/admin_shell.dart';
 const Map<String, String> _routeTitles = {
   '/admin/dashboard': 'الرئيسية',
   '/admin/captains': 'الكباتن',
+  '/admin/motorcycle-captains': 'كباتن الدراجات',
   '/admin/customers': 'الزبناء',
   '/admin/trips': 'الرحلات',
   '/admin/live-operations': 'العمليات المباشرة',
@@ -107,6 +108,12 @@ GoRouter buildAdminRouter(AdminSession session) {
           GoRoute(
             path: '/admin/captains',
             builder: (context, state) => const AdminCaptainsScreen(),
+          ),
+          GoRoute(
+            path: '/admin/motorcycle-captains',
+            builder: (context, state) => const AdminCaptainsScreen(
+              initialVehicleTypeFilter: 'motorcycle',
+            ),
           ),
           GoRoute(
             path: '/admin/customers',

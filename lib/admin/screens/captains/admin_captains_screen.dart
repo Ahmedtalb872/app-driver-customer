@@ -10,7 +10,13 @@ import '../../widgets/status_badge.dart';
 import 'captain_detail_panel.dart';
 
 class AdminCaptainsScreen extends StatefulWidget {
-  const AdminCaptainsScreen({super.key});
+  /// Pre-selects the "نوع المركبة" filter (e.g. 'motorcycle' for the
+  /// dedicated "كباتن الدراجات" sidebar entry) instead of starting on "الكل" -
+  /// the admin can still change it freely afterward, same as any other
+  /// filter on this screen.
+  final String? initialVehicleTypeFilter;
+
+  const AdminCaptainsScreen({super.key, this.initialVehicleTypeFilter});
 
   @override
   State<AdminCaptainsScreen> createState() => _AdminCaptainsScreenState();
@@ -25,7 +31,7 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
   int _offset = 0;
   String? _statusFilter;
   bool? _onlineFilter;
-  String? _vehicleTypeFilter;
+  late String? _vehicleTypeFilter = widget.initialVehicleTypeFilter;
   bool _loading = true;
   String? _error;
   List<CaptainAdminView> _captains = [];

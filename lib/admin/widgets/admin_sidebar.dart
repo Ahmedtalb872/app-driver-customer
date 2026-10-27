@@ -27,6 +27,11 @@ const List<AdminSidebarItem> adminSidebarItems = [
     route: '/admin/captains',
   ),
   AdminSidebarItem(
+    label: 'كباتن الدراجات',
+    icon: Icons.two_wheeler_rounded,
+    route: '/admin/motorcycle-captains',
+  ),
+  AdminSidebarItem(
     label: 'الزبناء',
     icon: Icons.people_alt_rounded,
     route: '/admin/customers',
