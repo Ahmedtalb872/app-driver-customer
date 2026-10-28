@@ -22,7 +22,7 @@ const List<AdminSidebarItem> adminSidebarItems = [
     route: '/admin/dashboard',
   ),
   AdminSidebarItem(
-    label: 'الكباتن',
+    label: 'كباتن السيارات',
     icon: Icons.local_taxi_rounded,
     route: '/admin/captains',
   ),

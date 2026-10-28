@@ -12,11 +12,17 @@ import '../models/captain_admin_view.dart';
 class AdminCaptainsRepository {
   SupabaseClient get _client => SupabaseConfig.client;
 
+  /// [excludeVehicleTypeFilter] (e.g. 'motorcycle' for "كباتن السيارات")
+  /// drops that one vehicle type regardless of [vehicleTypeFilter] - the
+  /// two are meant to be mutually exclusive callers (one page picks a type
+  /// to include, the other picks one to exclude), but if both were passed
+  /// the exclusion wins since it's applied last.
   Future<List<CaptainAdminView>> loadCaptains({
     String? searchQuery,
     String? statusFilter,
     bool? onlineFilter,
     String? vehicleTypeFilter,
+    String? excludeVehicleTypeFilter,
     int limit = 25,
     int offset = 0,
   }) async {
@@ -30,6 +36,10 @@ class AdminCaptainsRepository {
     }
     if (vehicleTypeFilter != null && vehicleTypeFilter.isNotEmpty) {
       query = query.eq('vehicle_type', vehicleTypeFilter);
+    }
+    if (excludeVehicleTypeFilter != null &&
+        excludeVehicleTypeFilter.isNotEmpty) {
+      query = query.neq('vehicle_type', excludeVehicleTypeFilter);
     }
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
       final q = searchQuery.trim();

@@ -16,7 +16,18 @@ class AdminCaptainsScreen extends StatefulWidget {
   /// filter on this screen.
   final String? initialVehicleTypeFilter;
 
-  const AdminCaptainsScreen({super.key, this.initialVehicleTypeFilter});
+  /// "كباتن السيارات" (the main captains page): motorcycle captains get
+  /// their own dedicated page now, so this page never shows them, and its
+  /// own "نوع المركبة" dropdown drops the "دراجة نارية" option entirely
+  /// instead of just defaulting away from it - a filter that only hides a
+  /// type until someone picks it isn't really a car-only page.
+  final bool excludeMotorcycle;
+
+  const AdminCaptainsScreen({
+    super.key,
+    this.initialVehicleTypeFilter,
+    this.excludeMotorcycle = false,
+  });
 
   @override
   State<AdminCaptainsScreen> createState() => _AdminCaptainsScreenState();
@@ -60,6 +71,8 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
         statusFilter: _statusFilter,
         onlineFilter: _onlineFilter,
         vehicleTypeFilter: _vehicleTypeFilter,
+        excludeVehicleTypeFilter:
+            widget.excludeMotorcycle ? 'motorcycle' : null,
         limit: _pageSize,
         offset: _offset,
       );
@@ -290,15 +303,25 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
                 child: DropdownButtonFormField<String?>(
                   initialValue: _vehicleTypeFilter,
                   decoration: const InputDecoration(labelText: 'نوع المركبة'),
-                  items: const [
-                    DropdownMenuItem(value: null, child: Text('الكل')),
-                    DropdownMenuItem(
-                      value: 'motorcycle',
-                      child: Text('دراجة نارية'),
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('الكل')),
+                    if (!widget.excludeMotorcycle)
+                      const DropdownMenuItem(
+                        value: 'motorcycle',
+                        child: Text('دراجة نارية'),
+                      ),
+                    const DropdownMenuItem(
+                      value: 'economy',
+                      child: Text('اقتصادية'),
                     ),
-                    DropdownMenuItem(value: 'economy', child: Text('اقتصادية')),
-                    DropdownMenuItem(value: 'comfort', child: Text('مريحة')),
-                    DropdownMenuItem(value: 'family', child: Text('عائلية')),
+                    const DropdownMenuItem(
+                      value: 'comfort',
+                      child: Text('مريحة'),
+                    ),
+                    const DropdownMenuItem(
+                      value: 'family',
+                      child: Text('عائلية'),
+                    ),
                   ],
                   onChanged: (value) {
                     setState(() => _vehicleTypeFilter = value);
