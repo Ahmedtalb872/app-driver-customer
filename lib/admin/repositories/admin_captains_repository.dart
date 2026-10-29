@@ -39,7 +39,17 @@ class AdminCaptainsRepository {
     }
     if (excludeVehicleTypeFilter != null &&
         excludeVehicleTypeFilter.isNotEmpty) {
-      query = query.neq('vehicle_type', excludeVehicleTypeFilter);
+      // Plain .neq() compiles to `vehicle_type <> 'motorcycle'` - under SQL's
+      // three-valued logic that's NULL (not true) for a captain who hasn't
+      // set a vehicle type yet, so WHERE silently drops that row instead of
+      // keeping it. This is exactly what made "كباتن السيارات" show far
+      // fewer captains than it should (every captain with no vehicle_type
+      // set vanished from both this page and "كباتن الدراجات"). The
+      // explicit `.is.null` branch keeps them here, where they belong until
+      // someone actually marks them as a motorcycle.
+      query = query.or(
+        'vehicle_type.is.null,vehicle_type.neq.$excludeVehicleTypeFilter',
+      );
     }
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
       final q = searchQuery.trim();
