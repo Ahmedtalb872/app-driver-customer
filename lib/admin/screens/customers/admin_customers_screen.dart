@@ -6,6 +6,7 @@ import '../../core/admin_colors.dart';
 import '../../models/customer_admin_view.dart';
 import '../../repositories/admin_customers_repository.dart';
 import '../../widgets/confirm_dialog.dart';
+import '../../widgets/copyable_phone.dart';
 import '../../widgets/status_badge.dart';
 
 /// General registered-customers list (name/phone/rating/trip count/Selefli
@@ -252,7 +253,7 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
                   DataCell(
                     Text(customer.fullName.isEmpty ? '-' : customer.fullName),
                   ),
-                  DataCell(Text(customer.phone ?? '-')),
+                  DataCell(CopyablePhone(customer.phone)),
                   DataCell(
                     customer.isSuspended
                         ? StatusBadge.error('موقوف')

@@ -6,6 +6,7 @@ import '../../core/admin_colors.dart';
 import '../../models/captain_admin_view.dart';
 import '../../repositories/admin_captains_repository.dart';
 import '../../repositories/admin_trips_repository.dart';
+import '../../widgets/copyable_phone.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/status_badge.dart';
 import '../trips/trip_detail_panel.dart';
@@ -404,7 +405,7 @@ class _LiveOperationsScreenState extends State<LiveOperationsScreen> {
             return DataRow(
               cells: [
                 DataCell(Text(captain.fullName)),
-                DataCell(Text(captain.phone ?? '-')),
+                DataCell(CopyablePhone(captain.phone)),
                 DataCell(Text(captain.vehicleType ?? '-')),
                 DataCell(StatusBadge.success('متصل')),
               ],

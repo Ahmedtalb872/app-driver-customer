@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../repositories/admin_finance_repository.dart';
 import '../../widgets/confirm_dialog.dart';
+import '../../widgets/copyable_phone.dart';
 
 class FinanceWalletsScreen extends StatefulWidget {
   const FinanceWalletsScreen({super.key});
@@ -200,7 +201,7 @@ class _FinanceWalletsScreenState extends State<FinanceWalletsScreen> {
                                 Text((profile?['full_name'] as String?) ?? '-'),
                               ),
                               DataCell(
-                                Text((profile?['phone'] as String?) ?? '-'),
+                                CopyablePhone(profile?['phone'] as String?),
                               ),
                               DataCell(
                                 Text(_vehicleTypeLabel(

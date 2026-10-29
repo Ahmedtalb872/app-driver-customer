@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/admin_colors.dart';
 import '../../repositories/admin_finance_repository.dart';
 import '../../widgets/confirm_dialog.dart';
+import '../../widgets/copyable_phone.dart';
 import '../../widgets/status_badge.dart';
 
 class WithdrawalRequestsScreen extends StatefulWidget {
@@ -162,9 +163,13 @@ class _WithdrawalRequestsScreenState extends State<WithdrawalRequestsScreen> {
                           return DataRow(
                             cells: [
                               DataCell(
-                                Text(
-                                  '${profile?['full_name'] ?? '-'}\n'
-                                  '${profile?['phone'] ?? ''}',
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text('${profile?['full_name'] ?? '-'}'),
+                                    CopyablePhone(profile?['phone'] as String?),
+                                  ],
                                 ),
                               ),
                               DataCell(

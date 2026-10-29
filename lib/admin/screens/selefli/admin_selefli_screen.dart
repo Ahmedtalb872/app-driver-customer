@@ -4,6 +4,7 @@ import '../../models/customer_admin_view.dart';
 import '../../repositories/admin_customers_repository.dart';
 import '../../repositories/admin_settings_repository.dart';
 import '../../widgets/confirm_dialog.dart';
+import '../../widgets/copyable_phone.dart';
 import '../../widgets/status_badge.dart';
 
 /// Dedicated "سلفلي" section - previously just a couple of fields buried
@@ -275,7 +276,7 @@ class _AdminSelefliScreenState extends State<AdminSelefliScreen> {
                           (c) => DataRow(
                             cells: [
                               DataCell(Text(c.fullName.isEmpty ? '-' : c.fullName)),
-                              DataCell(Text(c.phone ?? '-')),
+                              DataCell(CopyablePhone(c.phone)),
                               DataCell(Text('${c.completedTripsCount}')),
                               DataCell(
                                 StatusBadge.error(

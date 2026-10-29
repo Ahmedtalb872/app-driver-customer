@@ -6,6 +6,7 @@ import '../../core/admin_colors.dart';
 import '../../models/captain_admin_view.dart';
 import '../../repositories/admin_captains_repository.dart';
 import '../../widgets/confirm_dialog.dart';
+import '../../widgets/copyable_phone.dart';
 import '../../widgets/status_badge.dart';
 import 'captain_detail_panel.dart';
 
@@ -432,7 +433,7 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
                   Text(captain.fullName.isEmpty ? '-' : captain.fullName),
                   onTap: () => _openDetails(captain),
                 ),
-                DataCell(Text(captain.phone ?? '-')),
+                DataCell(CopyablePhone(captain.phone)),
                 DataCell(_statusBadge(captain)),
                 DataCell(
                   captain.isOnline
