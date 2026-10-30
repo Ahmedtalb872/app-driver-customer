@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -31,6 +32,8 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
 
   Map<DocumentType, CaptainDocument> _documents = {};
   bool _loadingDocuments = true;
+  final Set<DocumentType> _uploadingTypes = {};
+  final _imagePicker = ImagePicker();
 
   @override
   void initState() {
@@ -66,9 +69,120 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
         _documents = {for (final d in docs) d.documentType: d};
         _loadingDocuments = false;
       });
+      _triggerMissingExtractions(docs);
     } catch (_) {
       if (!mounted) return;
       setState(() => _loadingDocuments = false);
+    }
+  }
+
+  /// Best-effort catch-up for documents uploaded before OCR extraction
+  /// existed (or from a session where the captain-side fire-and-forget call
+  /// never landed) - normally every document already has this done by the
+  /// time an admin opens this panel, since it's triggered right at upload
+  /// time (CaptainDocumentsRepository.uploadDocument). Re-fetches once,
+  /// after a short delay, so freshly-extracted text shows up without the
+  /// admin needing to close and reopen the panel.
+  void _triggerMissingExtractions(List<CaptainDocument> docs) {
+    final pending = docs.where(
+      (d) => d.extractionStatus == ExtractionStatus.notAttempted,
+    );
+    if (pending.isEmpty) return;
+    for (final doc in pending) {
+      CaptainDocumentsRepository.instance.triggerExtraction(doc.id);
+    }
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) _loadDocuments();
+    });
+  }
+
+  void _rescanDocument(CaptainDocument doc) {
+    CaptainDocumentsRepository.instance.triggerExtraction(doc.id);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'جارٍ إعادة فحص المستند...',
+          style: TextStyle(fontFamily: 'Cairo'),
+        ),
+      ),
+    );
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) _loadDocuments();
+    });
+  }
+
+  /// For a captain who sent their documents over WhatsApp instead of
+  /// uploading through the app - picks an image from the admin's own
+  /// device/computer and registers it under this captain via
+  /// AdminCaptainsRepository.uploadDocumentForCaptain. Replaces any
+  /// existing document of the same type (back to 'pending' review), same as
+  /// a captain re-uploading their own.
+  Future<void> _uploadDocument(DocumentType type) async {
+    final XFile? picked = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
+    if (picked == null) return;
+
+    setState(() => _uploadingTypes.add(type));
+    try {
+      final bytes = await picked.readAsBytes();
+      await _repository.uploadDocumentForCaptain(
+        captainId: widget.captain.id,
+        documentType: type,
+        bytes: bytes,
+        fileName: picked.name,
+        mimeType: picked.mimeType ?? 'image/jpeg',
+      );
+      await _loadDocuments();
+    } catch (_) {
+      _showDocError();
+    } finally {
+      if (mounted) setState(() => _uploadingTypes.remove(type));
+    }
+  }
+
+  /// Mirrors AdminCaptainsScreen's own `_approve` - duplicated here (rather
+  /// than lifted into the repository/a shared helper) so this panel can
+  /// close itself and point the admin straight at the documents section
+  /// on the one error that matters, same confirm-dialog/exception shape as
+  /// the list screen's row action.
+  Future<void> _approveCaptainAccount() async {
+    final ok = await showConfirmDialog(
+      context,
+      title: 'اعتماد الكابتن',
+      message: 'هل تريد اعتماد ${widget.captain.fullName}؟',
+    );
+    if (!ok) return;
+    try {
+      await _repository.approve(widget.captain.id);
+      widget.onChanged();
+      if (mounted) Navigator.of(context).pop();
+    } on CaptainDocumentsIncompleteException {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'لا يمكن تفعيل الحساب قبل اعتماد جميع المستندات الإلزامية (٩ مستندات) أدناه.',
+              style: TextStyle(fontFamily: 'Cairo'),
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      _showDocError();
+    }
+  }
+
+  Future<void> _rejectCaptainAccount() async {
+    final reason = await showReasonDialog(context, title: 'سبب الرفض (إلزامي)');
+    if (reason == null) return;
+    try {
+      await _repository.reject(widget.captain.id, reason);
+      widget.onChanged();
+      if (mounted) Navigator.of(context).pop();
+    } catch (_) {
+      _showDocError();
     }
   }
 
@@ -79,6 +193,44 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
     );
     widget.onChanged();
     if (mounted) Navigator.of(context).pop();
+  }
+
+  /// Only refuses server-side when the captain has trip history (see
+  /// admin_delete_captain / [CaptainHasTripHistoryException]).
+  Future<void> _deleteCaptain() async {
+    final reason = await showReasonDialog(
+      context,
+      title: 'حذف ملف ${widget.captain.fullName} نهائياً - سبب الحذف (إلزامي)',
+      hint: 'هذا الإجراء لا يمكن التراجع عنه',
+    );
+    if (reason == null) return;
+    try {
+      await _repository.delete(widget.captain.id, reason);
+      widget.onChanged();
+      if (mounted) Navigator.of(context).pop();
+    } on CaptainHasTripHistoryException {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'لا يمكن حذف كابتن له سجل رحلات سابقة - استخدم إيقاف الحساب بدلاً من ذلك.',
+              style: TextStyle(fontFamily: 'Cairo'),
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'تعذر حذف الملف، تحقق من صلاحياتك وحاول مجدداً.',
+              style: TextStyle(fontFamily: 'Cairo'),
+            ),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _approveDocument(CaptainDocument doc) async {
@@ -93,6 +245,51 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
       _loadDocuments();
     } catch (_) {
       _showDocError();
+      return;
+    }
+
+    // Best-effort, separate from the approval above (which already
+    // succeeded) - a failure here just leaves the customer-facing photo
+    // unset, exactly as it was before this document existed, rather than
+    // undoing a real approval over a copy/sync problem.
+    if (doc.documentType == DocumentType.profilePhoto) {
+      try {
+        await _repository.syncApprovedProfilePhotoToAvatar(doc);
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'تم اعتماد المستند، لكن تعذر تعيينه صورةً ظاهرة للزبون. حاول مجدداً لاحقاً.',
+                style: TextStyle(fontFamily: 'Cairo'),
+              ),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  /// Manual re-trigger for a "profile_photo" document approved before this
+  /// sync existed (or one that failed to sync the first time) - the
+  /// [_approveDocument] flow above already does this automatically for a
+  /// fresh approval, but that's a one-time hook, not something that reruns
+  /// on its own for already-approved documents.
+  Future<void> _setAsAvatar(CaptainDocument doc) async {
+    try {
+      await _repository.syncApprovedProfilePhotoToAvatar(doc);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'تم تعيين الصورة لتظهر للزبون.',
+              style: TextStyle(fontFamily: 'Cairo'),
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) _showDocError();
     }
   }
 
@@ -176,6 +373,35 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
                   fontFamily: 'Cairo',
                 ),
               ),
+              if (captain.isPending) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _approveCaptainAccount,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AdminColors.success,
+                        ),
+                        icon: const Icon(Icons.check_circle_outline),
+                        label: const Text('تفعيل الحساب'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _rejectCaptainAccount,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AdminColors.error,
+                          side: const BorderSide(color: AdminColors.error),
+                        ),
+                        icon: const Icon(Icons.cancel_outlined),
+                        label: const Text('رفض الحساب'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               const Divider(height: 32),
 
               _sectionTitle('البيانات الشخصية'),
@@ -251,6 +477,25 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
                 ],
               ),
 
+              const SizedBox(height: 20),
+              _sectionTitle('معلومات الدفع'),
+              const SizedBox(height: 8),
+              // Set by the captain themselves from their own app profile -
+              // this admin panel only ever displays it (for the finance/ops
+              // team to use when paying the captain directly or giving them
+              // a bonus/reward), never edits it.
+              Wrap(
+                spacing: 24,
+                runSpacing: 8,
+                children: [
+                  _infoTile(
+                    'وسيلة استلام المدفوعات',
+                    captain.payoutMethodLabel ?? '-',
+                  ),
+                  _infoTile('رقم الهاتف', captain.payoutPhone ?? '-'),
+                ],
+              ),
+
               const SizedBox(height: 24),
               _sectionTitle('المستندات'),
               const SizedBox(height: 8),
@@ -277,6 +522,14 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
                       onRequestReplacement: _documents[type] == null
                           ? null
                           : () => _requestReplacement(_documents[type]!),
+                      onSetAsAvatar: _documents[type] == null
+                          ? null
+                          : () => _setAsAvatar(_documents[type]!),
+                      onRescan: _documents[type] == null
+                          ? null
+                          : () => _rescanDocument(_documents[type]!),
+                      onUpload: () => _uploadDocument(type),
+                      isUploading: _uploadingTypes.contains(type),
                     ),
                   ),
                 ),
@@ -337,6 +590,19 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
                     trailing: Text('${trip['captain_net_earnings'] ?? '-'}'),
                   ),
                 ),
+              const Divider(height: 32),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  onPressed: _deleteCaptain,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AdminColors.error,
+                    side: const BorderSide(color: AdminColors.error),
+                  ),
+                  icon: const Icon(Icons.delete_outline_rounded),
+                  label: const Text('حذف ملف الكابتن نهائياً'),
+                ),
+              ),
             ],
           ),
         );
@@ -425,6 +691,10 @@ class _AdminDocumentCard extends StatelessWidget {
   final VoidCallback? onApprove;
   final VoidCallback? onReject;
   final VoidCallback? onRequestReplacement;
+  final VoidCallback? onSetAsAvatar;
+  final VoidCallback? onRescan;
+  final VoidCallback onUpload;
+  final bool isUploading;
 
   const _AdminDocumentCard({
     required this.documentType,
@@ -432,6 +702,10 @@ class _AdminDocumentCard extends StatelessWidget {
     required this.onApprove,
     required this.onReject,
     required this.onRequestReplacement,
+    required this.onSetAsAvatar,
+    required this.onRescan,
+    required this.onUpload,
+    required this.isUploading,
   });
 
   @override
@@ -530,6 +804,7 @@ class _AdminDocumentCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                  _buildExtractionBlock(doc),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 6,
@@ -539,28 +814,58 @@ class _AdminDocumentCard extends StatelessWidget {
                         _actionChip('اعتماد', AdminColors.success, onApprove),
                       if (doc.status != DocumentStatus.rejected)
                         _actionChip('رفض', AdminColors.error, onReject),
+                      if (documentType == DocumentType.profilePhoto &&
+                          doc.status == DocumentStatus.approved)
+                        _actionChip(
+                          'تعيين كصورة للزبون',
+                          AdminColors.primary,
+                          onSetAsAvatar,
+                        ),
                       _actionChip(
                         'طلب استبدال',
                         AdminColors.warning,
                         onRequestReplacement,
                       ),
                       _actionChip(
+                        isUploading ? 'جارٍ الرفع...' : 'رفع بديل من الجهاز',
+                        AdminColors.primary,
+                        isUploading ? null : onUpload,
+                      ),
+                      _actionChip(
                         'تنزيل',
                         AdminColors.textSecondary,
                         () => _openDocument(context, doc),
                       ),
+                      if (doc.extractionStatus != ExtractionStatus.skipped &&
+                          doc.extractionStatus != ExtractionStatus.pending)
+                        _actionChip(
+                          'إعادة الفحص الآلي',
+                          AdminColors.textSecondary,
+                          onRescan,
+                        ),
                     ],
                   ),
                 ] else
-                  const Padding(
-                    padding: EdgeInsets.only(top: 4),
-                    child: Text(
-                      'لم يقم الكابتن برفع هذا المستند بعد.',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AdminColors.textSecondary,
-                        fontFamily: 'Cairo',
-                      ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'لم يقم الكابتن برفع هذا المستند بعد.',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AdminColors.textSecondary,
+                            fontFamily: 'Cairo',
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        _actionChip(
+                          isUploading ? 'جارٍ الرفع...' : 'رفع من الجهاز',
+                          AdminColors.primary,
+                          isUploading ? null : onUpload,
+                        ),
+                      ],
                     ),
                   ),
               ],
@@ -569,6 +874,103 @@ class _AdminDocumentCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// Shows the printed text Vision OCR read off the document (or a status
+  /// line while that's still running/failed) right under the review chips
+  /// - see extract-document-text and
+  /// 20260831000087_captain_document_extraction.sql. Purely informational:
+  /// the reviewer still has to look at the thumbnail above and click
+  /// اعتماد/رفض themselves, this only saves them from squinting at a
+  /// photographed ID card to read small print.
+  Widget _buildExtractionBlock(CaptainDocument doc) {
+    switch (doc.extractionStatus) {
+      case ExtractionStatus.done:
+        final text = doc.extractedText;
+        if (text == null || text.trim().isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.only(top: 6),
+            child: Text(
+              'لم يُعثر على نص مقروء في هذا المستند.',
+              style: TextStyle(
+                fontSize: 11,
+                color: AdminColors.textSecondary,
+                fontFamily: 'Cairo',
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          );
+        }
+        return Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AdminColors.surface,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AdminColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'النص المستخرج آلياً من المستند (للمراجعة فقط):',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.bold,
+                    color: AdminColors.textSecondary,
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+                const SizedBox(height: 4),
+                SelectableText(
+                  text,
+                  style: const TextStyle(fontSize: 11.5, fontFamily: 'Cairo'),
+                ),
+              ],
+            ),
+          ),
+        );
+      case ExtractionStatus.pending:
+        return const Padding(
+          padding: EdgeInsets.only(top: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              SizedBox(width: 6),
+              Text(
+                'جارٍ فحص المستند آلياً...',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AdminColors.textSecondary,
+                  fontFamily: 'Cairo',
+                ),
+              ),
+            ],
+          ),
+        );
+      case ExtractionStatus.failed:
+        return const Padding(
+          padding: EdgeInsets.only(top: 6),
+          child: Text(
+            'تعذّر الفحص الآلي لهذا المستند - راجعه يدوياً من الصورة أعلاه.',
+            style: TextStyle(
+              fontSize: 11,
+              color: AdminColors.warning,
+              fontFamily: 'Cairo',
+            ),
+          ),
+        );
+      case ExtractionStatus.notAttempted:
+      case ExtractionStatus.skipped:
+        return const SizedBox.shrink();
+    }
   }
 
   Widget _actionChip(String label, Color color, VoidCallback? onTap) {
@@ -645,7 +1047,7 @@ class _DocumentThumbnail extends StatelessWidget {
           return InkWell(
             onTap: () => showDialog<void>(
               context: context,
-              builder: (_) => Dialog(
+              builder: (dialogContext) => Dialog(
                 backgroundColor: Colors.transparent,
                 insetPadding: const EdgeInsets.all(24),
                 child: Stack(
@@ -659,7 +1061,7 @@ class _DocumentThumbnail extends StatelessWidget {
                         backgroundColor: Colors.black54,
                       ),
                       icon: const Icon(Icons.close, color: Colors.white),
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: () => Navigator.of(dialogContext).pop(),
                     ),
                   ],
                 ),

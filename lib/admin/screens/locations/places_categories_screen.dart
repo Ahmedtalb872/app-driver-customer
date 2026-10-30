@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 
+import '../../../core/constants/nouakchott_bounds.dart';
+import '../../../core/services/geocoding_service.dart';
+import '../../../core/widgets/real_map_widget.dart';
 import '../../../features/destinations/data/models/district.dart';
 import '../../../features/destinations/data/models/place.dart';
 import '../../../features/destinations/data/models/place_category.dart';
@@ -68,6 +72,80 @@ class _PlacesCategoriesScreenState extends State<PlacesCategoriesScreen>
     });
   }
 
+  /// Opens a large, full-height map in its own dialog so the operator can
+  /// pan/zoom/drag the pin comfortably - the embedded map inside
+  /// [_addOrEditPlace]'s form is only 260px tall, cramped for pinpointing an
+  /// exact spot next to all the other fields. [onPicked] is the same
+  /// `handlePick` closure the small map already uses (updates the form's
+  /// lat/lng fields and reverse-geocodes the address), so confirming here
+  /// flows back into the form exactly like tapping the small map would.
+  Future<void> _openFullscreenMapPicker(
+    BuildContext context, {
+    required LatLng? initialPoint,
+    required Future<void> Function(LatLng) onPicked,
+  }) async {
+    LatLng? tempPoint = initialPoint;
+    final picked = await showDialog<LatLng>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setMapState) {
+          return Dialog(
+            insetPadding: const EdgeInsets.all(16),
+            child: SizedBox(
+              width: double.infinity,
+              height: MediaQuery.of(dialogContext).size.height * 0.85,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'اضغط على الخريطة أو اسحب العلامة لتحديد الموقع بدقة',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: RealMapWidget(
+                      interactive: true,
+                      destLat: tempPoint?.latitude,
+                      destLng: tempPoint?.longitude,
+                      destDraggable: true,
+                      onMapTap: (point) => setMapState(() => tempPoint = point),
+                      onDestDragged: (point) =>
+                          setMapState(() => tempPoint = point),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: tempPoint == null
+                            ? null
+                            : () => Navigator.pop(dialogContext, tempPoint),
+                        child: const Text('تأكيد هذا الموقع'),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+    if (picked != null) await onPicked(picked);
+  }
+
   Future<void> _addOrEditPlace({Place? existing}) async {
     final nameArController = TextEditingController(
       text: existing?.nameAr ?? '',
@@ -77,6 +155,9 @@ class _PlacesCategoriesScreenState extends State<PlacesCategoriesScreen>
     );
     final addressArController = TextEditingController(
       text: existing?.addressAr ?? '',
+    );
+    final altNamesController = TextEditingController(
+      text: existing?.altNames.join('، ') ?? '',
     );
     final latController = TextEditingController(
       text: existing?.latitude.toString() ?? '',
@@ -91,88 +172,201 @@ class _PlacesCategoriesScreenState extends State<PlacesCategoriesScreen>
         existing?.categoryId ??
         (_categories.isNotEmpty ? _categories.first.id : null);
     var isPopular = existing?.isPopular ?? false;
+    LatLng? pickedPoint = existing != null
+        ? LatLng(existing.latitude, existing.longitude)
+        : null;
+    var isGeocoding = false;
+    String? boundsError;
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(existing == null ? 'إضافة مكان' : 'تعديل المكان'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<String>(
-                  initialValue: districtId,
-                  decoration: const InputDecoration(labelText: 'المقاطعة'),
-                  items: _districts
-                      .map(
-                        (d) => DropdownMenuItem(
-                          value: d.id,
-                          child: Text(d.nameAr),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) => setDialogState(() => districtId = v),
-                ),
-                DropdownButtonFormField<String>(
-                  initialValue: categoryId,
-                  decoration: const InputDecoration(labelText: 'الفئة'),
-                  items: _categories
-                      .map(
-                        (c) => DropdownMenuItem(
-                          value: c.id,
-                          child: Text(c.nameAr),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) => setDialogState(() => categoryId = v),
-                ),
-                TextField(
-                  controller: nameArController,
-                  decoration: const InputDecoration(
-                    labelText: 'الاسم بالعربية',
+        builder: (context, setDialogState) {
+          Future<void> handlePick(LatLng point) async {
+            setDialogState(() {
+              pickedPoint = point;
+              latController.text = point.latitude.toStringAsFixed(6);
+              lngController.text = point.longitude.toStringAsFixed(6);
+              boundsError = isWithinNouakchott(point.latitude, point.longitude)
+                  ? null
+                  : 'هذه النقطة خارج نطاق أنواكشوط - اختر نقطة داخل المدينة.';
+            });
+            if (addressArController.text.trim().isNotEmpty) return;
+            setDialogState(() => isGeocoding = true);
+            final address = await GeocodingService.instance.reverseGeocode(
+              point.latitude,
+              point.longitude,
+            );
+            if (address != null) addressArController.text = address;
+            setDialogState(() => isGeocoding = false);
+          }
+
+          return AlertDialog(
+            title: Text(existing == null ? 'إضافة مكان' : 'تعديل المكان'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<String>(
+                    initialValue: districtId,
+                    decoration: const InputDecoration(labelText: 'المقاطعة'),
+                    items: _districts
+                        .map(
+                          (d) => DropdownMenuItem(
+                            value: d.id,
+                            child: Text(d.nameAr),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setDialogState(() => districtId = v),
                   ),
-                ),
-                TextField(
-                  controller: nameFrController,
-                  decoration: const InputDecoration(
-                    labelText: 'الاسم بالفرنسية',
+                  DropdownButtonFormField<String>(
+                    initialValue: categoryId,
+                    decoration: const InputDecoration(labelText: 'الفئة'),
+                    items: _categories
+                        .map(
+                          (c) => DropdownMenuItem(
+                            value: c.id,
+                            child: Text(c.nameAr),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setDialogState(() => categoryId = v),
                   ),
-                ),
-                TextField(
-                  controller: addressArController,
-                  decoration: const InputDecoration(labelText: 'العنوان'),
-                ),
-                TextField(
-                  controller: latController,
-                  decoration: const InputDecoration(labelText: 'خط العرض'),
-                  keyboardType: TextInputType.number,
-                ),
-                TextField(
-                  controller: lngController,
-                  decoration: const InputDecoration(labelText: 'خط الطول'),
-                  keyboardType: TextInputType.number,
-                ),
-                CheckboxListTile(
-                  value: isPopular,
-                  title: const Text('مكان شائع'),
-                  onChanged: (v) =>
-                      setDialogState(() => isPopular = v ?? false),
-                ),
-              ],
+                  TextField(
+                    controller: nameArController,
+                    decoration: const InputDecoration(
+                      labelText: 'الاسم بالعربية',
+                    ),
+                  ),
+                  TextField(
+                    controller: nameFrController,
+                    decoration: const InputDecoration(
+                      labelText: 'الاسم بالفرنسية',
+                    ),
+                  ),
+                  TextField(
+                    controller: addressArController,
+                    decoration: const InputDecoration(labelText: 'العنوان'),
+                  ),
+                  TextField(
+                    controller: altNamesController,
+                    decoration: const InputDecoration(
+                      labelText: 'أسماء/نطق بديل (مفصولة بفاصلة)',
+                      helperText:
+                          'يساعد البحث الصوتي على إيجاد هذا المكان حتى لو نُطق بشكل مختلف، مثال: بكار، بكر',
+                      helperMaxLines: 2,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'اضغط على الخريطة لتحديد الموقع، أو عدّل الإحداثيات يدوياً بالأسفل',
+                          style: TextStyle(fontSize: 12),
+                          textAlign: TextAlign.right,
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => _openFullscreenMapPicker(
+                          context,
+                          initialPoint: pickedPoint,
+                          onPicked: handlePick,
+                        ),
+                        icon: const Icon(Icons.open_in_full_rounded, size: 16),
+                        label: const Text('تكبير الخريطة'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: SizedBox(
+                      height: 260,
+                      child: RealMapWidget(
+                        interactive: true,
+                        destLat: pickedPoint?.latitude,
+                        destLng: pickedPoint?.longitude,
+                        destDraggable: true,
+                        onMapTap: handlePick,
+                        onDestDragged: handlePick,
+                      ),
+                    ),
+                  ),
+                  if (isGeocoding)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 4),
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          'جارٍ تحديد العنوان...',
+                          style: TextStyle(fontSize: 11),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: latController,
+                    decoration: const InputDecoration(labelText: 'خط العرض'),
+                    keyboardType: TextInputType.number,
+                    onChanged: (_) => setDialogState(() => boundsError = null),
+                  ),
+                  TextField(
+                    controller: lngController,
+                    decoration: const InputDecoration(labelText: 'خط الطول'),
+                    keyboardType: TextInputType.number,
+                    onChanged: (_) => setDialogState(() => boundsError = null),
+                  ),
+                  if (boundsError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        boundsError!,
+                        style: const TextStyle(
+                          color: AdminColors.error,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  CheckboxListTile(
+                    value: isPopular,
+                    title: const Text('مكان شائع'),
+                    onChanged: (v) =>
+                        setDialogState(() => isPopular = v ?? false),
+                  ),
+                ],
+              ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('إلغاء'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('حفظ'),
-            ),
-          ],
-        ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('إلغاء'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  final lat = double.tryParse(latController.text);
+                  final lng = double.tryParse(lngController.text);
+                  if (lat == null || lng == null) {
+                    setDialogState(
+                      () => boundsError = 'أدخل إحداثيات صحيحة أو اختر نقطة من الخريطة.',
+                    );
+                    return;
+                  }
+                  if (!isWithinNouakchott(lat, lng)) {
+                    setDialogState(
+                      () => boundsError =
+                          'هذه النقطة خارج نطاق أنواكشوط - اختر نقطة داخل المدينة.',
+                    );
+                    return;
+                  }
+                  Navigator.pop(context, true);
+                },
+                child: const Text('حفظ'),
+              ),
+            ],
+          );
+        },
       ),
     );
     if (confirmed != true || districtId == null || categoryId == null) return;
@@ -181,45 +375,83 @@ class _PlacesCategoriesScreenState extends State<PlacesCategoriesScreen>
     final lng = double.tryParse(lngController.text);
     if (lat == null || lng == null) return;
 
-    if (existing == null) {
-      await _placesRepo.adminAddOfficialPlace(
-        districtId: districtId!,
-        categoryId: categoryId!,
-        nameAr: nameArController.text.trim(),
-        nameFr: nameFrController.text.trim().isEmpty
-            ? null
-            : nameFrController.text.trim(),
-        addressAr: addressArController.text.trim(),
-        latitude: lat,
-        longitude: lng,
-        isPopular: isPopular,
-      );
-    } else {
-      await _placesRepo.adminUpdateOfficialPlace(
-        existing.id,
-        nameAr: nameArController.text.trim(),
-        nameFr: nameFrController.text.trim(),
-        addressAr: addressArController.text.trim(),
-        latitude: lat,
-        longitude: lng,
-        isPopular: isPopular,
-        categoryId: categoryId,
-      );
+    final altNames = altNamesController.text
+        .split(RegExp('[,،]'))
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+
+    if (nameArController.text.trim().isEmpty) {
+      _showError('الاسم بالعربية مطلوب.');
+      return;
+    }
+
+    try {
+      if (existing == null) {
+        await _placesRepo.adminAddOfficialPlace(
+          districtId: districtId!,
+          categoryId: categoryId!,
+          nameAr: nameArController.text.trim(),
+          nameFr: nameFrController.text.trim().isEmpty
+              ? null
+              : nameFrController.text.trim(),
+          addressAr: addressArController.text.trim(),
+          altNames: altNames,
+          latitude: lat,
+          longitude: lng,
+          isPopular: isPopular,
+        );
+      } else {
+        await _placesRepo.adminUpdateOfficialPlace(
+          existing.id,
+          nameAr: nameArController.text.trim(),
+          nameFr: nameFrController.text.trim(),
+          addressAr: addressArController.text.trim(),
+          altNames: altNames,
+          latitude: lat,
+          longitude: lng,
+          isPopular: isPopular,
+          categoryId: categoryId,
+        );
+      }
+    } catch (_) {
+      // Previously silent - the dialog closed (it's already popped by this
+      // point) but the insert/update could still fail (e.g. a backend
+      // constraint) with nothing telling the admin it didn't actually save.
+      _showError('تعذر حفظ المكان، تحقق من البيانات وحاول مرة أخرى.');
+      return;
     }
     _load();
   }
 
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message, style: const TextStyle(fontFamily: 'Cairo'))),
+    );
+  }
+
   Future<void> _togglePlaceActive(Place place) async {
-    if (place.isActive) {
-      await _placesRepo.adminDeactivatePlace(place.id);
-    } else {
-      await _placesRepo.adminActivatePlace(place.id);
+    try {
+      if (place.isActive) {
+        await _placesRepo.adminDeactivatePlace(place.id);
+      } else {
+        await _placesRepo.adminActivatePlace(place.id);
+      }
+    } catch (_) {
+      _showError('تعذر تنفيذ الإجراء، تحقق من صلاحياتك وحاول مجدداً.');
+      return;
     }
     _load();
   }
 
   Future<void> _verifyPlace(Place place) async {
-    await _placesRepo.adminVerifyPlace(place.id);
+    try {
+      await _placesRepo.adminVerifyPlace(place.id);
+    } catch (_) {
+      _showError('تعذر تنفيذ الإجراء، تحقق من صلاحياتك وحاول مجدداً.');
+      return;
+    }
     _load();
   }
 
@@ -270,20 +502,31 @@ class _PlacesCategoriesScreenState extends State<PlacesCategoriesScreen>
     );
     if (confirmed != true) return;
 
-    if (existing == null) {
-      await _categoriesRepo.adminAddCategory(
-        code: codeController.text.trim(),
-        nameAr: nameArController.text.trim(),
-        nameFr: nameFrController.text.trim().isEmpty
-            ? null
-            : nameFrController.text.trim(),
-      );
-    } else {
-      await _categoriesRepo.adminUpdateCategory(
-        existing.id,
-        nameAr: nameArController.text.trim(),
-        nameFr: nameFrController.text.trim(),
-      );
+    if (nameArController.text.trim().isEmpty ||
+        (existing == null && codeController.text.trim().isEmpty)) {
+      _showError('الاسم بالعربية (والرمز عند الإضافة) مطلوبان.');
+      return;
+    }
+
+    try {
+      if (existing == null) {
+        await _categoriesRepo.adminAddCategory(
+          code: codeController.text.trim(),
+          nameAr: nameArController.text.trim(),
+          nameFr: nameFrController.text.trim().isEmpty
+              ? null
+              : nameFrController.text.trim(),
+        );
+      } else {
+        await _categoriesRepo.adminUpdateCategory(
+          existing.id,
+          nameAr: nameArController.text.trim(),
+          nameFr: nameFrController.text.trim(),
+        );
+      }
+    } catch (_) {
+      _showError('تعذر حفظ الفئة، تحقق من البيانات (قد يكون الرمز مستخدماً من قبل) وحاول مرة أخرى.');
+      return;
     }
     _load();
   }

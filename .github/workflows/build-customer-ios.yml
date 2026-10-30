@@ -1,0 +1,49 @@
+name: Build customer app iOS (unsigned, verification only)
+
+# There's no way to sign/distribute an iOS build without a real Apple
+# Developer account and a Mac (Xcode's signing tooling doesn't run on
+# Linux) - that part has to happen on someone's actual Mac. What this
+# workflow *can* do on a GitHub-hosted macOS runner is compile the whole
+# Flutter + Xcode + CocoaPods pipeline unsigned (--no-codesign) and catch
+# real build breakage (a bad Podfile, a plugin with no iOS support, an
+# Xcode project misconfiguration, ...) before anyone wastes time on a Mac
+# finding out the hard way. Uses the same secrets as
+# build-customer-apk.yml (SUPABASE_URL/SUPABASE_ANON_KEY/MAPTILER_API_KEY)
+# - no Google Maps key needed here since this never actually renders a
+# map, just compiles.
+on:
+  push:
+    branches:
+      - main
+      - claude/project-nature-3gwftj
+    paths:
+      - "ios/**"
+      - "lib/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - ".github/workflows/build-customer-ios.yml"
+  workflow_dispatch:
+
+jobs:
+  build-ios-unsigned:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Write .env
+        run: |
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+          echo "MAPTILER_API_KEY=${{ secrets.MAPTILER_API_KEY }}" >> .env
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build iOS (unsigned - compiles only, produces no installable IPA)
+        run: flutter build ios --release --no-codesign

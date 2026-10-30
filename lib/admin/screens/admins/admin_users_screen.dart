@@ -5,6 +5,7 @@ import '../../core/admin_colors.dart';
 import '../../repositories/admin_users_repository.dart';
 import '../../services/admin_session.dart';
 import '../../widgets/confirm_dialog.dart';
+import '../../widgets/copyable_phone.dart';
 import '../../widgets/status_badge.dart';
 
 class AdminUsersScreen extends StatefulWidget {
@@ -222,7 +223,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                 ),
                               ),
                               DataCell(
-                                Text((profile?['phone'] as String?) ?? '-'),
+                                CopyablePhone(profile?['phone'] as String?),
                               ),
                               DataCell(
                                 Text(

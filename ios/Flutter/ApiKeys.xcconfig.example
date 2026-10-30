@@ -1,0 +1,7 @@
+// Copy this file to ApiKeys.xcconfig (same folder) and fill in a real key -
+// ApiKeys.xcconfig itself is gitignored so it never lands in source
+// control, same as android/local.properties for the Android build.
+//
+// Get a key from a Google Cloud project with billing enabled and the
+// "Maps SDK for iOS" API turned on: https://console.cloud.google.com
+GOOGLE_MAPS_API_KEY = your-ios-maps-api-key
