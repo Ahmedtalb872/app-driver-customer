@@ -381,47 +381,77 @@ class _PlacesCategoriesScreenState extends State<PlacesCategoriesScreen>
         .where((e) => e.isNotEmpty)
         .toList();
 
-    if (existing == null) {
-      await _placesRepo.adminAddOfficialPlace(
-        districtId: districtId!,
-        categoryId: categoryId!,
-        nameAr: nameArController.text.trim(),
-        nameFr: nameFrController.text.trim().isEmpty
-            ? null
-            : nameFrController.text.trim(),
-        addressAr: addressArController.text.trim(),
-        altNames: altNames,
-        latitude: lat,
-        longitude: lng,
-        isPopular: isPopular,
-      );
-    } else {
-      await _placesRepo.adminUpdateOfficialPlace(
-        existing.id,
-        nameAr: nameArController.text.trim(),
-        nameFr: nameFrController.text.trim(),
-        addressAr: addressArController.text.trim(),
-        altNames: altNames,
-        latitude: lat,
-        longitude: lng,
-        isPopular: isPopular,
-        categoryId: categoryId,
-      );
+    if (nameArController.text.trim().isEmpty) {
+      _showError('الاسم بالعربية مطلوب.');
+      return;
+    }
+
+    try {
+      if (existing == null) {
+        await _placesRepo.adminAddOfficialPlace(
+          districtId: districtId!,
+          categoryId: categoryId!,
+          nameAr: nameArController.text.trim(),
+          nameFr: nameFrController.text.trim().isEmpty
+              ? null
+              : nameFrController.text.trim(),
+          addressAr: addressArController.text.trim(),
+          altNames: altNames,
+          latitude: lat,
+          longitude: lng,
+          isPopular: isPopular,
+        );
+      } else {
+        await _placesRepo.adminUpdateOfficialPlace(
+          existing.id,
+          nameAr: nameArController.text.trim(),
+          nameFr: nameFrController.text.trim(),
+          addressAr: addressArController.text.trim(),
+          altNames: altNames,
+          latitude: lat,
+          longitude: lng,
+          isPopular: isPopular,
+          categoryId: categoryId,
+        );
+      }
+    } catch (_) {
+      // Previously silent - the dialog closed (it's already popped by this
+      // point) but the insert/update could still fail (e.g. a backend
+      // constraint) with nothing telling the admin it didn't actually save.
+      _showError('تعذر حفظ المكان، تحقق من البيانات وحاول مرة أخرى.');
+      return;
     }
     _load();
   }
 
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message, style: const TextStyle(fontFamily: 'Cairo'))),
+    );
+  }
+
   Future<void> _togglePlaceActive(Place place) async {
-    if (place.isActive) {
-      await _placesRepo.adminDeactivatePlace(place.id);
-    } else {
-      await _placesRepo.adminActivatePlace(place.id);
+    try {
+      if (place.isActive) {
+        await _placesRepo.adminDeactivatePlace(place.id);
+      } else {
+        await _placesRepo.adminActivatePlace(place.id);
+      }
+    } catch (_) {
+      _showError('تعذر تنفيذ الإجراء، تحقق من صلاحياتك وحاول مجدداً.');
+      return;
     }
     _load();
   }
 
   Future<void> _verifyPlace(Place place) async {
-    await _placesRepo.adminVerifyPlace(place.id);
+    try {
+      await _placesRepo.adminVerifyPlace(place.id);
+    } catch (_) {
+      _showError('تعذر تنفيذ الإجراء، تحقق من صلاحياتك وحاول مجدداً.');
+      return;
+    }
     _load();
   }
 
@@ -472,20 +502,31 @@ class _PlacesCategoriesScreenState extends State<PlacesCategoriesScreen>
     );
     if (confirmed != true) return;
 
-    if (existing == null) {
-      await _categoriesRepo.adminAddCategory(
-        code: codeController.text.trim(),
-        nameAr: nameArController.text.trim(),
-        nameFr: nameFrController.text.trim().isEmpty
-            ? null
-            : nameFrController.text.trim(),
-      );
-    } else {
-      await _categoriesRepo.adminUpdateCategory(
-        existing.id,
-        nameAr: nameArController.text.trim(),
-        nameFr: nameFrController.text.trim(),
-      );
+    if (nameArController.text.trim().isEmpty ||
+        (existing == null && codeController.text.trim().isEmpty)) {
+      _showError('الاسم بالعربية (والرمز عند الإضافة) مطلوبان.');
+      return;
+    }
+
+    try {
+      if (existing == null) {
+        await _categoriesRepo.adminAddCategory(
+          code: codeController.text.trim(),
+          nameAr: nameArController.text.trim(),
+          nameFr: nameFrController.text.trim().isEmpty
+              ? null
+              : nameFrController.text.trim(),
+        );
+      } else {
+        await _categoriesRepo.adminUpdateCategory(
+          existing.id,
+          nameAr: nameArController.text.trim(),
+          nameFr: nameFrController.text.trim(),
+        );
+      }
+    } catch (_) {
+      _showError('تعذر حفظ الفئة، تحقق من البيانات (قد يكون الرمز مستخدماً من قبل) وحاول مرة أخرى.');
+      return;
     }
     _load();
   }
