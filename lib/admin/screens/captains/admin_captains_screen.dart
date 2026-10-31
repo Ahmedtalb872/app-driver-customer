@@ -134,6 +134,24 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
     }
   }
 
+  Future<void> _convertToMotorcycle(CaptainAdminView captain) async {
+    final ok = await showConfirmDialog(
+      context,
+      title: 'تحويل إلى كابتن دراجة نارية',
+      message:
+          'سيتم تغيير نوع مركبة ${captain.fullName} إلى دراجة نارية - '
+          'استخدم هذا إن كان قد اختار سيارة بالخطأ أثناء التسجيل. '
+          'هل أنت متأكد؟',
+    );
+    if (!ok) return;
+    try {
+      await _repository.convertToMotorcycle(captain.id);
+      _load();
+    } catch (_) {
+      _showError();
+    }
+  }
+
   Future<void> _toggleSuspend(CaptainAdminView captain) async {
     if (captain.isSuspended) {
       final ok = await showConfirmDialog(
@@ -501,6 +519,16 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
                                 : AdminColors.error,
                           ),
                           onPressed: () => _toggleSuspend(captain),
+                        ),
+                      if (captain.vehicleType != 'motorcycle')
+                        IconButton(
+                          tooltip: 'تحويل إلى دراجة نارية',
+                          icon: const Icon(
+                            Icons.two_wheeler_rounded,
+                            size: 20,
+                            color: AdminColors.primary,
+                          ),
+                          onPressed: () => _convertToMotorcycle(captain),
                         ),
                       IconButton(
                         tooltip: 'التفاصيل',

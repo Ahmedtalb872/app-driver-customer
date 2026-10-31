@@ -103,6 +103,19 @@ class AdminCaptainsRepository {
     return List<Map<String, dynamic>>.from(rows);
   }
 
+  /// For when a captain picked "سيارة" by mistake during registration (or
+  /// never picked anything) and actually rides a motorcycle - an admin
+  /// fixes it here instead of the captain having to re-register. Also
+  /// flips accepts_delivery on, same as every other motorcycle captain, so
+  /// they immediately start receiving delivery dispatches too rather than
+  /// needing a second manual step.
+  Future<void> convertToMotorcycle(String captainId) async {
+    await _client
+        .from('captains')
+        .update({'vehicle_type': 'motorcycle', 'accepts_delivery': true})
+        .eq('id', captainId);
+  }
+
   Future<void> updateAdminNotes(String captainId, String notes) async {
     await _client
         .from('captains')
