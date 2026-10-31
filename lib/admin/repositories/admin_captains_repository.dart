@@ -23,10 +23,13 @@ class AdminCaptainsRepository {
   /// drops that one vehicle type regardless of [vehicleTypeFilter] - the
   /// two are meant to be mutually exclusive callers (one page picks a type
   /// to include, the other picks one to exclude), but if both were passed
-  /// the exclusion wins since it's applied last. Pass
-  /// [unassignedVehicleType] as [vehicleTypeFilter] to get captains who
-  /// haven't chosen a vehicle type at all (vehicle_type IS NULL) - they're
-  /// never implicitly included in a car or motorcycle filter.
+  /// the exclusion wins since it's applied last. A captain who hasn't
+  /// chosen a vehicle type yet (vehicle_type IS NULL) still passes this
+  /// exclusion - pending/newly-registered captains need to stay visible on
+  /// "كباتن السيارات" so an admin can actually review and approve them,
+  /// even before they've picked a vehicle type. Pass
+  /// [unassignedVehicleType] as [vehicleTypeFilter] to narrow down to
+  /// exactly those not-yet-chosen captains instead.
   Future<List<CaptainAdminView>> loadCaptains({
     String? searchQuery,
     String? statusFilter,
@@ -49,20 +52,21 @@ class AdminCaptainsRepository {
     } else if (vehicleTypeFilter != null && vehicleTypeFilter.isNotEmpty) {
       query = query.eq('vehicle_type', vehicleTypeFilter);
     }
-    if (vehicleTypeFilter != _unassignedVehicleType &&
-        excludeVehicleTypeFilter != null &&
+    if (excludeVehicleTypeFilter != null &&
         excludeVehicleTypeFilter.isNotEmpty) {
-      // Plain .neq() compiles to `vehicle_type <> 'motorcycle'`, which under
-      // SQL's three-valued logic also drops a captain who hasn't chosen a
-      // vehicle type yet (NULL). That's intentional here: a captain with no
-      // vehicle_type is not a car captain and not a motorcycle captain, and
-      // should not be silently counted as either until they actually pick
-      // one - the "لم يحدد بعد" filter option is how an admin finds them
-      // instead. (Skipped above when vehicleTypeFilter already asked for
-      // exactly those NULL rows - ANDing the two would be unsatisfiable:
-      // `vehicle_type IS NULL AND vehicle_type <> 'motorcycle'` is never
-      // true.)
-      query = query.neq('vehicle_type', excludeVehicleTypeFilter);
+      // Plain .neq() compiles to `vehicle_type <> 'motorcycle'` - under
+      // SQL's three-valued logic that's NULL (not true) for a captain who
+      // hasn't set a vehicle type yet, so a plain WHERE would silently drop
+      // that row instead of keeping it. A captain who registered yesterday
+      // and is still "قيد المراجعة" almost always hasn't picked a vehicle
+      // type yet, and needs to stay on this list to be reviewed/approved -
+      // losing them here isn't "not auto-categorizing", it's losing track
+      // of a pending application entirely. The explicit `.is.null` branch
+      // keeps them here; use the "لم يحدد بعد" filter (vehicleTypeFilter:
+      // unassignedVehicleType) to look at only those specifically.
+      query = query.or(
+        'vehicle_type.is.null,vehicle_type.neq.$excludeVehicleTypeFilter',
+      );
     }
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
       final q = searchQuery.trim();
