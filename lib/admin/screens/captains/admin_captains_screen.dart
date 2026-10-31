@@ -323,6 +323,10 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
                       value: 'family',
                       child: Text('عائلية'),
                     ),
+                    const DropdownMenuItem(
+                      value: AdminCaptainsRepository.unassignedVehicleType,
+                      child: Text('لم يحدد بعد'),
+                    ),
                   ],
                   onChanged: (value) {
                     setState(() => _vehicleTypeFilter = value);

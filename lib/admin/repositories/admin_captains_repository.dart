@@ -9,14 +9,24 @@ import '../../core/services/captain_documents_repository.dart';
 import '../../models/models.dart';
 import '../models/captain_admin_view.dart';
 
+const _unassignedVehicleType = 'unassigned';
+
 class AdminCaptainsRepository {
   SupabaseClient get _client => SupabaseConfig.client;
+
+  /// Sentinel passed as [loadCaptains]'s vehicleTypeFilter to mean "hasn't
+  /// chosen a vehicle type yet" (vehicle_type IS NULL) - distinct from
+  /// `null` itself, which means "don't filter by vehicle type at all".
+  static const unassignedVehicleType = _unassignedVehicleType;
 
   /// [excludeVehicleTypeFilter] (e.g. 'motorcycle' for "كباتن السيارات")
   /// drops that one vehicle type regardless of [vehicleTypeFilter] - the
   /// two are meant to be mutually exclusive callers (one page picks a type
   /// to include, the other picks one to exclude), but if both were passed
-  /// the exclusion wins since it's applied last.
+  /// the exclusion wins since it's applied last. Pass
+  /// [unassignedVehicleType] as [vehicleTypeFilter] to get captains who
+  /// haven't chosen a vehicle type at all (vehicle_type IS NULL) - they're
+  /// never implicitly included in a car or motorcycle filter.
   Future<List<CaptainAdminView>> loadCaptains({
     String? searchQuery,
     String? statusFilter,
@@ -34,22 +44,25 @@ class AdminCaptainsRepository {
     if (onlineFilter != null) {
       query = query.eq('is_online', onlineFilter);
     }
-    if (vehicleTypeFilter != null && vehicleTypeFilter.isNotEmpty) {
+    if (vehicleTypeFilter == _unassignedVehicleType) {
+      query = query.isFilter('vehicle_type', null);
+    } else if (vehicleTypeFilter != null && vehicleTypeFilter.isNotEmpty) {
       query = query.eq('vehicle_type', vehicleTypeFilter);
     }
-    if (excludeVehicleTypeFilter != null &&
+    if (vehicleTypeFilter != _unassignedVehicleType &&
+        excludeVehicleTypeFilter != null &&
         excludeVehicleTypeFilter.isNotEmpty) {
-      // Plain .neq() compiles to `vehicle_type <> 'motorcycle'` - under SQL's
-      // three-valued logic that's NULL (not true) for a captain who hasn't
-      // set a vehicle type yet, so WHERE silently drops that row instead of
-      // keeping it. This is exactly what made "كباتن السيارات" show far
-      // fewer captains than it should (every captain with no vehicle_type
-      // set vanished from both this page and "كباتن الدراجات"). The
-      // explicit `.is.null` branch keeps them here, where they belong until
-      // someone actually marks them as a motorcycle.
-      query = query.or(
-        'vehicle_type.is.null,vehicle_type.neq.$excludeVehicleTypeFilter',
-      );
+      // Plain .neq() compiles to `vehicle_type <> 'motorcycle'`, which under
+      // SQL's three-valued logic also drops a captain who hasn't chosen a
+      // vehicle type yet (NULL). That's intentional here: a captain with no
+      // vehicle_type is not a car captain and not a motorcycle captain, and
+      // should not be silently counted as either until they actually pick
+      // one - the "لم يحدد بعد" filter option is how an admin finds them
+      // instead. (Skipped above when vehicleTypeFilter already asked for
+      // exactly those NULL rows - ANDing the two would be unsatisfiable:
+      // `vehicle_type IS NULL AND vehicle_type <> 'motorcycle'` is never
+      // true.)
+      query = query.neq('vehicle_type', excludeVehicleTypeFilter);
     }
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
       final q = searchQuery.trim();
