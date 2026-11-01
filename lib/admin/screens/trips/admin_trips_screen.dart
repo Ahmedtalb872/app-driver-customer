@@ -89,6 +89,29 @@ class _AdminTripsScreenState extends State<AdminTripsScreen> {
     }
   }
 
+  Future<void> _showEligibleCaptainsCount(Map<String, dynamic> trip) async {
+    final count = await _repository.countEligibleCaptains(trip);
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('عدد الكباتن الذين يمكنهم رؤية الطلب'),
+        content: Text(
+          '$count كابتن متصل حالياً مؤهل لرؤية هذا الطلب.\n\n'
+          'هذا عدد حي لحظي (من هو متصل ومؤهل الآن) وليس سجلاً لمن رآه '
+          'فعلاً وقت إرسال الطلب - مفيد بشكل خاص لرحلة ما زالت "قيد البحث".',
+          style: const TextStyle(fontFamily: 'Cairo'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('حسناً'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _exportCsv() {
     downloadCsv('trips_export.csv', _repository.toCsv(_trips));
   }
@@ -236,6 +259,11 @@ class _AdminTripsScreenState extends State<AdminTripsScreen> {
                       IconButton(
                         icon: const Icon(Icons.visibility_outlined, size: 20),
                         onPressed: () => _openDetails(trip),
+                      ),
+                      IconButton(
+                        tooltip: 'كم كابتن يراها',
+                        icon: const Icon(Icons.groups_outlined, size: 20),
+                        onPressed: () => _showEligibleCaptainsCount(trip),
                       ),
                       if (canCancel)
                         IconButton(

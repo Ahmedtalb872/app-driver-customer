@@ -76,6 +76,31 @@ class AdminTripsRepository {
     return List<Map<String, dynamic>>.from(rows);
   }
 
+  /// How many captains are currently eligible to see [trip] on their own
+  /// "طلب جديد" screen, mirroring the exact rule in trips' "Open trip
+  /// requests are visible to active captains" RLS policy
+  /// (20260801000046_delivery_service.sql): approved + online, and for a
+  /// delivery specifically a motorcycle captain who opted into deliveries -
+  /// a ride has no further vehicle_type restriction there, so any approved
+  /// online captain counts. There's no log of who actually saw a given
+  /// request at the moment it went out (nothing persists that), so this is
+  /// a live count of who could see it right now, not a historical one -
+  /// only meaningful alongside a trip still in 'searching'.
+  Future<int> countEligibleCaptains(Map<String, dynamic> trip) async {
+    var query = _client
+        .from('captains')
+        .select()
+        .eq('status', 'approved')
+        .eq('is_online', true);
+
+    if ((trip['service_type'] as String?) == 'delivery') {
+      query = query.eq('vehicle_type', 'motorcycle').eq('accepts_delivery', true);
+    }
+
+    final response = await query.count(CountOption.exact);
+    return response.count;
+  }
+
   Future<void> updateAdminNotes(String tripId, String notes) async {
     await _client.from('trips').update({'admin_notes': notes}).eq('id', tripId);
   }

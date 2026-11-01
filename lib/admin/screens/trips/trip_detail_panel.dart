@@ -317,6 +317,29 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
     }
   }
 
+  Future<void> _showEligibleCaptainsCount() async {
+    final count = await _repository.countEligibleCaptains(widget.trip);
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('عدد الكباتن الذين يمكنهم رؤية الطلب'),
+        content: Text(
+          '$count كابتن متصل حالياً مؤهل لرؤية هذا الطلب.\n\n'
+          'هذا عدد حي لحظي (من هو متصل ومؤهل الآن) وليس سجلاً لمن رآه '
+          'فعلاً وقت إرسال الطلب - مفيد بشكل خاص لرحلة ما زالت "قيد البحث".',
+          style: const TextStyle(fontFamily: 'Cairo'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('حسناً'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _assignCaptain() async {
     final captainId = await showCaptainPickerDialog(
       context,
@@ -483,6 +506,11 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
                       icon: const Icon(Icons.chat_bubble_outline_rounded),
                       label: const Text('مراسلة الزبون'),
                     ),
+                  OutlinedButton.icon(
+                    onPressed: _showEligibleCaptainsCount,
+                    icon: const Icon(Icons.groups_outlined),
+                    label: const Text('كم كابتن يراها'),
+                  ),
                   if (_canAssign)
                     OutlinedButton.icon(
                       onPressed: _assignCaptain,
