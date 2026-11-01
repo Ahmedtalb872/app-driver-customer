@@ -11,6 +11,7 @@ import '../../repositories/admin_support_repository.dart';
 import '../../repositories/admin_trips_repository.dart';
 import '../../widgets/captain_picker_dialog.dart';
 import '../../widgets/confirm_dialog.dart';
+import '../../widgets/trip_captain_offers_dialog.dart';
 import '../support/admin_support_ticket_panel.dart';
 
 /// Trip statuses a captain is actually en route/on-scene for, matching
@@ -317,29 +318,6 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
     }
   }
 
-  Future<void> _showEligibleCaptainsCount() async {
-    final count = await _repository.countEligibleCaptains(widget.trip);
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('عدد الكباتن الذين يمكنهم رؤية الطلب'),
-        content: Text(
-          '$count كابتن متصل حالياً مؤهل لرؤية هذا الطلب.\n\n'
-          'هذا عدد حي لحظي (من هو متصل ومؤهل الآن) وليس سجلاً لمن رآه '
-          'فعلاً وقت إرسال الطلب - مفيد بشكل خاص لرحلة ما زالت "قيد البحث".',
-          style: const TextStyle(fontFamily: 'Cairo'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('حسناً'),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _assignCaptain() async {
     final captainId = await showCaptainPickerDialog(
       context,
@@ -507,7 +485,8 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
                       label: const Text('مراسلة الزبون'),
                     ),
                   OutlinedButton.icon(
-                    onPressed: _showEligibleCaptainsCount,
+                    onPressed: () =>
+                        showTripCaptainOffersDialog(context, _repository, trip),
                     icon: const Icon(Icons.groups_outlined),
                     label: const Text('كم كابتن يراها'),
                   ),

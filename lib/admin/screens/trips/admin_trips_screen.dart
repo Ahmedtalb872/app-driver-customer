@@ -5,6 +5,7 @@ import '../../repositories/admin_trips_repository.dart';
 import '../../utils/csv_downloader.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../widgets/status_badge.dart';
+import '../../widgets/trip_captain_offers_dialog.dart';
 import 'trip_detail_panel.dart';
 
 class AdminTripsScreen extends StatefulWidget {
@@ -87,29 +88,6 @@ class _AdminTripsScreenState extends State<AdminTripsScreen> {
         );
       }
     }
-  }
-
-  Future<void> _showEligibleCaptainsCount(Map<String, dynamic> trip) async {
-    final count = await _repository.countEligibleCaptains(trip);
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('عدد الكباتن الذين يمكنهم رؤية الطلب'),
-        content: Text(
-          '$count كابتن متصل حالياً مؤهل لرؤية هذا الطلب.\n\n'
-          'هذا عدد حي لحظي (من هو متصل ومؤهل الآن) وليس سجلاً لمن رآه '
-          'فعلاً وقت إرسال الطلب - مفيد بشكل خاص لرحلة ما زالت "قيد البحث".',
-          style: const TextStyle(fontFamily: 'Cairo'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('حسناً'),
-          ),
-        ],
-      ),
-    );
   }
 
   void _exportCsv() {
@@ -263,7 +241,8 @@ class _AdminTripsScreenState extends State<AdminTripsScreen> {
                       IconButton(
                         tooltip: 'كم كابتن يراها',
                         icon: const Icon(Icons.groups_outlined, size: 20),
-                        onPressed: () => _showEligibleCaptainsCount(trip),
+                        onPressed: () =>
+                            showTripCaptainOffersDialog(context, _repository, trip),
                       ),
                       if (canCancel)
                         IconButton(

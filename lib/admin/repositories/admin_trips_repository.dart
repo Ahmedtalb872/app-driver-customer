@@ -101,6 +101,23 @@ class AdminTripsRepository {
     return response.count;
   }
 
+  /// The persisted per-captain log behind "كم كابتن يراها" -
+  /// `trip_captain_offers` (20261101000118_trip_captain_offers.sql) is
+  /// snapshotted by a DB trigger the instant a request is created (every
+  /// captain who was eligible to receive it right then) and resolved by
+  /// another trigger the instant it leaves 'searching' (whoever ended up
+  /// with it marked 'accepted', everyone else 'missed'). A trip placed
+  /// before this migration shipped has no rows here at all - that's not a
+  /// bug, there's simply nothing recorded for it.
+  Future<List<Map<String, dynamic>>> loadCaptainOffers(String tripId) async {
+    final rows = await _client
+        .from('trip_captain_offers')
+        .select('*, captains(profiles(full_name, phone))')
+        .eq('trip_id', tripId)
+        .order('offered_at');
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
   Future<void> updateAdminNotes(String tripId, String notes) async {
     await _client.from('trips').update({'admin_notes': notes}).eq('id', tripId);
   }
