@@ -152,6 +152,62 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
     }
   }
 
+  Future<void> _setVehicleType(CaptainAdminView captain) async {
+    var selected = captain.vehicleType ?? 'economy';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('تعيين نوع مركبة ${captain.fullName}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (captain.vehicleType == null)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    'هذا الكابتن لم يحدد نوع مركبته بعد، لذلك لا تصله أي '
+                    'طلبات مشاوير إطلاقاً.',
+                    style: TextStyle(fontFamily: 'Cairo', fontSize: 12),
+                  ),
+                ),
+              DropdownButtonFormField<String>(
+                initialValue: selected,
+                decoration: const InputDecoration(labelText: 'نوع المركبة'),
+                items: AdminCaptainsRepository.vehicleTypeLabels.entries
+                    .map(
+                      (e) =>
+                          DropdownMenuItem(value: e.key, child: Text(e.value)),
+                    )
+                    .toList(),
+                onChanged: (v) =>
+                    setDialogState(() => selected = v ?? selected),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('حفظ'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await _repository.setVehicleType(captain.id, selected);
+      _load();
+    } catch (_) {
+      _showError();
+    }
+  }
+
   Future<void> _toggleSuspend(CaptainAdminView captain) async {
     if (captain.isSuspended) {
       final ok = await showConfirmDialog(
@@ -530,6 +586,19 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
                           ),
                           onPressed: () => _convertToMotorcycle(captain),
                         ),
+                      IconButton(
+                        tooltip: captain.vehicleType == null
+                            ? 'تعيين نوع المركبة (غير محدد حالياً - لا تصله طلبات)'
+                            : 'تعيين نوع المركبة',
+                        icon: Icon(
+                          Icons.directions_car_filled_outlined,
+                          size: 20,
+                          color: captain.vehicleType == null
+                              ? AdminColors.error
+                              : AdminColors.primary,
+                        ),
+                        onPressed: () => _setVehicleType(captain),
+                      ),
                       IconButton(
                         tooltip: 'التفاصيل',
                         icon: const Icon(Icons.visibility_outlined, size: 20),

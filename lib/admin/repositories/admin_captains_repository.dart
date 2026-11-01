@@ -120,6 +120,28 @@ class AdminCaptainsRepository {
         .eq('id', captainId);
   }
 
+  static const vehicleTypeLabels = {
+    'economy': 'اقتصادية',
+    'comfort': 'مريحة',
+    'family': 'عائلية',
+    'motorcycle': 'دراجة نارية',
+  };
+
+  /// General-purpose "set this captain's vehicle type" - mainly for a
+  /// captain stuck with vehicle_type still unset (NULL): matching a ride
+  /// request compares the trip's vehicle_type against the captain's own
+  /// (see the captain app's own request-matching, not this repo), so a
+  /// NULL never matches anything and that captain never receives a single
+  /// request. Unlike [convertToMotorcycle] this never touches
+  /// accepts_delivery - pick that one instead for the one-click
+  /// car-by-mistake fix, which also opts the captain into deliveries.
+  Future<void> setVehicleType(String captainId, String vehicleType) async {
+    await _client
+        .from('captains')
+        .update({'vehicle_type': vehicleType})
+        .eq('id', captainId);
+  }
+
   Future<void> updateAdminNotes(String captainId, String notes) async {
     await _client
         .from('captains')
