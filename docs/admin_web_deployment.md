@@ -101,6 +101,16 @@ Deploy the contents of `build/web/` after running
    /*    /index.html   200
    ```
 
+## 5b. MapTiler API key (optional)
+
+The admin dashboard renders live maps (operator dispatch, live operations,
+trip route editing) via `RealMapWidget`, same as the mobile apps. Without a
+`MAPTILER_API_KEY` env var set on the hosting provider (e.g. Vercel project
+settings → Environment Variables), it falls back to free OpenStreetMap
+tiles automatically - see `lib/core/services/map_tile_provider.dart`. Add
+the key there (no code change needed) to switch this deployment to
+MapTiler tiles.
+
 ## 6. Google Maps API key (only needed for the destination map picker, Phase 2)
 
 The admin dashboard itself doesn't use Google Maps. If you later add the

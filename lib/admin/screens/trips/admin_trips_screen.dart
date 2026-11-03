@@ -5,6 +5,7 @@ import '../../repositories/admin_trips_repository.dart';
 import '../../utils/csv_downloader.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../widgets/status_badge.dart';
+import '../../widgets/trip_captain_offers_dialog.dart';
 import 'trip_detail_panel.dart';
 
 class AdminTripsScreen extends StatefulWidget {
@@ -236,6 +237,12 @@ class _AdminTripsScreenState extends State<AdminTripsScreen> {
                       IconButton(
                         icon: const Icon(Icons.visibility_outlined, size: 20),
                         onPressed: () => _openDetails(trip),
+                      ),
+                      IconButton(
+                        tooltip: 'كم كابتن يراها',
+                        icon: const Icon(Icons.groups_outlined, size: 20),
+                        onPressed: () =>
+                            showTripCaptainOffersDialog(context, _repository, trip),
                       ),
                       if (canCancel)
                         IconButton(

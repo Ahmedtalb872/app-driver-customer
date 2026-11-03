@@ -1,17 +1,18 @@
 // Smoke tests for the Hudhud ("الهدهد") app entrypoint: the app boots
-// without throwing, and the splash screen auto-navigates straight to
-// captain login. See test/features/**/*.dart for the rest of the required
-// front-end smoke-test coverage.
+// without throwing, and the splash screen auto-navigates straight to the
+// customer phone-code login screen. See test/features/**/*.dart for the
+// rest of the required front-end smoke-test coverage.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import 'package:alhudhud/core/services/captain_session.dart';
-import 'package:alhudhud/features/authentication/captain_login_screen.dart';
+import 'package:alhudhud/features/authentication/auth_welcome_screen.dart';
+import 'package:alhudhud/features/authentication/phone_code_login_screen.dart';
 import 'package:alhudhud/main.dart';
 import 'package:alhudhud/providers/app_state_provider.dart';
+import 'package:alhudhud/providers/locale_provider.dart';
 
 void main() {
   // Mirrors main()'s MultiProvider wiring without calling
@@ -21,7 +22,7 @@ void main() {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AppStateProvider()),
-        ChangeNotifierProvider(create: (_) => CaptainSession()),
+        ChangeNotifierProvider(create: (_) => LocaleProvider()),
       ],
       child: const MyApp(),
     );
@@ -41,7 +42,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('تنتقل الشاشة الافتتاحية تلقائياً إلى تسجيل دخول الكابتن', (
+  testWidgets('تنتقل الشاشة الافتتاحية تلقائياً إلى شاشة إنشاء حساب/تسجيل الدخول', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(wrappedApp());
@@ -50,29 +51,32 @@ void main() {
     await tester.pump(const Duration(milliseconds: 2700));
     await tester.pumpAndSettle(const Duration(milliseconds: 600));
 
-    expect(find.byType(CaptainLoginScreen), findsOneWidget);
-    expect(find.text('أهلاً بك يا كابتن!'), findsOneWidget);
+    expect(find.byType(AuthWelcomeScreen), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
   // The localization delegates below are needed for MaterialApp's default
   // Arabic-locale text direction/date-formatting machinery.
-  testWidgets('واجهة تسجيل دخول الكابتن تدعم الاتجاه من اليمين لليسار', (
+  testWidgets('واجهة تسجيل الدخول تدعم الاتجاه من اليمين لليسار', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
       MultiProvider(
         providers: [ChangeNotifierProvider(create: (_) => AppStateProvider())],
-        child: const MaterialApp(
+        child: MaterialApp(
           debugShowCheckedModeBanner: false,
-          localizationsDelegates: [
+          localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          supportedLocales: [Locale('ar', '')],
-          locale: Locale('ar', ''),
-          home: CaptainLoginScreen(),
+          supportedLocales: const [Locale('ar', '')],
+          locale: const Locale('ar', ''),
+          home: PhoneCodeLoginScreen(
+            title: 'تسجيل الدخول',
+            subtitle: 'أدخل رقم هاتفك لإرسال رمز التحقق إليه.',
+            onSignedIn: () {},
+          ),
         ),
       ),
     );

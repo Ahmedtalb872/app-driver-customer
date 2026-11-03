@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/admin_colors.dart';
 import '../../repositories/admin_finance_repository.dart';
 import '../../widgets/confirm_dialog.dart';
+import '../../widgets/copyable_phone.dart';
 import '../../widgets/status_badge.dart';
 
 class RechargeRequestsScreen extends StatefulWidget {
@@ -15,6 +16,7 @@ class RechargeRequestsScreen extends StatefulWidget {
 class _RechargeRequestsScreenState extends State<RechargeRequestsScreen> {
   final _repository = AdminFinanceRepository();
   String? _statusFilter = 'pending';
+  String? _vehicleTypeFilter;
   bool _loading = true;
   List<Map<String, dynamic>> _requests = [];
 
@@ -28,6 +30,7 @@ class _RechargeRequestsScreenState extends State<RechargeRequestsScreen> {
     setState(() => _loading = true);
     final requests = await _repository.loadRechargeRequests(
       statusFilter: _statusFilter,
+      vehicleTypeFilter: _vehicleTypeFilter,
     );
     if (!mounted) return;
     setState(() {
@@ -80,22 +83,52 @@ class _RechargeRequestsScreenState extends State<RechargeRequestsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 200,
-            child: DropdownButtonFormField<String?>(
-              initialValue: _statusFilter,
-              decoration: const InputDecoration(labelText: 'الحالة'),
-              items: const [
-                DropdownMenuItem(value: 'pending', child: Text('قيد الانتظار')),
-                DropdownMenuItem(value: 'approved', child: Text('موافق عليه')),
-                DropdownMenuItem(value: 'rejected', child: Text('مرفوض')),
-                DropdownMenuItem(value: null, child: Text('الكل')),
-              ],
-              onChanged: (value) {
-                setState(() => _statusFilter = value);
-                _load();
-              },
-            ),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              SizedBox(
+                width: 200,
+                child: DropdownButtonFormField<String?>(
+                  initialValue: _statusFilter,
+                  decoration: const InputDecoration(labelText: 'الحالة'),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'pending',
+                      child: Text('قيد الانتظار'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'approved',
+                      child: Text('موافق عليه'),
+                    ),
+                    DropdownMenuItem(value: 'rejected', child: Text('مرفوض')),
+                    DropdownMenuItem(value: null, child: Text('الكل')),
+                  ],
+                  onChanged: (value) {
+                    setState(() => _statusFilter = value);
+                    _load();
+                  },
+                ),
+              ),
+              SizedBox(
+                width: 220,
+                child: DropdownButtonFormField<String?>(
+                  initialValue: _vehicleTypeFilter,
+                  decoration: const InputDecoration(labelText: 'نوع الحساب'),
+                  items: const [
+                    DropdownMenuItem(value: null, child: Text('الكل')),
+                    DropdownMenuItem(
+                      value: 'motorcycle',
+                      child: Text('كباتن الدراجات النارية فقط'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    setState(() => _vehicleTypeFilter = value);
+                    _load();
+                  },
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           Expanded(
@@ -113,6 +146,8 @@ class _RechargeRequestsScreenState extends State<RechargeRequestsScreen> {
                       scrollDirection: Axis.horizontal,
                       child: DataTable(
                         columns: const [
+                          DataColumn(label: Text('مقدّم الطلب')),
+                          DataColumn(label: Text('النوع')),
                           DataColumn(label: Text('المبلغ')),
                           DataColumn(label: Text('طريقة الدفع')),
                           DataColumn(label: Text('الحالة')),
@@ -121,8 +156,34 @@ class _RechargeRequestsScreenState extends State<RechargeRequestsScreen> {
                         ],
                         rows: _requests.map((request) {
                           final status = request['status'] as String? ?? '';
+                          final profile =
+                              request['profile'] as Map<String, dynamic>?;
+                          final vehicleType = request['vehicle_type'] as String?;
                           return DataRow(
                             cells: [
+                              DataCell(
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text('${profile?['full_name'] ?? '-'}'),
+                                    CopyablePhone(profile?['phone'] as String?),
+                                  ],
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  profile?['role'] != 'captain'
+                                      ? 'زبون'
+                                      : switch (vehicleType) {
+                                          'motorcycle' => 'دراجة نارية',
+                                          'economy' => 'اقتصادية',
+                                          'comfort' => 'مريحة',
+                                          'family' => 'عائلية',
+                                          _ => 'كابتن',
+                                        },
+                                ),
+                              ),
                               DataCell(Text('${request['amount']}')),
                               DataCell(
                                 Text(

@@ -32,7 +32,32 @@ class AdminAuthService {
         password: password,
       );
     }
-    return AuthService.instance.signIn(phone: identifier, password: password);
+    return AuthService.instance.signIn(
+      phone: normalizePhone(identifier),
+      password: password,
+    );
+  }
+
+  /// Brings whatever the admin typed into the `+222XXXXXXXX` form every
+  /// other entry point in both apps already stores and signs in with.
+  ///
+  /// This screen's code mode hardcodes `'+222' + digits`, but password
+  /// mode used to hand the raw text straight to AuthService, which derives
+  /// the synthetic email from the digits it is given. Typing the local
+  /// 8-digit number therefore looked up `20522064@hudhud.app` while the
+  /// account actually lives at `22220522064@hudhud.app` - same admin, two
+  /// different identities, and an "Invalid login credentials" that looked
+  /// like a wrong password.
+  static String normalizePhone(String input) {
+    final digits = input.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isEmpty) return input.trim();
+    // Already carries the Mauritanian country code, with or without '+'.
+    if (digits.length > 8 && digits.startsWith('222')) return '+$digits';
+    // Bare local number.
+    if (digits.length == 8) return '+222$digits';
+    // Some other country's number, or something we don't recognise - pass
+    // it through rather than corrupting it.
+    return input.trim().startsWith('+') ? '+$digits' : digits;
   }
 
   Future<void> signOut() => AuthService.instance.signOut();

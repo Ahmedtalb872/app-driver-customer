@@ -29,6 +29,17 @@
 
   <title>الهدهد | لوحة تحكم AL HODHOD</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Google Maps JS API - required by google_maps_flutter_web (the same
+       RealMapWidget used on Android/iOS also renders the real Google Maps
+       SDK here on web, not flutter_map). This is a dedicated web key
+       (Application restrictions -> Websites, limited to this project's
+       GitHub Pages and Vercel domains) - separate from the Android key in
+       android/local.properties, since a single key can only carry one kind
+       of application restriction. This key is meant to be public in page
+       source, same as every site that embeds Google Maps - it's protected
+       by that Websites restriction, not by being secret. -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCgvm2c74b18WUEYUA-8ahmk7SZ40nPeuo"></script>
   
   
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">

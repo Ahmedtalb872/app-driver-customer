@@ -1,8 +1,26 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../core/auth/app_role.dart';
+import '../../core/auth/auth_service.dart';
 import '../../core/constants/colors.dart';
-import '../authentication/captain_login_screen.dart';
+import '../../core/services/push_notifications.dart';
+import '../../core/services/session_guard_service.dart';
+import '../../core/services/version_gate_service.dart';
+import '../../providers/app_state_provider.dart';
+import '../authentication/auth_welcome_screen.dart';
+import '../home/customer_home_screen.dart';
+
+// Store links for the "force update" dialog below - the iOS App Store one
+// needs this app's actual numeric Apple ID filled in once it's known (visible
+// on App Information in App Store Connect); until then the iOS button just
+// opens the App Store app to a name search instead of the exact listing.
+const String _androidStoreUrl =
+    'https://play.google.com/store/apps/details?id=com.alhudhud.lizeboun';
+const String _iosStoreUrl = 'https://apps.apple.com/search?term=الهدهد';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -43,16 +61,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     _navigationTimer = Timer(const Duration(milliseconds: 2600), () {
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              const CaptainLoginScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-          transitionDuration: const Duration(milliseconds: 500),
-        ),
-      );
+      unawaited(_navigateNext());
     });
   }
 
@@ -61,6 +70,130 @@ class _SplashScreenState extends State<SplashScreen>
     _navigationTimer?.cancel();
     _controller.dispose();
     super.dispose();
+  }
+
+  /// Supabase already restores a previously-signed-in session from local
+  /// storage before this ever runs (the default `supabase_flutter`
+  /// behaviour) - so reopening the app is not the same event as choosing to
+  /// sign out, and shouldn't be treated as one. Only an explicit tap on
+  /// "تسجيل الخروج" (SettingsScreen) or a SessionGuardService kick from
+  /// another device signing in should ever land the user back on
+  /// [AuthWelcomeScreen]; a restored session skips straight to the home
+  /// screen instead of forcing a fresh login every time the app is closed
+  /// and reopened.
+  Future<void> _navigateNext() async {
+    final requiredVersion = await VersionGateService.requiredMinVersionOrNull();
+    if (!mounted) return;
+    if (requiredVersion != null) {
+      await _showForceUpdateDialog(requiredVersion);
+      return;
+    }
+
+    if (AuthService.instance.isAuthenticated) {
+      try {
+        final role = await AuthService.instance.fetchCurrentRole();
+        if (!mounted) return;
+
+        if (role == AppRole.customer) {
+          final fullName = await AuthService.instance.fetchCurrentFullName();
+          if (!mounted) return;
+
+          // Best effort, same as the normal login path (see
+          // PhoneCodeLoginScreen) - this device just won't be forcibly
+          // kicked by a later login elsewhere until the next successful
+          // call.
+          try {
+            final sessionId = SessionGuardService.generateSessionId();
+            await AuthService.instance.setActiveSession(sessionId);
+            SessionGuardService.instance.start(sessionId);
+          } catch (_) {}
+
+          if (!mounted) return;
+          Provider.of<AppStateProvider>(context, listen: false).login(
+            AuthService.instance.currentUser?.phone ?? '',
+            fullName: fullName,
+          );
+          // Fire-and-forget, same as SessionGuardService above - a
+          // failure here just means this device misses admin broadcast
+          // notifications until the next successful sync.
+          unawaited(PushNotifications.syncToken());
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => const CustomerHomeScreen(),
+            ),
+          );
+          return;
+        }
+
+        // Any other role (captain, admin, or a profile that failed to
+        // load) isn't supported on this mobile app - mirrors the same
+        // fallback PhoneCodeLoginScreen uses after a fresh login.
+        await AuthService.instance.signOut();
+      } catch (_) {
+        // Couldn't confirm the restored session is still good (e.g. no
+        // network yet) - fall through to the welcome screen rather than
+        // show a home screen that can't load anything. The session itself
+        // is untouched, so the next successful launch tries again.
+      }
+    }
+
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const AuthWelcomeScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 500),
+      ),
+    );
+  }
+
+  /// Blocks the splash screen indefinitely behind a non-dismissible dialog -
+  /// no path back into the app - once the admin dashboard's "تحديث إجباري"
+  /// toggle (AdminSettingsScreen) is on and this install is below the
+  /// configured minimum version. Only a tap on "تحديث الآن" (which leaves the
+  /// app for the store) ends this; there is deliberately no "later" option.
+  Future<void> _showForceUpdateDialog(String requiredVersion) {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          title: const Text(
+            'يتوفر تحديث جديد',
+            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          content: Text(
+            'يجب تحديث التطبيق إلى الإصدار $requiredVersion أو أحدث للمتابعة.',
+            style: const TextStyle(fontFamily: 'Cairo'),
+            textAlign: TextAlign.center,
+          ),
+          actions: [
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () async {
+                  final url = Platform.isIOS ? _iosStoreUrl : _androidStoreUrl;
+                  await launchUrl(
+                    Uri.parse(url),
+                    mode: LaunchMode.externalApplication,
+                  );
+                },
+                child: const Text(
+                  'تحديث الآن',
+                  style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -132,7 +265,7 @@ class _SplashScreenState extends State<SplashScreen>
                                               maxWidth: logoWidth,
                                             ),
                                             child: Image.asset(
-                                              'assets/images/al-houdhoud-logo.png',
+                                              'assets/images/al-houdhoud-logo-mark.png',
                                               width: logoWidth,
                                               fit: BoxFit.contain,
                                             ),

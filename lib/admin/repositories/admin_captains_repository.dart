@@ -1,30 +1,41 @@
 import 'dart:async';
+import 'dart:typed_data';
 
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/config/supabase_config.dart';
+import '../../core/services/captain_documents_repository.dart';
 import '../../models/models.dart';
 import '../models/captain_admin_view.dart';
+
+const _unassignedVehicleType = 'unassigned';
 
 class AdminCaptainsRepository {
   SupabaseClient get _client => SupabaseConfig.client;
 
-  Future<Map<String, double>> _walletBalances(List<String> userIds) async {
-    if (userIds.isEmpty) return {};
-    final rows = await _client
-        .from('wallets')
-        .select('user_id, balance')
-        .inFilter('user_id', userIds);
-    return {
-      for (final row in List<Map<String, dynamic>>.from(rows))
-        row['user_id'] as String: (row['balance'] as num).toDouble(),
-    };
-  }
+  /// Sentinel passed as [loadCaptains]'s vehicleTypeFilter to mean "hasn't
+  /// chosen a vehicle type yet" (vehicle_type IS NULL) - distinct from
+  /// `null` itself, which means "don't filter by vehicle type at all".
+  static const unassignedVehicleType = _unassignedVehicleType;
 
+  /// [excludeVehicleTypeFilter] (e.g. 'motorcycle' for "كباتن السيارات")
+  /// drops that one vehicle type regardless of [vehicleTypeFilter] - the
+  /// two are meant to be mutually exclusive callers (one page picks a type
+  /// to include, the other picks one to exclude), but if both were passed
+  /// the exclusion wins since it's applied last. A captain who hasn't
+  /// chosen a vehicle type yet (vehicle_type IS NULL) still passes this
+  /// exclusion - pending/newly-registered captains need to stay visible on
+  /// "كباتن السيارات" so an admin can actually review and approve them,
+  /// even before they've picked a vehicle type. Pass
+  /// [unassignedVehicleType] as [vehicleTypeFilter] to narrow down to
+  /// exactly those not-yet-chosen captains instead.
   Future<List<CaptainAdminView>> loadCaptains({
     String? searchQuery,
     String? statusFilter,
     bool? onlineFilter,
+    String? vehicleTypeFilter,
+    String? excludeVehicleTypeFilter,
     int limit = 25,
     int offset = 0,
   }) async {
@@ -35,6 +46,27 @@ class AdminCaptainsRepository {
     }
     if (onlineFilter != null) {
       query = query.eq('is_online', onlineFilter);
+    }
+    if (vehicleTypeFilter == _unassignedVehicleType) {
+      query = query.isFilter('vehicle_type', null);
+    } else if (vehicleTypeFilter != null && vehicleTypeFilter.isNotEmpty) {
+      query = query.eq('vehicle_type', vehicleTypeFilter);
+    }
+    if (excludeVehicleTypeFilter != null &&
+        excludeVehicleTypeFilter.isNotEmpty) {
+      // Plain .neq() compiles to `vehicle_type <> 'motorcycle'` - under
+      // SQL's three-valued logic that's NULL (not true) for a captain who
+      // hasn't set a vehicle type yet, so a plain WHERE would silently drop
+      // that row instead of keeping it. A captain who registered yesterday
+      // and is still "قيد المراجعة" almost always hasn't picked a vehicle
+      // type yet, and needs to stay on this list to be reviewed/approved -
+      // losing them here isn't "not auto-categorizing", it's losing track
+      // of a pending application entirely. The explicit `.is.null` branch
+      // keeps them here; use the "لم يحدد بعد" filter (vehicleTypeFilter:
+      // unassignedVehicleType) to look at only those specifically.
+      query = query.or(
+        'vehicle_type.is.null,vehicle_type.neq.$excludeVehicleTypeFilter',
+      );
     }
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
       final q = searchQuery.trim();
@@ -49,18 +81,7 @@ class AdminCaptainsRepository {
         .range(offset, offset + limit - 1);
     final list = List<Map<String, dynamic>>.from(rows);
 
-    final balances = await _walletBalances(
-      list.map((r) => r['id'] as String).toList(),
-    );
-
-    return list
-        .map(
-          (row) => CaptainAdminView.fromJson(
-            row,
-            walletBalance: balances[row['id']] ?? 0,
-          ),
-        )
-        .toList();
+    return list.map(CaptainAdminView.fromJson).toList();
   }
 
   Future<CaptainAdminView?> loadCaptainById(String id) async {
@@ -70,8 +91,7 @@ class AdminCaptainsRepository {
         .eq('id', id)
         .maybeSingle();
     if (row == null) return null;
-    final balances = await _walletBalances([id]);
-    return CaptainAdminView.fromJson(row, walletBalance: balances[id] ?? 0);
+    return CaptainAdminView.fromJson(row);
   }
 
   Future<List<Map<String, dynamic>>> loadTripHistory(
@@ -87,10 +107,56 @@ class AdminCaptainsRepository {
     return List<Map<String, dynamic>>.from(rows);
   }
 
+  /// For when a captain picked "سيارة" by mistake during registration (or
+  /// never picked anything) and actually rides a motorcycle - an admin
+  /// fixes it here instead of the captain having to re-register. Also
+  /// flips accepts_delivery on, same as every other motorcycle captain, so
+  /// they immediately start receiving delivery dispatches too rather than
+  /// needing a second manual step.
+  Future<void> convertToMotorcycle(String captainId) async {
+    await _client
+        .from('captains')
+        .update({'vehicle_type': 'motorcycle', 'accepts_delivery': true})
+        .eq('id', captainId);
+  }
+
+  static const vehicleTypeLabels = {
+    'economy': 'اقتصادية',
+    'comfort': 'مريحة',
+    'family': 'عائلية',
+    'motorcycle': 'دراجة نارية',
+  };
+
+  /// General-purpose "set this captain's vehicle type" - mainly for a
+  /// captain stuck with vehicle_type still unset (NULL): matching a ride
+  /// request compares the trip's vehicle_type against the captain's own
+  /// (see the captain app's own request-matching, not this repo), so a
+  /// NULL never matches anything and that captain never receives a single
+  /// request. Unlike [convertToMotorcycle] this never touches
+  /// accepts_delivery - pick that one instead for the one-click
+  /// car-by-mistake fix, which also opts the captain into deliveries.
+  Future<void> setVehicleType(String captainId, String vehicleType) async {
+    await _client
+        .from('captains')
+        .update({'vehicle_type': vehicleType})
+        .eq('id', captainId);
+  }
+
   Future<void> updateAdminNotes(String captainId, String notes) async {
     await _client
         .from('captains')
         .update({'admin_notes': notes})
+        .eq('id', captainId);
+  }
+
+  /// Marks whether an admin has already reached out to this captain
+  /// (phone call, follow-up SMS, ...) - independent of the approval
+  /// workflow, mainly for working through the pending-review list from a
+  /// recruitment batch without losing track of who's been called already.
+  Future<void> setContacted(String captainId, bool contacted) async {
+    await _client
+        .from('captains')
+        .update({'contacted_by_admin': contacted})
         .eq('id', captainId);
   }
 
@@ -149,6 +215,111 @@ class AdminCaptainsRepository {
     );
   }
 
+  /// Registers a document on [captainId]'s behalf - for a captain who sent
+  /// their ID/license/vehicle photos over WhatsApp or by hand instead of
+  /// uploading them through the app themselves. Mirrors
+  /// [CaptainDocumentsRepository.uploadDocument]'s validation and Storage
+  /// path convention exactly, just uploading under the given captain's
+  /// folder (via the storage policy "Admins can upload documents for any
+  /// captain") and registering through admin_upload_captain_document
+  /// instead of the captain's own RPC. Lands as 'pending' like any other
+  /// upload - the admin still reviews/approves it separately afterward.
+  Future<CaptainDocument> uploadDocumentForCaptain({
+    required String captainId,
+    required DocumentType documentType,
+    required Uint8List bytes,
+    required String fileName,
+    required String mimeType,
+    DateTime? expiresAt,
+  }) async {
+    if (bytes.length > CaptainDocumentsRepository.maxFileSizeBytes) {
+      throw ArgumentError('File exceeds the 10MB limit');
+    }
+    if (!CaptainDocumentsRepository.allowedMimeTypes.contains(mimeType)) {
+      throw ArgumentError('Unsupported file type: $mimeType');
+    }
+
+    final sanitizedFileName = fileName.replaceAll(
+      RegExp(r'[^A-Za-z0-9._-]'),
+      '_',
+    );
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final path =
+        'captains/$captainId/${documentType.dbValue}/${timestamp}_$sanitizedFileName';
+
+    await _client.storage
+        .from(CaptainDocumentsRepository.bucket)
+        .uploadBinary(
+          path,
+          bytes,
+          fileOptions: FileOptions(contentType: mimeType, upsert: false),
+        );
+
+    final row = await _client.rpc(
+      'admin_upload_captain_document',
+      params: {
+        'p_captain_id': captainId,
+        'p_document_type': documentType.dbValue,
+        'p_file_path': path,
+        'p_file_name': fileName,
+        'p_mime_type': mimeType,
+        'p_file_size': bytes.length,
+        'p_expires_at': expiresAt?.toUtc().toIso8601String(),
+      },
+    );
+    final document = CaptainDocument.fromRow(
+      Map<String, dynamic>.from(row as Map),
+    );
+    // Best effort, same as the captain's own upload path.
+    CaptainDocumentsRepository.instance.triggerExtraction(document.id);
+    return document;
+  }
+
+  /// Copies an approved "profile_photo" document (private captain-documents
+  /// bucket, owner-or-admin only) into the public captain-avatars bucket and
+  /// points captains.avatar_url at it - the customer-facing trip-tracking
+  /// screen only ever reads that column, which has otherwise never had
+  /// anything write to it (see 20260812000054_captain_avatar_url.sql /
+  /// 20260813000069_captain_avatar_from_profile_photo.sql). A no-op for any
+  /// other document type. Best-effort by design - callers should treat a
+  /// failure here as separate from the document approval itself succeeding.
+  Future<void> syncApprovedProfilePhotoToAvatar(CaptainDocument doc) async {
+    if (doc.documentType != DocumentType.profilePhoto) return;
+
+    final signedUrl = await _client.storage
+        .from('captain-documents')
+        .createSignedUrl(doc.filePath, 300);
+    final response = await http.get(Uri.parse(signedUrl));
+    if (response.statusCode != 200) {
+      throw StateError(
+        'Failed to download profile photo (${response.statusCode})',
+      );
+    }
+
+    final contentType = response.headers['content-type'] ?? 'image/jpeg';
+    final extension = contentType.contains('png')
+        ? 'png'
+        : contentType.contains('webp')
+        ? 'webp'
+        : 'jpg';
+    final path =
+        'captains/${doc.captainId}/${DateTime.now().millisecondsSinceEpoch}.$extension';
+
+    await _client.storage
+        .from('captain-avatars')
+        .uploadBinary(
+          path,
+          response.bodyBytes,
+          fileOptions: FileOptions(contentType: contentType, upsert: false),
+        );
+
+    final publicUrl = _client.storage.from('captain-avatars').getPublicUrl(path);
+    await _client
+        .from('captains')
+        .update({'avatar_url': publicUrl})
+        .eq('id', doc.captainId);
+  }
+
   Future<void> setSuspended(
     String captainId,
     bool suspended, {
@@ -162,6 +333,65 @@ class AdminCaptainsRepository {
         'p_reason': reason,
       },
     );
+  }
+
+  /// Deletes the captain's profile (see
+  /// 20260802000050_admin_delete_captain.sql) - the uploaded document
+  /// *rows* cascade-delete with it, but the underlying files stay in
+  /// Storage (no admin DELETE policy exists on that bucket, and it's the
+  /// captain's own account either way - see the migration's comment for why
+  /// a full account/file wipe isn't in scope here). Throws
+  /// [CaptainHasTripHistoryException] when the captain was ever assigned a
+  /// trip - the database itself refuses the delete in that case.
+  Future<void> delete(String captainId, String reason) async {
+    try {
+      await _client.rpc(
+        'admin_delete_captain',
+        params: {'p_captain_id': captainId, 'p_reason': reason},
+      );
+    } on PostgrestException catch (e) {
+      if (e.message.contains('CAPTAIN_HAS_TRIP_HISTORY')) {
+        throw CaptainHasTripHistoryException();
+      }
+      rethrow;
+    }
+  }
+
+  /// Live positions from `captain_locations` - the same table the captain
+  /// app's own foreground location service keeps fresh while a captain is
+  /// online or on a trip (see aihoudhoud's AppStateProvider), and the same
+  /// table TripDetailPanel already reads per-trip. Admin read access to
+  /// every row (not just one tied to an active trip) comes from that
+  /// repo's own captain_locations_admin_select policy
+  /// (0030_captain_locations_admin_and_realtime.sql) - nothing to add on
+  /// this side. Keyed by captain_id for an O(1) lookup against the online
+  /// captains list in the live-operations map view.
+  Stream<Map<String, CaptainLocation>> watchCaptainLocations() {
+    final controller = StreamController<Map<String, CaptainLocation>>.broadcast();
+
+    final sub = _client
+        .from('captain_locations')
+        .stream(primaryKey: ['captain_id'])
+        .listen((rows) {
+          final byId = <String, CaptainLocation>{};
+          for (final row in rows) {
+            final lat = (row['lat'] as num?)?.toDouble();
+            final lng = (row['lng'] as num?)?.toDouble();
+            if (lat == null || lng == null) continue;
+            final updatedAt = DateTime.tryParse(
+              row['updated_at'] as String? ?? '',
+            );
+            byId[row['captain_id'] as String] = CaptainLocation(
+              lat: lat,
+              lng: lng,
+              updatedAt: updatedAt,
+            );
+          }
+          controller.add(byId);
+        });
+
+    controller.onCancel = () async => sub.cancel();
+    return controller.stream;
   }
 
   /// Live version of [loadCaptains](onlineFilter: true): emits the online
@@ -202,4 +432,18 @@ class CaptainDocumentsIncompleteException implements Exception {
   final String rawMessage;
 
   const CaptainDocumentsIncompleteException(this.rawMessage);
+}
+
+/// Thrown when `admin_delete_captain` refuses because the captain has trip
+/// history - suspend the account instead of deleting it.
+class CaptainHasTripHistoryException implements Exception {}
+
+/// A captain's last-known position from `captain_locations`, as read by
+/// [AdminCaptainsRepository.watchCaptainLocations].
+class CaptainLocation {
+  final double lat;
+  final double lng;
+  final DateTime? updatedAt;
+
+  const CaptainLocation({required this.lat, required this.lng, this.updatedAt});
 }

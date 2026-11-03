@@ -214,17 +214,31 @@ class DestinationsRemoteDataSource {
 
   /// Unified place/district/neighborhood search for the admin dispatch
   /// screen's autocomplete (search_destinations,
-  /// 20260717000035_destination_search.sql). Unlike [searchPlaces], this
-  /// isn't scoped to a district/category - it's a single free-text box
-  /// meant to resolve any of place, address, district, neighborhood,
-  /// street or landmark in one query.
+  /// 20260717000035_destination_search.sql, extended by
+  /// 20260811000053_fuzzy_proximity_search.sql with typo-tolerant matching
+  /// and optional proximity ordering). Unlike [searchPlaces], this isn't
+  /// scoped to a district/category - it's a single free-text box meant to
+  /// resolve any of place, address, district, neighborhood, street or
+  /// landmark in one query.
+  ///
+  /// [nearLat]/[nearLng], when both given, order results by distance from
+  /// that point (typically the customer's current location) ahead of
+  /// popularity - closest-first, once text relevance is already accounted
+  /// for. Omit either to leave ordering as before (no proximity signal).
   Future<List<Map<String, dynamic>>> searchDestinations({
     required String query,
     int limit = 15,
+    double? nearLat,
+    double? nearLng,
   }) async {
     final rows = await _client.rpc(
       'search_destinations',
-      params: {'p_query': query, 'p_limit': limit},
+      params: {
+        'p_query': query,
+        'p_limit': limit,
+        'p_near_lat': nearLat,
+        'p_near_lng': nearLng,
+      },
     );
     return List<Map<String, dynamic>>.from(rows as List);
   }
