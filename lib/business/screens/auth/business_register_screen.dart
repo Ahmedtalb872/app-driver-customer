@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/auth/auth_service.dart';
 import '../../core/business_colors.dart';
 import '../../core/business_theme.dart';
 import '../../repositories/business_account_repository.dart';
@@ -56,6 +57,27 @@ class _BusinessRegisterScreenState extends State<BusinessRegisterScreen> {
       _error = null;
     });
     try {
+      final normalizedPhone = BusinessAuthService.normalizePhone(
+        _phoneController.text.trim(),
+      );
+      // Checked up front rather than just letting signUp fail on it: a
+      // phone already used by any account (customer, captain, admin, or a
+      // previous business signup) trips profiles' own unique(phone)
+      // constraint inside the handle_new_user trigger, which surfaces as
+      // Supabase's generic, user-facing-unsafe "Database error saving new
+      // user" - this catches the common case with a message that actually
+      // explains what to do instead.
+      final alreadyRegistered = await AuthService.instance.isPhoneRegistered(
+        normalizedPhone,
+      );
+      if (alreadyRegistered) {
+        setState(
+          () => _error =
+              'هذا الرقم مسجل مسبقاً - إذا كان حسابك، سجّل الدخول بدلاً من إنشاء حساب جديد.',
+        );
+        return;
+      }
+
       await BusinessAuthService.instance.signUp(
         phone: _phoneController.text.trim(),
         password: _passwordController.text,
@@ -73,7 +95,11 @@ class _BusinessRegisterScreenState extends State<BusinessRegisterScreen> {
       if (!mounted) return;
       context.go('/business/dashboard');
     } on AuthException catch (e) {
-      setState(() => _error = e.message);
+      setState(
+        () => _error = e.message.contains('Database error saving new user')
+            ? 'هذا الرقم مسجل مسبقاً - إذا كان حسابك، سجّل الدخول بدلاً من إنشاء حساب جديد.'
+            : e.message,
+      );
     } catch (_) {
       setState(
         () => _error = 'تعذر إنشاء الحساب، تحقق من البيانات وحاول مرة أخرى.',
