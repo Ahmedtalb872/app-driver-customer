@@ -84,9 +84,21 @@ jobs:
         # (minus a fixed offset so the result comfortably fits Android's
         # signed-32-bit versionCode limit, instead of nearly overflowing it)
         # only ever increases and has no such reset path.
+        #
+        # The version name (the part before "+", shown to users on Google
+        # Play) is kept from pubspec.yaml - it used to be hardcoded to 1.1.1
+        # here, so every Play upload said 1.1.1 no matter what pubspec.yaml
+        # said. Bump it in pubspec.yaml for each store update.
         run: |
           version_code=$(( $(date -u +%s) - 1700000000 ))
-          sed -i -E "s/^version: [0-9]+\.[0-9]+\.[0-9]+\+[0-9]+/version: 1.1.1+${version_code}/" pubspec.yaml
+          version_name=$(sed -n -E 's/^version: ([0-9]+\.[0-9]+\.[0-9]+)\+[0-9]+.*/\1/p' pubspec.yaml)
+          if [ -z "$version_name" ]; then
+            echo "::error::Could not read the version name from pubspec.yaml"
+            exit 1
+          fi
+          sed -i -E "s/^version: [0-9]+\.[0-9]+\.[0-9]+\+[0-9]+/version: ${version_name}+${version_code}/" pubspec.yaml
+          echo "Building version ${version_name} (${version_code})"
+          grep '^version:' pubspec.yaml
 
       - name: Install dependencies
         run: flutter pub get
