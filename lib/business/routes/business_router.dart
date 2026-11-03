@@ -32,7 +32,13 @@ String? businessRedirect(BusinessSession session, String path) {
     case BusinessSessionStatus.loading:
       return null; // wait for the first refresh() to resolve
     case BusinessSessionStatus.signedOut:
-      return (onLogin || onRegister) ? null : '/business/login';
+      // The public landing experience is the registration form only - a
+      // signed-out visitor who lands anywhere else (including trying
+      // /business/dashboard directly) is sent there, not to a visible
+      // login form. /business/login still works for a returning business
+      // that knows to go there (linked from the register screen itself),
+      // it's just never the default.
+      return (onLogin || onRegister) ? null : '/business/register';
     case BusinessSessionStatus.noAccount:
       // Signed in mid-registration (createMyAccount hasn't run/finished
       // yet) - only the register screen itself should be reachable here,

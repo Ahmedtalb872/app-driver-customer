@@ -8,6 +8,7 @@ import '../../core/business_theme.dart';
 import '../../repositories/business_account_repository.dart';
 import '../../services/business_auth_service.dart';
 import '../../services/business_session.dart';
+import '../../widgets/hidden_admin_key.dart';
 
 class BusinessRegisterScreen extends StatefulWidget {
   const BusinessRegisterScreen({super.key});
@@ -87,7 +88,9 @@ class _BusinessRegisterScreenState extends State<BusinessRegisterScreen> {
   Widget build(BuildContext context) {
     return Theme(data: BusinessTheme.theme, child: Scaffold(
       backgroundColor: BusinessColors.background,
-      body: Center(
+      body: Stack(
+        children: [
+          Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: ConstrainedBox(
@@ -239,6 +242,9 @@ class _BusinessRegisterScreenState extends State<BusinessRegisterScreen> {
             ),
           ),
         ),
+          ),
+          const HiddenAdminKey(),
+        ],
       ),
     ));
   }

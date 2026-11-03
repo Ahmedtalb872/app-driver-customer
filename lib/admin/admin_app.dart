@@ -41,7 +41,13 @@ class _AdminAppState extends State<AdminApp> {
     // separate GoRouters/MaterialApps) keeps a single `/` origin, which
     // this web build is served from either way.
     _router = GoRouter(
-      initialLocation: '/admin/dashboard',
+      // The public landing page is the business registration form, not the
+      // staff admin login - a visitor who opens the bare site URL (no path
+      // typed) is a restaurant/institution signing up, not staff. Staff
+      // reach /admin/login through the small hidden key icon on the
+      // business pages (HiddenAdminKey) or a direct/bookmarked URL -
+      // either way this only decides what shows with no path at all.
+      initialLocation: '/business/register',
       refreshListenable: Listenable.merge([_adminSession, _businessSession]),
       redirect: (context, state) {
         final path = state.matchedLocation;
