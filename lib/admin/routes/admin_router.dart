@@ -5,6 +5,7 @@ import '../screens/admins/admin_users_screen.dart';
 import '../screens/audit_logs/admin_audit_logs_screen.dart';
 import '../screens/auth/admin_login_screen.dart';
 import '../screens/auth/unauthorized_screen.dart';
+import '../screens/business/admin_business_accounts_screen.dart';
 import '../screens/captains/admin_captains_screen.dart';
 import '../screens/customers/admin_customers_screen.dart';
 import '../screens/dashboard/admin_dashboard_screen.dart';
@@ -35,6 +36,7 @@ const Map<String, String> _routeTitles = {
   '/admin/captains': 'كباتن السيارات',
   '/admin/motorcycle-captains': 'كباتن الدراجات',
   '/admin/customers': 'الزبناء',
+  '/admin/business-accounts': 'حسابات الأعمال',
   '/admin/trips': 'الرحلات',
   '/admin/live-operations': 'العمليات المباشرة',
   '/admin/dispatch': 'إرسال طلب يدوي',
@@ -58,30 +60,48 @@ const Map<String, String> _routeTitles = {
   '/admin/settings': 'إعدادات التطبيق',
 };
 
+/// Redirect decision for any path under `/admin` - exposed separately so
+/// the combined app router (see admin_app.dart) can branch between this
+/// and the business portal's own [businessRedirect] in one `redirect`
+/// callback, keyed by path prefix.
+String? adminRedirect(AdminSession session, String path) {
+  final onLogin = path == '/admin/login';
+  final onUnauthorized = path == '/admin/unauthorized';
+
+  switch (session.status) {
+    case AdminSessionStatus.unknown:
+    case AdminSessionStatus.loading:
+      return null; // wait for the first refresh() to resolve
+    case AdminSessionStatus.signedOut:
+      return onLogin ? null : '/admin/login';
+    case AdminSessionStatus.unauthorized:
+      return onUnauthorized ? null : '/admin/unauthorized';
+    case AdminSessionStatus.authorized:
+      if (onLogin || onUnauthorized) return '/admin/dashboard';
+      if (path == '/admin') return '/admin/dashboard';
+      return null;
+  }
+}
+
+/// Standalone admin-only router, kept for anything that only ever needs
+/// the admin half (e.g. a future widget test) - the live app instead
+/// combines [adminRoutes] with the business portal's own routes into one
+/// GoRouter (see admin_app.dart) so both share a single redirect callback.
 GoRouter buildAdminRouter(AdminSession session) {
   return GoRouter(
     initialLocation: '/admin/dashboard',
     refreshListenable: session,
-    redirect: (context, state) {
-      final path = state.matchedLocation;
-      final onLogin = path == '/admin/login';
-      final onUnauthorized = path == '/admin/unauthorized';
+    redirect: (context, state) => adminRedirect(session, state.matchedLocation),
+    routes: adminRoutes(session),
+    errorBuilder: (context, state) => const Scaffold(
+      body: Center(
+        child: Text('الصفحة غير موجودة', style: TextStyle(fontFamily: 'Cairo')),
+      ),
+    ),
+  );
+}
 
-      switch (session.status) {
-        case AdminSessionStatus.unknown:
-        case AdminSessionStatus.loading:
-          return null; // wait for the first refresh() to resolve
-        case AdminSessionStatus.signedOut:
-          return onLogin ? null : '/admin/login';
-        case AdminSessionStatus.unauthorized:
-          return onUnauthorized ? null : '/admin/unauthorized';
-        case AdminSessionStatus.authorized:
-          if (onLogin || onUnauthorized) return '/admin/dashboard';
-          if (path == '/admin') return '/admin/dashboard';
-          return null;
-      }
-    },
-    routes: [
+List<RouteBase> adminRoutes(AdminSession session) => [
       GoRoute(path: '/admin', redirect: (context, state) => '/admin/dashboard'),
       GoRoute(
         path: '/admin/login',
@@ -119,6 +139,10 @@ GoRouter buildAdminRouter(AdminSession session) {
           GoRoute(
             path: '/admin/customers',
             builder: (context, state) => const AdminCustomersScreen(),
+          ),
+          GoRoute(
+            path: '/admin/business-accounts',
+            builder: (context, state) => const AdminBusinessAccountsScreen(),
           ),
           GoRoute(
             path: '/admin/trips',
@@ -206,11 +230,4 @@ GoRouter buildAdminRouter(AdminSession session) {
           ),
         ],
       ),
-    ],
-    errorBuilder: (context, state) => const Scaffold(
-      body: Center(
-        child: Text('الصفحة غير موجودة', style: TextStyle(fontFamily: 'Cairo')),
-      ),
-    ),
-  );
-}
+    ];

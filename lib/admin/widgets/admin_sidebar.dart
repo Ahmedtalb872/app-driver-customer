@@ -37,6 +37,11 @@ const List<AdminSidebarItem> adminSidebarItems = [
     route: '/admin/customers',
   ),
   AdminSidebarItem(
+    label: 'حسابات الأعمال',
+    icon: Icons.storefront_rounded,
+    route: '/admin/business-accounts',
+  ),
+  AdminSidebarItem(
     label: 'الرحلات',
     icon: Icons.route_rounded,
     route: '/admin/trips',
