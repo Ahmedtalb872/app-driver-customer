@@ -60,10 +60,8 @@ const Map<String, String> _routeTitles = {
   '/admin/settings': 'إعدادات التطبيق',
 };
 
-/// Redirect decision for any path under `/admin` - exposed separately so
-/// the combined app router (see admin_app.dart) can branch between this
-/// and the business portal's own [businessRedirect] in one `redirect`
-/// callback, keyed by path prefix.
+/// Redirect decision for any path under `/admin`, exposed separately from
+/// [buildAdminRouter] purely so a future test can call it directly.
 String? adminRedirect(AdminSession session, String path) {
   final onLogin = path == '/admin/login';
   final onUnauthorized = path == '/admin/unauthorized';
@@ -83,10 +81,6 @@ String? adminRedirect(AdminSession session, String path) {
   }
 }
 
-/// Standalone admin-only router, kept for anything that only ever needs
-/// the admin half (e.g. a future widget test) - the live app instead
-/// combines [adminRoutes] with the business portal's own routes into one
-/// GoRouter (see admin_app.dart) so both share a single redirect callback.
 GoRouter buildAdminRouter(AdminSession session) {
   return GoRouter(
     initialLocation: '/admin/dashboard',

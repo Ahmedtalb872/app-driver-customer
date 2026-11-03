@@ -7,7 +7,6 @@ import '../../core/business_colors.dart';
 import '../../core/business_theme.dart';
 import '../../services/business_auth_service.dart';
 import '../../services/business_session.dart';
-import '../../widgets/hidden_admin_key.dart';
 
 class BusinessLoginScreen extends StatefulWidget {
   const BusinessLoginScreen({super.key});
@@ -61,9 +60,7 @@ class _BusinessLoginScreenState extends State<BusinessLoginScreen> {
   Widget build(BuildContext context) {
     return Theme(data: BusinessTheme.theme, child: Scaffold(
       backgroundColor: BusinessColors.background,
-      body: Stack(
-        children: [
-          Center(
+      body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: ConstrainedBox(
@@ -180,9 +177,6 @@ class _BusinessLoginScreenState extends State<BusinessLoginScreen> {
             ),
           ),
         ),
-          ),
-          const HiddenAdminKey(),
-        ],
       ),
     ));
   }

@@ -3,8 +3,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../business/routes/business_router.dart';
-import '../business/services/business_session.dart';
 import 'core/admin_theme.dart';
 import 'routes/admin_router.dart';
 import 'services/admin_session.dart';
@@ -17,6 +15,11 @@ import 'services/admin_session.dart';
 /// session - an admin who already verified their phone-OTP on mobile never
 /// sees this dashboard's own login screen. Arabic RTL by default,
 /// admin-only palette/theme.
+///
+/// Staff-only: the business portal (restaurants/institutions) is a
+/// completely separate build/deployment - see lib/business/business_app.dart
+/// and lib/main_business_web.dart - with its own URL. Nothing here links to
+/// it or knows it exists, the same way nothing there links back here.
 class AdminApp extends StatefulWidget {
   const AdminApp({super.key});
 
@@ -25,58 +28,24 @@ class AdminApp extends StatefulWidget {
 }
 
 class _AdminAppState extends State<AdminApp> {
-  late final AdminSession _adminSession;
-  late final BusinessSession _businessSession;
+  late final AdminSession _session;
   late final GoRouter _router;
 
   @override
   void initState() {
     super.initState();
-    _adminSession = AdminSession();
-    _businessSession = BusinessSession();
-    // go_router re-evaluates its redirect callback every time either
-    // ChangeNotifier fires, so login/logout/session-expiry on both the
-    // admin and business sides route correctly without any screen
-    // manually calling context.go(). One combined router (rather than two
-    // separate GoRouters/MaterialApps) keeps a single `/` origin, which
-    // this web build is served from either way.
-    _router = GoRouter(
-      // The public landing page is the business registration form, not the
-      // staff admin login - a visitor who opens the bare site URL (no path
-      // typed) is a restaurant/institution signing up, not staff. Staff
-      // reach /admin/login through the small hidden key icon on the
-      // business pages (HiddenAdminKey) or a direct/bookmarked URL -
-      // either way this only decides what shows with no path at all.
-      initialLocation: '/business/register',
-      refreshListenable: Listenable.merge([_adminSession, _businessSession]),
-      redirect: (context, state) {
-        final path = state.matchedLocation;
-        if (path.startsWith('/business')) {
-          return businessRedirect(_businessSession, path);
-        }
-        return adminRedirect(_adminSession, path);
-      },
-      routes: [
-        ...adminRoutes(_adminSession),
-        ...businessRoutes(_businessSession),
-      ],
-      errorBuilder: (context, state) => const Scaffold(
-        body: Center(
-          child: Text('الصفحة غير موجودة', style: TextStyle(fontFamily: 'Cairo')),
-        ),
-      ),
-    );
-    _adminSession.refresh();
-    _businessSession.refresh();
+    _session = AdminSession();
+    // go_router re-evaluates its redirect callback every time this
+    // ChangeNotifier fires, so login/logout/session-expiry all route
+    // correctly without any screen manually calling context.go().
+    _router = buildAdminRouter(_session);
+    _session.refresh();
   }
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider<AdminSession>.value(value: _adminSession),
-        ChangeNotifierProvider<BusinessSession>.value(value: _businessSession),
-      ],
+    return ChangeNotifierProvider<AdminSession>.value(
+      value: _session,
       child: MaterialApp.router(
         title: 'الهدهد | لوحة التحكم',
         debugShowCheckedModeBanner: false,

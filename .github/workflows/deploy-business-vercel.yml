@@ -1,0 +1,82 @@
+name: Deploy business portal to Vercel
+
+# Builds the business portal (lib/main_business_web.dart's BusinessApp -
+# restaurants/institutions self-register, request rides/deliveries, track
+# them, and message support) and deploys it to its own separate Vercel
+# project/URL - deliberately not the same deployment as the staff admin
+# dashboard (deploy-admin-vercel.yml). A business account should never be
+# able to reach, guess, or stumble onto anything admin-related, and vice
+# versa; two entirely separate builds/URLs is the actual separation that
+# gives, not just a route guard inside one shared app.
+#
+# Requires repository secrets (Settings -> Secrets and variables -> Actions):
+#   SUPABASE_URL / SUPABASE_ANON_KEY - same ones the other web builds use
+#   VERCEL_TOKEN - same token deploy-admin-vercel.yml uses (one Vercel
+#     account can hold several projects under one token)
+#
+# `vercel link --yes --project=hudhud-business-vercel` creates that project
+# under the token's account the first time this runs if it doesn't exist
+# yet - no manual Vercel dashboard setup needed first, same as
+# deploy-admin-vercel.yml's own reasoning for not using VERCEL_ORG_ID/
+# VERCEL_PROJECT_ID secrets.
+on:
+  push:
+    branches:
+      - main
+      - claude/project-nature-3gwftj
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Write .env
+        run: |
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build web (business portal)
+        run: flutter build web --release -t lib/main_business_web.dart
+
+      # Same reasoning as deploy-admin-vercel.yml's identical step: copy the
+      # finished static site outside the git checkout so the Vercel CLI has
+      # no commit metadata to try (and fail) to attach, and ship a
+      # "no build" vercel.json so Vercel serves the static output as-is.
+      - name: Prepare deploy directory
+        run: |
+          mkdir -p "$RUNNER_TEMP/deploy"
+          cp -r build/web/. "$RUNNER_TEMP/deploy/"
+          cat > "$RUNNER_TEMP/deploy/vercel.json" <<'EOF'
+          {
+            "buildCommand": null,
+            "installCommand": null,
+            "framework": null
+          }
+          EOF
+
+      - name: Link Vercel project
+        working-directory: ${{ runner.temp }}/deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx --yes vercel link --yes --project=hudhud-business-vercel --token="$VERCEL_TOKEN"
+
+      - name: Deploy to Vercel
+        working-directory: ${{ runner.temp }}/deploy
+        timeout-minutes: 3
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx --yes vercel deploy --prod --token="$VERCEL_TOKEN" --yes --debug
