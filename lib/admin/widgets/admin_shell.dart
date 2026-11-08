@@ -6,6 +6,7 @@ import '../core/admin_colors.dart';
 import '../services/admin_session.dart';
 import 'admin_sidebar.dart';
 import 'admin_topbar.dart';
+import 'glass_card.dart';
 
 /// Responsive dashboard shell (section 3 / 21 of the spec):
 /// - >= 1100px: fixed/collapsible sidebar always visible.
@@ -59,7 +60,15 @@ class _AdminShellState extends State<AdminShell> {
           onToggleSidebar: () => _scaffoldKey.currentState?.openDrawer(),
           onLogout: () => _logout(context),
         ),
-        body: widget.child,
+        body: Container(
+          color: AdminColors.background,
+          child: Stack(
+            children: [
+              const Positioned.fill(child: AmbientGlowBackground()),
+              widget.child,
+            ],
+          ),
+        ),
       );
     }
 
@@ -82,7 +91,12 @@ class _AdminShellState extends State<AdminShell> {
                 Expanded(
                   child: Container(
                     color: AdminColors.background,
-                    child: widget.child,
+                    child: Stack(
+                      children: [
+                        const Positioned.fill(child: AmbientGlowBackground()),
+                        widget.child,
+                      ],
+                    ),
                   ),
                 ),
               ],

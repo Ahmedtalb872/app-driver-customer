@@ -106,9 +106,24 @@ class AdminTopBar extends StatelessWidget implements PreferredSizeWidget {
                 ),
               ),
             ],
-            child: CircleAvatar(
-              radius: 18,
-              backgroundColor: AdminColors.primary.withValues(alpha: 0.1),
+            child: Container(
+              width: 36,
+              height: 36,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AdminColors.primary.withValues(alpha: 0.35),
+                    AdminColors.secondary.withValues(alpha: 0.2),
+                  ],
+                ),
+                border: Border.all(
+                  color: AdminColors.primary.withValues(alpha: 0.4),
+                ),
+              ),
               child: Text(
                 (profile?.fullName.isNotEmpty == true
                     ? profile!.fullName[0]

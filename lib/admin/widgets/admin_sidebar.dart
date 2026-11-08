@@ -248,11 +248,18 @@ class _SidebarTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = Container(
+    final content = AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       decoration: BoxDecoration(
         color: selected ? AdminColors.sidebarSelected : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
+        border: Border(
+          left: BorderSide(
+            color: selected ? AdminColors.primary : Colors.transparent,
+            width: 3,
+          ),
+        ),
       ),
       child: ListTile(
         dense: true,
