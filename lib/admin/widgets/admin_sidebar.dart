@@ -176,13 +176,16 @@ class AdminSidebar extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
+                SizedBox(
+                  width: 40,
+                  height: 40,
+                  // BoxFit.cover inside a circular clip cropped most of the
+                  // logo's fanned feathers and car away - contain always
+                  // shows the full artwork (same fix as the customer app's
+                  // login screens).
                   child: Image.asset(
                     'assets/images/al-houdhoud-logo-mark.png',
-                    width: 40,
-                    height: 40,
-                    fit: BoxFit.cover,
+                    fit: BoxFit.contain,
                   ),
                 ),
                 if (!collapsed) ...[
