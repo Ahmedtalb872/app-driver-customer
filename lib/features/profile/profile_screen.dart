@@ -63,7 +63,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SnackBar(
           content: Text(
             'تعذر رفع الصورة الآن، تحقق من الاتصال وحاول مرة أخرى.',
-            style: TextStyle(fontFamily: 'Cairo'),
+            style: TextStyle(fontFamily: 'Tajawal'),
           ),
           backgroundColor: AppColors.error,
         ),
@@ -91,7 +91,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: const Text(
           'تعديل الاسم',
-          style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+          style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
         content: TextField(
@@ -186,7 +186,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               fontSize: 32,
                               fontWeight: FontWeight.bold,
                               color: AppColors.primary,
-                              fontFamily: 'Cairo',
+                              fontFamily: 'Tajawal',
                             ),
                           ),
                   ),
@@ -236,7 +236,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: AppColors.darkText,
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                   ),
                 ),
                 IconButton(
@@ -338,7 +338,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           fontSize: 14,
           fontWeight: FontWeight.bold,
           color: AppColors.darkText,
-          fontFamily: 'Cairo',
+          fontFamily: 'Tajawal',
         ),
       ),
       trailing: const Icon(Icons.chevron_left_rounded, size: 20),

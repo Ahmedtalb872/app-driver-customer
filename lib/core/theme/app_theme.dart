@@ -5,12 +5,12 @@ import '../constants/colors.dart';
 
 class AppTheme {
   static ThemeData get lightTheme {
-    // Registers the real Cairo font under the 'Cairo' family name via
-    // google_fonts. Every TextStyle(fontFamily: 'Cairo') already
+    // Registers the real Tajawal font under the 'Tajawal' family name via
+    // google_fonts. Every TextStyle(fontFamily: 'Tajawal') already
     // hardcoded across the app's screens resolves through this same
     // font-family name once it's loaded here, so this one call is enough
-    // to make Cairo render everywhere - no per-widget changes needed.
-    final cairoTextTheme = GoogleFonts.cairoTextTheme();
+    // to make Tajawal render everywhere - no per-widget changes needed.
+    final tajawalTextTheme = GoogleFonts.tajawalTextTheme();
 
     return ThemeData(
       useMaterial3: true,
@@ -23,9 +23,9 @@ class AppTheme {
         error: AppColors.error,
       ),
       scaffoldBackgroundColor: AppColors.background,
-      fontFamily: GoogleFonts.cairo().fontFamily,
-      textTheme: cairoTextTheme,
-      primaryTextTheme: cairoTextTheme,
+      fontFamily: GoogleFonts.tajawal().fontFamily,
+      textTheme: tajawalTextTheme,
+      primaryTextTheme: tajawalTextTheme,
 
       cardTheme: ThemeData.light().cardTheme.copyWith(
         color: AppColors.surface,
@@ -46,7 +46,7 @@ class AppTheme {
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            fontFamily: 'Cairo',
+            fontFamily: 'Tajawal',
           ),
         ),
       ),
@@ -62,7 +62,7 @@ class AppTheme {
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            fontFamily: 'Cairo',
+            fontFamily: 'Tajawal',
           ),
         ),
       ),
@@ -73,7 +73,7 @@ class AppTheme {
           textStyle: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            fontFamily: 'Cairo',
+            fontFamily: 'Tajawal',
           ),
         ),
       ),
@@ -108,12 +108,12 @@ class AppTheme {
         hintStyle: const TextStyle(
           color: AppColors.secondaryText,
           fontSize: 14,
-          fontFamily: 'Cairo',
+          fontFamily: 'Tajawal',
         ),
         labelStyle: const TextStyle(
           color: AppColors.darkText,
           fontSize: 14,
-          fontFamily: 'Cairo',
+          fontFamily: 'Tajawal',
         ),
       ),
 
@@ -127,7 +127,7 @@ class AppTheme {
           color: Colors.white,
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          fontFamily: 'Cairo',
+          fontFamily: 'Tajawal',
         ),
       ),
 

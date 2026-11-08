@@ -87,7 +87,7 @@ class _CaptainsBrowseScreenState extends State<CaptainsBrowseScreen> {
           const SnackBar(
             content: Text(
               'تعذر بدء المحادثة الآن. حاول مرة أخرى.',
-              style: TextStyle(fontFamily: 'Cairo'),
+              style: TextStyle(fontFamily: 'Tajawal'),
             ),
             backgroundColor: AppColors.error,
           ),
@@ -106,7 +106,7 @@ class _CaptainsBrowseScreenState extends State<CaptainsBrowseScreen> {
       appBar: AppBar(
         title: const Text(
           'اشتراك شهري مع كابتن',
-          style: TextStyle(fontFamily: 'Cairo'),
+          style: TextStyle(fontFamily: 'Tajawal'),
         ),
       ),
       body: _isLoading
@@ -132,7 +132,7 @@ class _CaptainsBrowseScreenState extends State<CaptainsBrowseScreen> {
                       child: Text(
                         'اختر كابتناً واقترح عليه سعراً شهرياً عبر الدردشة. عند موافقته يُخصم المبلغ فوراً من رصيد محفظتك، وتصبح مشاويرك معه مجاناً لمدة 30 يوماً.',
                         style: TextStyle(
-                          fontFamily: 'Cairo',
+                          fontFamily: 'Tajawal',
                           fontSize: 12,
                           color: AppColors.secondaryText,
                         ),
@@ -171,7 +171,7 @@ class _CaptainsBrowseScreenState extends State<CaptainsBrowseScreen> {
             Text(
               _error!,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontFamily: 'Cairo'),
+              style: const TextStyle(fontFamily: 'Tajawal'),
             ),
             const SizedBox(height: 16),
             ElevatedButton(onPressed: _load, child: const Text('إعادة المحاولة')),
@@ -187,7 +187,7 @@ class _CaptainsBrowseScreenState extends State<CaptainsBrowseScreen> {
       child: Center(
         child: Text(
           'لا يوجد كباتنة متاحون حالياً. حاول لاحقاً.',
-          style: TextStyle(fontFamily: 'Cairo', color: AppColors.secondaryText),
+          style: TextStyle(fontFamily: 'Tajawal', color: AppColors.secondaryText),
         ),
       ),
     );
@@ -226,7 +226,7 @@ class _CaptainsBrowseScreenState extends State<CaptainsBrowseScreen> {
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
-                        fontFamily: 'Cairo',
+                        fontFamily: 'Tajawal',
                         color: AppColors.success,
                       ),
                     ),
@@ -237,7 +237,7 @@ class _CaptainsBrowseScreenState extends State<CaptainsBrowseScreen> {
                           : 'مشاويرك معه مجانية طوال مدة الاشتراك.',
                       style: const TextStyle(
                         fontSize: 12,
-                        fontFamily: 'Cairo',
+                        fontFamily: 'Tajawal',
                         color: AppColors.darkText,
                       ),
                     ),
@@ -274,7 +274,7 @@ class _CaptainsBrowseScreenState extends State<CaptainsBrowseScreen> {
                   'لديك محادثة مفتوحة مع ${status.captainName} - اضغط للمتابعة',
                   style: const TextStyle(
                     fontSize: 12.5,
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                     fontWeight: FontWeight.w600,
                     color: AppColors.darkText,
                   ),
@@ -315,7 +315,7 @@ class _CaptainsBrowseScreenState extends State<CaptainsBrowseScreen> {
                   'هل دفعت اشتراك هذا الشهر لـ ${status.captainName}؟ اضغط للتأكيد',
                   style: const TextStyle(
                     fontSize: 12.5,
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                     fontWeight: FontWeight.w600,
                     color: AppColors.darkText,
                   ),
@@ -356,7 +356,7 @@ class _CaptainsBrowseScreenState extends State<CaptainsBrowseScreen> {
                   'اشتراكك مع ${status.captainName} قيد المراجعة من فريقنا',
                   style: const TextStyle(
                     fontSize: 12.5,
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                     fontWeight: FontWeight.w600,
                     color: AppColors.darkText,
                   ),
@@ -410,7 +410,7 @@ class _CaptainTile extends StatelessWidget {
                     : Text(
                         captain.fullName.substring(0, 1),
                         style: const TextStyle(
-                          fontFamily: 'Cairo',
+                          fontFamily: 'Tajawal',
                           fontWeight: FontWeight.bold,
                           color: AppColors.primary,
                         ),
@@ -426,7 +426,7 @@ class _CaptainTile extends StatelessWidget {
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
-                        fontFamily: 'Cairo',
+                        fontFamily: 'Tajawal',
                         color: AppColors.darkText,
                       ),
                     ),
@@ -437,7 +437,7 @@ class _CaptainTile extends StatelessWidget {
                           captain.vehicleDescription,
                           style: const TextStyle(
                             fontSize: 11.5,
-                            fontFamily: 'Cairo',
+                            fontFamily: 'Tajawal',
                             color: AppColors.secondaryText,
                           ),
                         ),
@@ -457,7 +457,7 @@ class _CaptainTile extends StatelessWidget {
                               '${captain.rating!.toStringAsFixed(1)} (${captain.ratingsCount})',
                               style: const TextStyle(
                                 fontSize: 11,
-                                fontFamily: 'Cairo',
+                                fontFamily: 'Tajawal',
                                 color: AppColors.secondaryText,
                               ),
                             ),

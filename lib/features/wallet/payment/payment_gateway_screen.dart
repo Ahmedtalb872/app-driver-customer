@@ -74,7 +74,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
       const SnackBar(
         content: Text(
           'تم نسخ رقم التاجر',
-          style: TextStyle(fontFamily: 'Cairo'),
+          style: TextStyle(fontFamily: 'Tajawal'),
         ),
         duration: Duration(seconds: 1),
       ),
@@ -327,7 +327,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
                       style: TextStyle(
                         color: provider.onPrimaryColor,
                         fontSize: 11,
-                        fontFamily: 'Cairo',
+                        fontFamily: 'Tajawal',
                       ),
                     ),
                   ],
@@ -363,7 +363,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
                           color: provider.onPrimaryColor,
                           fontSize: 24,
                           fontWeight: FontWeight.w900,
-                          fontFamily: 'Cairo',
+                          fontFamily: 'Tajawal',
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -372,7 +372,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
                         style: TextStyle(
                           color: provider.onPrimaryColor.withOpacity(0.85),
                           fontSize: 12,
-                          fontFamily: 'Cairo',
+                          fontFamily: 'Tajawal',
                         ),
                       ),
                     ],
@@ -423,7 +423,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
                 style: const TextStyle(
                   fontSize: 11,
                   color: AppColors.secondaryText,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                 ),
               ),
               const SizedBox(height: 4),
@@ -433,7 +433,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: AppColors.darkText,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                 ),
               ),
             ],
@@ -470,7 +470,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 13,
-              fontFamily: 'Cairo',
+              fontFamily: 'Tajawal',
               color: AppColors.darkText,
             ),
           ),
@@ -504,7 +504,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
           style: const TextStyle(
             fontSize: 12,
             color: AppColors.secondaryText,
-            fontFamily: 'Cairo',
+            fontFamily: 'Tajawal',
           ),
         ),
         Text(
@@ -513,7 +513,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
             fontSize: emphasize ? 16 : 13,
             fontWeight: FontWeight.bold,
             color: color ?? AppColors.darkText,
-            fontFamily: 'Cairo',
+            fontFamily: 'Tajawal',
           ),
         ),
       ],
@@ -527,7 +527,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
         fontSize: 13,
         fontWeight: FontWeight.bold,
         color: AppColors.darkText,
-        fontFamily: 'Cairo',
+        fontFamily: 'Tajawal',
       ),
     );
   }
@@ -556,7 +556,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
               fontSize: 15,
               fontWeight: FontWeight.bold,
               color: AppColors.darkText,
-              fontFamily: 'Cairo',
+              fontFamily: 'Tajawal',
             ),
           ),
           const SizedBox(height: 8),
@@ -565,7 +565,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
             style: TextStyle(
               fontSize: 12,
               color: AppColors.secondaryText,
-              fontFamily: 'Cairo',
+              fontFamily: 'Tajawal',
             ),
           ),
         ],
@@ -599,7 +599,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: AppColors.darkText,
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
               ),
             ),
             const SizedBox(height: 8),
@@ -611,7 +611,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
               style: const TextStyle(
                 fontSize: 13,
                 color: AppColors.secondaryText,
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
               ),
             ),
             if (_transactionReference != null) ...[
@@ -630,7 +630,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
                   style: const TextStyle(
                     fontSize: 11,
                     color: AppColors.secondaryText,
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                   ),
                 ),
               ),
@@ -678,7 +678,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: AppColors.darkText,
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
               ),
             ),
             const SizedBox(height: 8),
@@ -688,7 +688,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
               style: const TextStyle(
                 fontSize: 13,
                 color: AppColors.secondaryText,
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
               ),
             ),
             const SizedBox(height: 32),

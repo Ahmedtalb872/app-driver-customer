@@ -96,7 +96,7 @@ class AuthWelcomeScreen extends StatelessWidget {
                   Text(
                     l10n.welcomeTitle,
                     style: const TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: 'Tajawal',
                       fontWeight: FontWeight.bold,
                       fontSize: 22,
                       color: AppColors.darkText,
@@ -107,7 +107,7 @@ class AuthWelcomeScreen extends StatelessWidget {
                     l10n.welcomeSubtitle,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: 'Tajawal',
                       fontSize: 14,
                       color: AppColors.secondaryText,
                     ),

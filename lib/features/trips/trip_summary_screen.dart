@@ -98,7 +98,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
         const SnackBar(
           content: Text(
             'تعذر حفظ الموقع الآن، حاول مرة أخرى.',
-            style: TextStyle(fontFamily: 'Cairo'),
+            style: TextStyle(fontFamily: 'Tajawal'),
           ),
         ),
       );
@@ -185,7 +185,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: AppColors.darkText,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                 ),
               ),
               const SizedBox(height: 6),
@@ -194,7 +194,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
                 style: TextStyle(
                   fontSize: 13,
                   color: AppColors.secondaryText,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                 ),
               ),
               const SizedBox(height: 24),
@@ -257,7 +257,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
                   const Text(
                     'المبلغ الإجمالي',
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: 'Tajawal',
                       fontSize: 11,
                       color: AppColors.secondaryText,
                     ),
@@ -266,7 +266,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
                   Text(
                     '${trip.price.toStringAsFixed(0)} أوقية',
                     style: const TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: 'Tajawal',
                       fontWeight: FontWeight.bold,
                       fontSize: 22,
                       color: AppColors.secondary,
@@ -290,7 +290,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(fontFamily: 'Cairo', fontSize: 13),
+            style: const TextStyle(fontFamily: 'Tajawal', fontSize: 13),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -310,7 +310,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
             Text(
               value,
               style: const TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
                 fontWeight: FontWeight.bold,
                 fontSize: 13,
                 color: AppColors.darkText,
@@ -319,7 +319,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
             Text(
               label,
               style: const TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
                 fontSize: 10,
                 color: AppColors.secondaryText,
               ),
@@ -346,7 +346,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
             const Text(
               'احفظ هذا الموقع لمشاويرك القادمة',
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
                 color: AppColors.darkText,
@@ -399,7 +399,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
             Expanded(
               child: Text(
                 address,
-                style: const TextStyle(fontFamily: 'Cairo', fontSize: 12),
+                style: const TextStyle(fontFamily: 'Tajawal', fontSize: 12),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -491,7 +491,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
         icon: Icon(saved ? Icons.check_circle_rounded : icon, size: 15),
         label: Text(
           text,
-          style: const TextStyle(fontFamily: 'Cairo', fontSize: 11),
+          style: const TextStyle(fontFamily: 'Tajawal', fontSize: 11),
           overflow: TextOverflow.ellipsis,
         ),
       ),
@@ -510,7 +510,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
                   ? 'قيّم رحلتك مع ${trip.captainName}'
                   : 'قيّم رحلتك مع الكابتن',
               style: const TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
                 color: AppColors.darkText,
@@ -532,7 +532,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
               Text(
                 _error!,
                 style: const TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                   color: AppColors.error,
                   fontSize: 12,
                 ),

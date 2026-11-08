@@ -34,11 +34,11 @@ Future<void> showCallOptionsSheet(
             leading: const Icon(Icons.call_rounded, color: AppColors.primary),
             title: const Text(
               'مكالمة عادية',
-              style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+              style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.bold),
             ),
             subtitle: const Text(
               'عبر شبكة الهاتف',
-              style: TextStyle(fontFamily: 'Cairo', fontSize: 11),
+              style: TextStyle(fontFamily: 'Tajawal', fontSize: 11),
             ),
             onTap: () {
               Navigator.of(context).pop();
@@ -49,11 +49,11 @@ Future<void> showCallOptionsSheet(
             leading: const Icon(Icons.wifi_calling_3_rounded, color: AppColors.accent),
             title: const Text(
               'مكالمة داخل التطبيق',
-              style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+              style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.bold),
             ),
             subtitle: const Text(
               'عبر الإنترنت، دون كشف رقم الهاتف',
-              style: TextStyle(fontFamily: 'Cairo', fontSize: 11),
+              style: TextStyle(fontFamily: 'Tajawal', fontSize: 11),
             ),
             onTap: () {
               Navigator.of(context).pop();

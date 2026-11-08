@@ -100,7 +100,7 @@ class _RideCountdownRingState extends State<RideCountdownRing> {
                   fontSize: widget.size * 0.2,
                   fontWeight: FontWeight.bold,
                   color: urgent ? AppColors.error : AppColors.darkText,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                 ),
               ),
               Text(
@@ -108,7 +108,7 @@ class _RideCountdownRingState extends State<RideCountdownRing> {
                 style: TextStyle(
                   fontSize: widget.size * 0.08,
                   color: AppColors.secondaryText,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                 ),
               ),
             ],

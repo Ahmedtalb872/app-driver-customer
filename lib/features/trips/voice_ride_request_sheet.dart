@@ -268,7 +268,7 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
               child: Text(
                 'أي "$title" تقصد؟',
                 style: const TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                   fontWeight: FontWeight.bold,
                   fontSize: 15,
                 ),
@@ -280,12 +280,12 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
                   Icons.place_rounded,
                   color: AppColors.accent,
                 ),
-                title: Text(c.title, style: const TextStyle(fontFamily: 'Cairo')),
+                title: Text(c.title, style: const TextStyle(fontFamily: 'Tajawal')),
                 subtitle: c.subtitle != null
                     ? Text(
                         c.subtitle!,
                         style: const TextStyle(
-                          fontFamily: 'Cairo',
+                          fontFamily: 'Tajawal',
                           fontSize: 11,
                         ),
                         maxLines: 1,
@@ -389,7 +389,7 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
               'اطلب بالصوت',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
                 color: AppColors.darkText,
@@ -400,7 +400,7 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
               'قل نقطة الانطلاق والوجهة معًا، مثلاً:\n"من السوق المركزي إلى المطار"',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
                 fontSize: 12,
                 color: AppColors.secondaryText,
               ),
@@ -427,7 +427,7 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
             Text(
               'جاري الاستماع... ($_recordedSeconds/$_maxRecordSeconds ث) - اضغط لإنهاء',
               style: const TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
                 fontSize: 12,
                 color: AppColors.error,
                 fontWeight: FontWeight.w600,
@@ -446,7 +446,7 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
               Text(
                 'جاري تحويل الصوت إلى نص...',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                   color: AppColors.secondaryText,
                 ),
               ),
@@ -464,7 +464,7 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
               Text(
                 'جاري إنشاء طلب...',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                   color: AppColors.secondaryText,
                 ),
               ),
@@ -479,7 +479,7 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
               _errorMessage ?? 'حدث خطأ غير متوقع.',
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
                 fontSize: 13,
                 color: AppColors.error,
               ),
@@ -614,7 +614,7 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
                     Text(
                       label,
                       style: const TextStyle(
-                        fontFamily: 'Cairo',
+                        fontFamily: 'Tajawal',
                         fontSize: 10.5,
                         color: AppColors.secondaryText,
                       ),
@@ -627,7 +627,7 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontFamily: 'Cairo',
+                        fontFamily: 'Tajawal',
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
                         color: unresolved
@@ -657,7 +657,7 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   minimumSize: const Size(0, 34),
                   textStyle: const TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                     fontSize: 11.5,
                     fontWeight: FontWeight.w600,
                   ),
@@ -677,7 +677,7 @@ class _VoiceRideRequestSheetState extends State<VoiceRideRequestSheet> {
                 ),
                 child: Text(
                   'ليس هذا؟ عرض $alternativesCount نتائج محتملة',
-                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 11.5),
+                  style: const TextStyle(fontFamily: 'Tajawal', fontSize: 11.5),
                 ),
               ),
             ),

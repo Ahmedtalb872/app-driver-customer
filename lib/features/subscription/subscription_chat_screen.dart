@@ -114,10 +114,10 @@ class _SubscriptionChatScreenState extends State<SubscriptionChatScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('إلغاء المحادثة', style: TextStyle(fontFamily: 'Cairo')),
+        title: const Text('إلغاء المحادثة', style: TextStyle(fontFamily: 'Tajawal')),
         content: const Text(
           'هل تريد إنهاء هذه المحادثة قبل الاتفاق على اشتراك؟',
-          style: TextStyle(fontFamily: 'Cairo'),
+          style: TextStyle(fontFamily: 'Tajawal'),
         ),
         actions: [
           TextButton(
@@ -149,10 +149,10 @@ class _SubscriptionChatScreenState extends State<SubscriptionChatScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('إلغاء الاشتراك', style: TextStyle(fontFamily: 'Cairo')),
+        title: const Text('إلغاء الاشتراك', style: TextStyle(fontFamily: 'Tajawal')),
         content: const Text(
           'هل تريد إنهاء هذا الاشتراك النشط؟ إذا لم تُصرف كامل مستحقات الكابتن بعد، سيراجع فريقنا المبلغ المتبقي.',
-          style: TextStyle(fontFamily: 'Cairo'),
+          style: TextStyle(fontFamily: 'Tajawal'),
         ),
         actions: [
           TextButton(
@@ -206,7 +206,7 @@ class _SubscriptionChatScreenState extends State<SubscriptionChatScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: const TextStyle(fontFamily: 'Cairo')),
+        content: Text(message, style: const TextStyle(fontFamily: 'Tajawal')),
         backgroundColor: AppColors.error,
       ),
     );
@@ -224,7 +224,7 @@ class _SubscriptionChatScreenState extends State<SubscriptionChatScreen> {
       appBar: AppBar(
         title: Text(
           status?.captainName ?? 'اشتراك شهري',
-          style: const TextStyle(fontFamily: 'Cairo'),
+          style: const TextStyle(fontFamily: 'Tajawal'),
         ),
       ),
       body: Column(
@@ -236,7 +236,7 @@ class _SubscriptionChatScreenState extends State<SubscriptionChatScreen> {
                     child: Text(
                       'ابدأ المحادثة واقترح سعراً شهرياً',
                       style: TextStyle(
-                        fontFamily: 'Cairo',
+                        fontFamily: 'Tajawal',
                         color: AppColors.secondaryText,
                       ),
                     ),
@@ -268,7 +268,7 @@ class _SubscriptionChatScreenState extends State<SubscriptionChatScreen> {
           'هذا الاشتراك قيد المراجعة من فريقنا - سنتواصل معك قريباً بخصوص المبلغ المحجوز.',
           textAlign: TextAlign.center,
           style: const TextStyle(
-            fontFamily: 'Cairo',
+            fontFamily: 'Tajawal',
             fontSize: 12,
             fontWeight: FontWeight.bold,
             color: AppColors.warning,
@@ -316,7 +316,7 @@ class _SubscriptionChatScreenState extends State<SubscriptionChatScreen> {
         text,
         textAlign: TextAlign.center,
         style: TextStyle(
-          fontFamily: 'Cairo',
+          fontFamily: 'Tajawal',
           fontSize: 12,
           fontWeight: FontWeight.bold,
           color: color,
@@ -349,7 +349,7 @@ class _SubscriptionChatScreenState extends State<SubscriptionChatScreen> {
                 'هل دفعت مباشرة اشتراك هذا الشهر لـ ${status.captainName}؟',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
                   color: AppColors.darkText,
@@ -421,7 +421,7 @@ class _SubscriptionChatScreenState extends State<SubscriptionChatScreen> {
                 child: Text(
                   'عرض سعر',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                     color: AppColors.secondary,
@@ -431,7 +431,7 @@ class _SubscriptionChatScreenState extends State<SubscriptionChatScreen> {
             Text(
               message.body,
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
                 fontSize: 13,
                 color: message.isOffer
                     ? AppColors.darkText

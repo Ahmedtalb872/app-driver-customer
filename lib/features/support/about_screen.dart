@@ -67,7 +67,7 @@ class _AboutScreenState extends State<AboutScreen> {
                 fontSize: 26,
                 fontWeight: FontWeight.w900,
                 color: AppColors.darkText,
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
               ),
             ),
             const SizedBox(height: 6),
@@ -76,7 +76,7 @@ class _AboutScreenState extends State<AboutScreen> {
               style: TextStyle(
                 fontSize: 14,
                 color: AppColors.secondaryText,
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
               ),
             ),
             const SizedBox(height: 24),
@@ -105,7 +105,7 @@ class _AboutScreenState extends State<AboutScreen> {
                   style: TextStyle(
                     fontSize: 13,
                     color: AppColors.secondaryText,
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                     height: 1.7,
                   ),
                 ),
@@ -117,7 +117,7 @@ class _AboutScreenState extends State<AboutScreen> {
               style: TextStyle(
                 fontSize: 11,
                 color: AppColors.secondaryText,
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
               ),
             ),
             const SizedBox(height: 20),
@@ -138,7 +138,7 @@ class _AboutScreenState extends State<AboutScreen> {
             style: const TextStyle(
               fontSize: 13,
               color: AppColors.secondaryText,
-              fontFamily: 'Cairo',
+              fontFamily: 'Tajawal',
             ),
           ),
           Text(
@@ -147,7 +147,7 @@ class _AboutScreenState extends State<AboutScreen> {
               fontSize: 13,
               fontWeight: FontWeight.bold,
               color: AppColors.darkText,
-              fontFamily: 'Cairo',
+              fontFamily: 'Tajawal',
             ),
           ),
         ],

@@ -307,7 +307,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
             const Text(
               'عدد الركاب',
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
                 fontWeight: FontWeight.bold,
                 fontSize: 15,
               ),
@@ -328,7 +328,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
               Text(
                 _error!,
                 style: const TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                   color: AppColors.error,
                   fontSize: 12,
                 ),
@@ -405,7 +405,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                 'المسافة التقريبية ${route.distanceKm.toStringAsFixed(1)} كم - '
                 'حوالي ${route.durationMinutes} دقيقة',
                 style: const TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                   fontSize: 12,
                   color: AppColors.secondaryText,
                 ),
@@ -416,7 +416,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
             Text(
               _openTripStartingRateText(),
               style: const TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
                 fontSize: 12,
                 color: AppColors.secondaryText,
               ),
@@ -463,7 +463,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                 const Text(
                   'ادفع لاحقاً مع سلفلي',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
                     color: AppColors.darkText,
@@ -473,7 +473,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                 const Text(
                   'اطلب هذا المشوار الآن وسدّد قيمته لاحقاً من محفظتك.',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                     fontSize: 11,
                     color: AppColors.secondaryText,
                   ),
@@ -514,7 +514,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                 const Text(
                   'استخدم اشتراكك الشهري',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
                     color: AppColors.darkText,
@@ -524,7 +524,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                 Text(
                   'هذا المشوار مجاني ضمن اشتراكك مع $captainName.',
                   style: const TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                     fontSize: 11,
                     color: AppColors.secondaryText,
                   ),
@@ -551,7 +551,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(fontFamily: 'Cairo', fontSize: 13),
+            style: const TextStyle(fontFamily: 'Tajawal', fontSize: 13),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -574,7 +574,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
           child: Text(
             '$_passengerCount',
             style: const TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: 'Tajawal',
               fontWeight: FontWeight.bold,
               fontSize: 16,
             ),
@@ -643,7 +643,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                   priceRowText,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
                     color: AppColors.secondary,

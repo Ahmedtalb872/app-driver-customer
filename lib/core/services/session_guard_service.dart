@@ -96,7 +96,7 @@ class SessionGuardService {
       const SnackBar(
         content: Text(
           'تم تسجيل الدخول إلى حسابك من جهاز آخر، لذلك تم تسجيل خروجك من هذا الجهاز.',
-          style: TextStyle(fontFamily: 'Cairo'),
+          style: TextStyle(fontFamily: 'Tajawal'),
         ),
         backgroundColor: AppColors.error,
       ),

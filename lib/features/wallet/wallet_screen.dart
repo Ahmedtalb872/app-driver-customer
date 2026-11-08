@@ -87,7 +87,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      fontFamily: 'Cairo',
+                      fontFamily: 'Tajawal',
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -97,7 +97,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     'المبلغ (أوقية)',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontFamily: 'Cairo',
+                      fontFamily: 'Tajawal',
                       fontSize: 13,
                     ),
                   ),
@@ -114,7 +114,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     'وسائل أخرى (تُرسَل للمراجعة اليدوية)',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontFamily: 'Cairo',
+                      fontFamily: 'Tajawal',
                       fontSize: 13,
                     ),
                   ),
@@ -173,7 +173,7 @@ class _WalletScreenState extends State<WalletScreen> {
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
-                        fontFamily: 'Cairo',
+                        fontFamily: 'Tajawal',
                         color: AppColors.darkText,
                       ),
                     ),
@@ -182,7 +182,7 @@ class _WalletScreenState extends State<WalletScreen> {
                       'يُضاف الرصيد مباشرة بعد تأكيد البنك، بدون انتظار مراجعة',
                       style: TextStyle(
                         fontSize: 11,
-                        fontFamily: 'Cairo',
+                        fontFamily: 'Tajawal',
                         color: AppColors.secondaryText,
                       ),
                     ),
@@ -247,7 +247,7 @@ class _WalletScreenState extends State<WalletScreen> {
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                     color: disabled ? AppColors.secondaryText : AppColors.darkText,
                   ),
                 ),
@@ -265,7 +265,7 @@ class _WalletScreenState extends State<WalletScreen> {
                       'قريباً',
                       style: TextStyle(
                         fontSize: 12,
-                        fontFamily: 'Cairo',
+                        fontFamily: 'Tajawal',
                         color: AppColors.secondaryText,
                       ),
                     ),
@@ -290,7 +290,7 @@ class _WalletScreenState extends State<WalletScreen> {
         const SnackBar(
           content: Text(
             'الرجاء إدخال مبلغ صحيح أولاً.',
-            style: TextStyle(fontFamily: 'Cairo'),
+            style: TextStyle(fontFamily: 'Tajawal'),
           ),
           backgroundColor: AppColors.error,
         ),
@@ -329,7 +329,7 @@ class _WalletScreenState extends State<WalletScreen> {
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: AppColors.darkText,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                 ),
               ),
               const SizedBox(height: 16),
@@ -349,7 +349,7 @@ class _WalletScreenState extends State<WalletScreen> {
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: AppColors.darkText,
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
               ),
             ),
             const SizedBox(height: 12),
@@ -377,7 +377,7 @@ class _WalletScreenState extends State<WalletScreen> {
               style: TextStyle(
                 color: Colors.white70,
                 fontSize: 14,
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
               ),
             ),
             const SizedBox(height: 6),
@@ -396,7 +396,7 @@ class _WalletScreenState extends State<WalletScreen> {
                       color: Colors.white,
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      fontFamily: 'Cairo',
+                      fontFamily: 'Tajawal',
                     ),
                   ),
             const SizedBox(height: 24),
@@ -491,7 +491,7 @@ class _WalletScreenState extends State<WalletScreen> {
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                     color: color,
                   ),
                 ),
@@ -500,7 +500,7 @@ class _WalletScreenState extends State<WalletScreen> {
                   body,
                   style: const TextStyle(
                     fontSize: 12,
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                     color: AppColors.darkText,
                   ),
                 ),
@@ -530,7 +530,7 @@ class _WalletScreenState extends State<WalletScreen> {
               Text(
                 'لا توجد عمليات سابقة',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                   color: AppColors.secondaryText,
                 ),
               ),
@@ -583,7 +583,7 @@ class _WalletScreenState extends State<WalletScreen> {
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                         color: AppColors.darkText,
-                        fontFamily: 'Cairo',
+                        fontFamily: 'Tajawal',
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -592,7 +592,7 @@ class _WalletScreenState extends State<WalletScreen> {
                       style: const TextStyle(
                         fontSize: 10,
                         color: AppColors.secondaryText,
-                        fontFamily: 'Cairo',
+                        fontFamily: 'Tajawal',
                       ),
                     ),
                   ],
@@ -604,7 +604,7 @@ class _WalletScreenState extends State<WalletScreen> {
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
                   color: tx.isCredit ? AppColors.success : AppColors.error,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                 ),
               ),
             ],

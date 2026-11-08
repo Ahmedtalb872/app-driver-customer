@@ -193,7 +193,7 @@ class _DeliveryRequestScreenState extends State<DeliveryRequestScreen> {
                     const Text(
                       'بيانات المستلم',
                       style: TextStyle(
-                        fontFamily: 'Cairo',
+                        fontFamily: 'Tajawal',
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
                       ),
@@ -230,7 +230,7 @@ class _DeliveryRequestScreenState extends State<DeliveryRequestScreen> {
                     const Text(
                       'وصف الطرد (اختياري)',
                       style: TextStyle(
-                        fontFamily: 'Cairo',
+                        fontFamily: 'Tajawal',
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
                       ),
@@ -248,7 +248,7 @@ class _DeliveryRequestScreenState extends State<DeliveryRequestScreen> {
                       Text(
                         _error!,
                         style: const TextStyle(
-                          fontFamily: 'Cairo',
+                          fontFamily: 'Tajawal',
                           color: AppColors.error,
                           fontSize: 12,
                         ),
@@ -296,7 +296,7 @@ class _DeliveryRequestScreenState extends State<DeliveryRequestScreen> {
             'المسافة التقريبية ${_route.distanceKm.toStringAsFixed(1)} كم - '
             'حوالي ${_route.durationMinutes} دقيقة',
             style: const TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: 'Tajawal',
               fontSize: 12,
               color: AppColors.secondaryText,
             ),
@@ -315,7 +315,7 @@ class _DeliveryRequestScreenState extends State<DeliveryRequestScreen> {
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(fontFamily: 'Cairo', fontSize: 13),
+            style: const TextStyle(fontFamily: 'Tajawal', fontSize: 13),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -350,7 +350,7 @@ class _DeliveryRequestScreenState extends State<DeliveryRequestScreen> {
                   '${price.toStringAsFixed(0)} أوقية',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
                     color: AppColors.secondary,

@@ -155,7 +155,7 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
         const SnackBar(
           content: Text(
             'الإدخال الصوتي غير متاح على هذا الجهاز.',
-            style: TextStyle(fontFamily: 'Cairo'),
+            style: TextStyle(fontFamily: 'Tajawal'),
           ),
         ),
       );
@@ -323,7 +323,7 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
                       child: const Text(
                         'اضغط لاختيار الموقع من الخريطة',
                         style: TextStyle(
-                          fontFamily: 'Cairo',
+                          fontFamily: 'Tajawal',
                           fontSize: 11.5,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
@@ -394,7 +394,7 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
               child: Text(
                 'جارٍ الاستماع... تكلّم الآن',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                   fontSize: 12,
                   color: AppColors.error,
                   fontWeight: FontWeight.w600,
@@ -440,7 +440,7 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
           message,
           textAlign: TextAlign.center,
           style: const TextStyle(
-            fontFamily: 'Cairo',
+            fontFamily: 'Tajawal',
             color: AppColors.secondaryText,
           ),
         ),
@@ -481,7 +481,7 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
           child: Text(
             'لا توجد نتائج مطابقة لبحثك.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'Cairo', color: AppColors.secondaryText),
+            style: TextStyle(fontFamily: 'Tajawal', color: AppColors.secondaryText),
           ),
         ),
         if (_categories.isNotEmpty) ...[
@@ -499,7 +499,7 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
       child: Text(
         label,
         style: const TextStyle(
-          fontFamily: 'Cairo',
+          fontFamily: 'Tajawal',
           fontWeight: FontWeight.bold,
           fontSize: 12,
           color: AppColors.secondaryText,
@@ -523,7 +523,7 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
             ),
             label: Text(
               category.nameAr,
-              style: const TextStyle(fontFamily: 'Cairo', fontSize: 12),
+              style: const TextStyle(fontFamily: 'Tajawal', fontSize: 12),
             ),
             onPressed: () => _pickCategory(category),
           );
@@ -572,7 +572,7 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
       title: Text(
         title,
         style: const TextStyle(
-          fontFamily: 'Cairo',
+          fontFamily: 'Tajawal',
           fontWeight: FontWeight.bold,
           fontSize: 14,
         ),
@@ -581,7 +581,7 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
           ? Text(
               suggestion.subtitle!,
               style: const TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
                 fontSize: 12,
                 color: AppColors.secondaryText,
               ),
