@@ -37,7 +37,7 @@ class UnauthorizedScreen extends StatelessWidget {
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: AdminColors.textPrimary,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                 ),
               ),
               const SizedBox(height: 8),
@@ -47,7 +47,7 @@ class UnauthorizedScreen extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13,
                   color: AdminColors.textSecondary,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                 ),
               ),
               const SizedBox(height: 24),

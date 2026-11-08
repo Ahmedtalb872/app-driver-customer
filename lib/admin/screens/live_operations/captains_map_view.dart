@@ -78,7 +78,7 @@ class CaptainsMapView extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white,
-                      fontFamily: 'Cairo',
+                      fontFamily: 'Tajawal',
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -132,7 +132,7 @@ class _CaptainMarker extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           captain.fullName,
-          style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+          style: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.bold),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -140,12 +140,12 @@ class _CaptainMarker extends StatelessWidget {
           children: [
             Text(
               captain.phone ?? '-',
-              style: const TextStyle(fontFamily: 'Cairo'),
+              style: const TextStyle(fontFamily: 'Tajawal'),
             ),
             const SizedBox(height: 4),
             Text(
               captain.vehicleType ?? '-',
-              style: const TextStyle(fontFamily: 'Cairo'),
+              style: const TextStyle(fontFamily: 'Tajawal'),
             ),
             if (location.updatedAt != null) ...[
               const SizedBox(height: 8),
@@ -155,7 +155,7 @@ class _CaptainMarker extends StatelessWidget {
                 '${location.updatedAt!.minute.toString().padLeft(2, '0')}:'
                 '${location.updatedAt!.second.toString().padLeft(2, '0')}',
                 style: const TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                   fontSize: 12,
                   color: AdminColors.textSecondary,
                 ),
@@ -166,7 +166,7 @@ class _CaptainMarker extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('إغلاق', style: TextStyle(fontFamily: 'Cairo')),
+            child: const Text('إغلاق', style: TextStyle(fontFamily: 'Tajawal')),
           ),
         ],
       ),

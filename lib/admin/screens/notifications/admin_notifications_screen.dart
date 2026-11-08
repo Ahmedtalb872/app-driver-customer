@@ -77,7 +77,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
         SnackBar(
           content: Text(
             'تم الإرسال إلى $sent جهاز',
-            style: const TextStyle(fontFamily: 'Cairo'),
+            style: const TextStyle(fontFamily: 'Tajawal'),
           ),
         ),
       );
@@ -90,7 +90,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
         SnackBar(
           content: Text(
             'تعذر إرسال الإشعار: $e',
-            style: const TextStyle(fontFamily: 'Cairo'),
+            style: const TextStyle(fontFamily: 'Tajawal'),
           ),
           backgroundColor: Colors.red,
         ),
@@ -115,7 +115,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
                   const Text(
                     'إرسال إشعار جماعي',
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: 'Tajawal',
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
@@ -125,7 +125,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
                     'يصل كإشعار حقيقي حتى لو كان التطبيق مغلقاً - لمن ثبّت '
                     'التطبيق على هاتفه فقط.',
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: 'Tajawal',
                       fontSize: 12,
                       color: Colors.grey,
                     ),
@@ -134,7 +134,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
                   const Text(
                     'إرسال إلى',
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: 'Tajawal',
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                     ),
@@ -144,17 +144,17 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
                     segments: const [
                       ButtonSegment(
                         value: 'customers',
-                        label: Text('الزبائن', style: TextStyle(fontFamily: 'Cairo')),
+                        label: Text('الزبائن', style: TextStyle(fontFamily: 'Tajawal')),
                         icon: Icon(Icons.groups_rounded),
                       ),
                       ButtonSegment(
                         value: 'captains',
-                        label: Text('الكباتن', style: TextStyle(fontFamily: 'Cairo')),
+                        label: Text('الكباتن', style: TextStyle(fontFamily: 'Tajawal')),
                         icon: Icon(Icons.local_taxi_rounded),
                       ),
                       ButtonSegment(
                         value: 'both',
-                        label: Text('الجميع', style: TextStyle(fontFamily: 'Cairo')),
+                        label: Text('الجميع', style: TextStyle(fontFamily: 'Tajawal')),
                         icon: Icon(Icons.diversity_3_rounded),
                       ),
                     ],
@@ -194,7 +194,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
           const SizedBox(height: 20),
           const Text(
             'سجل الإشعارات المرسلة',
-            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+            style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           if (_loadingHistory)
@@ -204,7 +204,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
               padding: EdgeInsets.symmetric(vertical: 24),
               child: Text(
                 'لا توجد إشعارات مُرسلة بعد',
-                style: TextStyle(fontFamily: 'Cairo', color: Colors.grey),
+                style: TextStyle(fontFamily: 'Tajawal', color: Colors.grey),
               ),
             )
           else
@@ -224,11 +224,11 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
       child: ListTile(
         title: Text(
           row['title'] as String? ?? '',
-          style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+          style: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.bold),
         ),
         subtitle: Text(
           '${row['body'] as String? ?? ''}\n$audienceLabel',
-          style: const TextStyle(fontFamily: 'Cairo'),
+          style: const TextStyle(fontFamily: 'Tajawal'),
         ),
         isThreeLine: true,
         trailing: Column(
@@ -237,7 +237,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
           children: [
             Text(
               '${row['recipient_count'] ?? 0} جهاز',
-              style: const TextStyle(fontFamily: 'Cairo', fontSize: 12),
+              style: const TextStyle(fontFamily: 'Tajawal', fontSize: 12),
             ),
             if (sentAt != null)
               Text(

@@ -71,7 +71,7 @@ class _WithdrawalRequestsScreenState extends State<WithdrawalRequestsScreen> {
       const SnackBar(
         content: Text(
           'حدث خطأ، تحقق من صلاحياتك أو رصيد المحفظة.',
-          style: TextStyle(fontFamily: 'Cairo'),
+          style: TextStyle(fontFamily: 'Tajawal'),
         ),
       ),
     );
@@ -139,7 +139,7 @@ class _WithdrawalRequestsScreenState extends State<WithdrawalRequestsScreen> {
                 ? const Center(
                     child: Text(
                       'لا توجد طلبات.',
-                      style: TextStyle(fontFamily: 'Cairo'),
+                      style: TextStyle(fontFamily: 'Tajawal'),
                     ),
                   )
                 : Card(

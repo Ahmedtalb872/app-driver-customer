@@ -109,7 +109,7 @@ class _AdminSelefliScreenState extends State<AdminSelefliScreen> {
         const SnackBar(
           content: Text(
             'تم حفظ إعدادات سلفلي بنجاح',
-            style: TextStyle(fontFamily: 'Cairo'),
+            style: TextStyle(fontFamily: 'Tajawal'),
           ),
         ),
       );
@@ -134,7 +134,7 @@ class _AdminSelefliScreenState extends State<AdminSelefliScreen> {
                   const Text(
                     'شروط الأهلية العادية',
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: 'Tajawal',
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
                     ),
@@ -143,7 +143,7 @@ class _AdminSelefliScreenState extends State<AdminSelefliScreen> {
                   const Text(
                     'تُطبَّق تلقائياً حسب عدد مشاوير الزبون المكتملة، طالما '
                     'العرض الترويجي أدناه غير مفعّل.',
-                    style: TextStyle(fontFamily: 'Cairo', fontSize: 12),
+                    style: TextStyle(fontFamily: 'Tajawal', fontSize: 12),
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -201,14 +201,14 @@ class _AdminSelefliScreenState extends State<AdminSelefliScreen> {
                   SwitchListTile(
                     title: const Text(
                       'عرض ترويجي: سلفلي للجميع',
-                      style: TextStyle(fontFamily: 'Cairo'),
+                      style: TextStyle(fontFamily: 'Tajawal'),
                     ),
                     subtitle: const Text(
                       'عند التفعيل، يصبح كل زبون مؤهلاً لسلفلي فوراً بغض '
                       'النظر عن عدد مشاويره - تحفيز لتنزيل التطبيق. أوقفه '
                       'لإعادة العمل بالمستويين أعلاه حسب عدد المشاوير '
                       'المكتملة.',
-                      style: TextStyle(fontFamily: 'Cairo', fontSize: 12),
+                      style: TextStyle(fontFamily: 'Tajawal', fontSize: 12),
                     ),
                     isThreeLine: true,
                     value: _promoEnabled,
@@ -242,7 +242,7 @@ class _AdminSelefliScreenState extends State<AdminSelefliScreen> {
           Text(
             'الزبناء ذوو دين سلفلي مستحق (${_debtors.length})',
             style: const TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: 'Tajawal',
               fontWeight: FontWeight.bold,
               fontSize: 15,
             ),
@@ -254,7 +254,7 @@ class _AdminSelefliScreenState extends State<AdminSelefliScreen> {
                 padding: EdgeInsets.all(20),
                 child: Text(
                   'لا يوجد زبناء عليهم دين سلفلي مستحق حالياً.',
-                  style: TextStyle(fontFamily: 'Cairo'),
+                  style: TextStyle(fontFamily: 'Tajawal'),
                 ),
               ),
             )

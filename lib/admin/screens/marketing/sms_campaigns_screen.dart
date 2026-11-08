@@ -387,7 +387,7 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
             success
                 ? 'وصلت: قبلت Chinguisoft الرسالة إلى $phone'
                 : 'فشلت: Chinguisoft لم تقبل الرسالة إلى $phone',
-            style: const TextStyle(fontFamily: 'Cairo'),
+            style: const TextStyle(fontFamily: 'Tajawal'),
           ),
           backgroundColor: success ? null : Colors.red,
         ),
@@ -400,7 +400,7 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
         SnackBar(
           content: Text(
             'تعذر الإرسال إلى $phone: $e',
-            style: const TextStyle(fontFamily: 'Cairo'),
+            style: const TextStyle(fontFamily: 'Tajawal'),
           ),
           backgroundColor: Colors.red,
         ),
@@ -417,7 +417,7 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
         const SnackBar(
           content: Text(
             'الصق رقماً واحداً على الأقل قبل الإرسال.',
-            style: TextStyle(fontFamily: 'Cairo'),
+            style: TextStyle(fontFamily: 'Tajawal'),
           ),
         ),
       );
@@ -468,7 +468,7 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
           content: Text(
             'اكتملت الحملة: قبلت Chinguisoft إرسال $sent من ${phones.length} '
             'رقم (راجع علامة نجاح/فشل أمام كل رقم أدناه).',
-            style: const TextStyle(fontFamily: 'Cairo'),
+            style: const TextStyle(fontFamily: 'Tajawal'),
           ),
         ),
       );
@@ -483,7 +483,7 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
         SnackBar(
           content: Text(
             'تعذر إرسال الحملة: $e',
-            style: const TextStyle(fontFamily: 'Cairo'),
+            style: const TextStyle(fontFamily: 'Tajawal'),
           ),
           backgroundColor: Colors.red,
         ),
@@ -537,7 +537,7 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
                   const Text(
                     'إرسال حملة SMS',
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: 'Tajawal',
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
@@ -551,7 +551,7 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
                     'قَبِلت الرسالة وخصمت رصيدها - وليس تأكيداً بوصولها فعلياً '
                     'لهاتف المستلم (لا يوجد لدينا تقرير تسليم من المزوّد).',
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: 'Tajawal',
                       fontSize: 12,
                       color: Colors.grey,
                     ),
@@ -619,7 +619,7 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
                           Text(
                             'القائمة الحالية ($countLabel) - اضغط "إرسال" '
                             'أمام أي رقم لإعادة إرسال الرسالة له وحده',
-                            style: const TextStyle(fontFamily: 'Cairo', fontSize: 12),
+                            style: const TextStyle(fontFamily: 'Tajawal', fontSize: 12),
                           ),
                           const SizedBox(height: 8),
                           Container(
@@ -635,7 +635,7 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
                                           ? 'لا توجد أرقام بعد'
                                           : 'لا يوجد رقم مطابق للبحث',
                                       style: const TextStyle(
-                                        fontFamily: 'Cairo',
+                                        fontFamily: 'Tajawal',
                                         color: Colors.grey,
                                       ),
                                     ),
@@ -663,7 +663,7 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
                                             child: Text(
                                               phone,
                                               textDirection: ui.TextDirection.ltr,
-                                              style: const TextStyle(fontFamily: 'Cairo'),
+                                              style: const TextStyle(fontFamily: 'Tajawal'),
                                             ),
                                           ),
                                           SizedBox(
@@ -748,7 +748,7 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
                         const SizedBox(width: 16),
                         Text(
                           'أُرسل: $_progressSent — متبقٍ: $_progressRemaining',
-                          style: const TextStyle(fontFamily: 'Cairo', fontSize: 12),
+                          style: const TextStyle(fontFamily: 'Tajawal', fontSize: 12),
                         ),
                       ],
                     ],
@@ -760,7 +760,7 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
           const SizedBox(height: 20),
           const Text(
             'سجل الحملات المرسلة',
-            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+            style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           if (_loadingHistory)
@@ -770,7 +770,7 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
               padding: EdgeInsets.symmetric(vertical: 24),
               child: Text(
                 'لا توجد حملات مُرسلة بعد',
-                style: TextStyle(fontFamily: 'Cairo', color: Colors.grey),
+                style: TextStyle(fontFamily: 'Tajawal', color: Colors.grey),
               ),
             )
           else
@@ -789,7 +789,7 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
         onTap: () => _openCampaignDetails(row),
         title: Text(
           row['title'] as String? ?? '',
-          style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+          style: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.bold),
         ),
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -797,7 +797,7 @@ class _SmsCampaignsScreenState extends State<SmsCampaignsScreen> {
           children: [
             Text(
               '${row['recipient_count'] ?? 0} رقم',
-              style: const TextStyle(fontFamily: 'Cairo', fontSize: 12),
+              style: const TextStyle(fontFamily: 'Tajawal', fontSize: 12),
             ),
             if (sentAt != null)
               Text(
@@ -876,7 +876,7 @@ class _SmsCampaignDetailPanelState extends State<_SmsCampaignDetailPanel> {
       child: Text(
         label,
         style: TextStyle(
-          fontFamily: 'Cairo',
+          fontFamily: 'Tajawal',
           fontSize: 12,
           fontWeight: FontWeight.bold,
           color: color,
@@ -924,7 +924,7 @@ class _SmsCampaignDetailPanelState extends State<_SmsCampaignDetailPanel> {
                     Text(
                       widget.campaign['title'] as String? ?? '',
                       style: const TextStyle(
-                        fontFamily: 'Cairo',
+                        fontFamily: 'Tajawal',
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
@@ -933,7 +933,7 @@ class _SmsCampaignDetailPanelState extends State<_SmsCampaignDetailPanel> {
                     if (!_loading)
                       Text(
                         'نجاح: $sentCount — فشل: $failedCount — قيد الانتظار: $pendingCount',
-                        style: const TextStyle(fontFamily: 'Cairo', fontSize: 12),
+                        style: const TextStyle(fontFamily: 'Tajawal', fontSize: 12),
                       ),
                   ],
                 ),
@@ -946,7 +946,7 @@ class _SmsCampaignDetailPanelState extends State<_SmsCampaignDetailPanel> {
                         ? const Center(
                             child: Text(
                               'لا توجد أرقام لهذه الحملة',
-                              style: TextStyle(fontFamily: 'Cairo', color: Colors.grey),
+                              style: TextStyle(fontFamily: 'Tajawal', color: Colors.grey),
                             ),
                           )
                         : ListView.separated(
@@ -959,7 +959,7 @@ class _SmsCampaignDetailPanelState extends State<_SmsCampaignDetailPanel> {
                               return ListTile(
                                 title: Text(
                                   r['phone'] as String? ?? '',
-                                  style: const TextStyle(fontFamily: 'Cairo'),
+                                  style: const TextStyle(fontFamily: 'Tajawal'),
                                   textDirection: ui.TextDirection.ltr,
                                 ),
                                 subtitle: r['error_message'] != null

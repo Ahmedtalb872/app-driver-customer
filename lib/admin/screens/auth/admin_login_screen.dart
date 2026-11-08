@@ -172,7 +172,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                         color: AdminColors.textPrimary,
-                        fontFamily: 'Cairo',
+                        fontFamily: 'Tajawal',
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -182,7 +182,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                       style: TextStyle(
                         fontSize: 12,
                         color: AdminColors.textSecondary,
-                        fontFamily: 'Cairo',
+                        fontFamily: 'Tajawal',
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -211,7 +211,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                         style: const TextStyle(
                           color: AdminColors.error,
                           fontSize: 12,
-                          fontFamily: 'Cairo',
+                          fontFamily: 'Tajawal',
                         ),
                       ),
                     ],
@@ -293,7 +293,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                 style: const TextStyle(
                   fontSize: 12,
                   color: AdminColors.textSecondary,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                 ),
               ),
               const SizedBox(height: 16),
@@ -372,7 +372,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                 style: TextStyle(
                   fontSize: 11,
                   color: AdminColors.textSecondary,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                 ),
               ),
             ],

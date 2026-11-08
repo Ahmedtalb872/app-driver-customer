@@ -680,7 +680,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
             const Text(
               'تحديد الموقع على الخريطة',
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
               ),
@@ -692,7 +692,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                   value: _TapMode.pickup,
                   label: Text(
                     'نقرة = نقطة الانطلاق',
-                    style: TextStyle(fontFamily: 'Cairo'),
+                    style: TextStyle(fontFamily: 'Tajawal'),
                   ),
                   icon: Icon(
                     Icons.radio_button_checked_rounded,
@@ -706,7 +706,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                     _serviceType == 'delivery'
                         ? 'نقرة = نقطة التسليم'
                         : 'نقرة = الوجهة',
-                    style: const TextStyle(fontFamily: 'Cairo'),
+                    style: const TextStyle(fontFamily: 'Tajawal'),
                   ),
                   icon: const Icon(
                     Icons.location_on_rounded,
@@ -747,7 +747,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
               style: const TextStyle(
                 fontSize: 12,
                 color: AdminColors.textSecondary,
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
               ),
             ),
           ],
@@ -767,7 +767,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
               Text(
                 _serviceType == 'delivery' ? 'بيانات طلب التوصيل' : 'بيانات المشوار',
                 style: const TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),
@@ -777,7 +777,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
               const Text(
                 'نوع الطلب',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
                 ),
@@ -787,14 +787,14 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                 segments: const [
                   ButtonSegment(
                     value: 'ride',
-                    label: Text('ركاب', style: TextStyle(fontFamily: 'Cairo')),
+                    label: Text('ركاب', style: TextStyle(fontFamily: 'Tajawal')),
                     icon: Icon(Icons.local_taxi_rounded),
                   ),
                   ButtonSegment(
                     value: 'delivery',
                     label: Text(
                       'توصيل طرد',
-                      style: TextStyle(fontFamily: 'Cairo'),
+                      style: TextStyle(fontFamily: 'Tajawal'),
                     ),
                     icon: Icon(Icons.two_wheeler_rounded),
                   ),
@@ -819,7 +819,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
               Text(
                 _serviceType == 'delivery' ? 'رقم هاتف المرسل' : 'رقم هاتف الزبون',
                 style: const TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
                 ),
@@ -855,7 +855,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                           )
                         : const Text(
                             'بحث',
-                            style: TextStyle(fontFamily: 'Cairo'),
+                            style: TextStyle(fontFamily: 'Tajawal'),
                           ),
                   ),
                 ],
@@ -882,7 +882,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                                   as String?) ??
                               'زبون',
                           style: const TextStyle(
-                            fontFamily: 'Cairo',
+                            fontFamily: 'Tajawal',
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
@@ -900,7 +900,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                   'لا يوجد حساب مسجل بهذا الرقم - سيتم إرسال المشوار كزبون '
                   'غير مسجل وسيصل لجميع الكباتن كالمعتاد',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                     fontSize: 11,
                     color: AdminColors.warning,
                   ),
@@ -912,7 +912,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                 const Text(
                   'نوع المشوار',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
                   ),
@@ -924,14 +924,14 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                       value: 'normal',
                       label: Text(
                         'مشوار محدد',
-                        style: TextStyle(fontFamily: 'Cairo'),
+                        style: TextStyle(fontFamily: 'Tajawal'),
                       ),
                     ),
                     ButtonSegment(
                       value: 'open',
                       label: Text(
                         'مشوار مفتوح',
-                        style: TextStyle(fontFamily: 'Cairo'),
+                        style: TextStyle(fontFamily: 'Tajawal'),
                       ),
                     ),
                   ],
@@ -951,7 +951,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                       'عنوان نقطة الانطلاق',
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontFamily: 'Cairo',
+                        fontFamily: 'Tajawal',
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
                       ),
@@ -962,7 +962,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                     icon: const Icon(Icons.list_alt_rounded, size: 16),
                     label: const Text(
                       'من الأماكن المسجلة',
-                      style: TextStyle(fontFamily: 'Cairo', fontSize: 11),
+                      style: TextStyle(fontFamily: 'Tajawal', fontSize: 11),
                     ),
                     style: TextButton.styleFrom(
                       padding: EdgeInsets.zero,
@@ -996,7 +996,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                             : 'عنوان الوجهة',
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontFamily: 'Cairo',
+                          fontFamily: 'Tajawal',
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                         ),
@@ -1007,7 +1007,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                       icon: const Icon(Icons.list_alt_rounded, size: 16),
                       label: const Text(
                         'من الأماكن المسجلة',
-                        style: TextStyle(fontFamily: 'Cairo', fontSize: 11),
+                        style: TextStyle(fontFamily: 'Tajawal', fontSize: 11),
                       ),
                       style: TextButton.styleFrom(
                         padding: EdgeInsets.zero,
@@ -1036,7 +1036,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                 const Text(
                   'بيانات المستلم',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
                   ),
@@ -1082,7 +1082,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                 const Text(
                   'نوع المركبة',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
                   ),
@@ -1092,7 +1092,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                   'كل طلبات التوصيل تُبَث للكباتن الذين يقودون دراجة نارية '
                   'ويقبلون التوصيل، بغض النظر عن أي اختيار آخر.',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                     fontSize: 11,
                     color: AdminColors.textSecondary,
                   ),
@@ -1101,7 +1101,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                 const Text(
                   'نوع السيارة',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
                   ),
@@ -1114,7 +1114,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                     return ChoiceChip(
                       label: Text(
                         entry.value,
-                        style: const TextStyle(fontFamily: 'Cairo'),
+                        style: const TextStyle(fontFamily: 'Tajawal'),
                       ),
                       selected: selected,
                       onSelected: (_) {
@@ -1130,7 +1130,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
               const Text(
                 'طريقة الدفع',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
                 ),
@@ -1142,7 +1142,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                   ChoiceChip(
                     label: const Text(
                       'نقداً',
-                      style: TextStyle(fontFamily: 'Cairo'),
+                      style: TextStyle(fontFamily: 'Tajawal'),
                     ),
                     selected: _paymentMethod == 'cash',
                     onSelected: (_) => setState(() => _paymentMethod = 'cash'),
@@ -1150,7 +1150,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                   ChoiceChip(
                     label: const Text(
                       'المحفظة',
-                      style: TextStyle(fontFamily: 'Cairo'),
+                      style: TextStyle(fontFamily: 'Tajawal'),
                     ),
                     selected: _paymentMethod == 'wallet',
                     onSelected: (_) =>
@@ -1163,7 +1163,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
               const Text(
                 'ملاحظة (اختياري)',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
                 ),
@@ -1209,7 +1209,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                         ? 'إرسال طلب التوصيل للكباتن'
                         : 'إرسال المشوار للكباتن',
                     style: const TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: 'Tajawal',
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -1251,7 +1251,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
               child: Text(
                 'جميع البيانات مكتملة، جاهز لإرسال المشوار',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                   fontSize: 11.5,
                   fontWeight: FontWeight.bold,
                   color: AdminColors.success,
@@ -1285,7 +1285,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                   'لإرسال المشوار، أكمل ما يلي:',
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                     fontSize: 11.5,
                     fontWeight: FontWeight.bold,
                     color: AdminColors.textPrimary,
@@ -1300,7 +1300,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
               child: Text(
                 '• $message',
                 style: const TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                   fontSize: 11,
                   color: AdminColors.textSecondary,
                 ),
@@ -1364,7 +1364,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                   : const Icon(Icons.search_rounded, size: 18),
               label: const Text(
                 'بحث',
-                style: TextStyle(fontFamily: 'Cairo', fontSize: 13),
+                style: TextStyle(fontFamily: 'Tajawal', fontSize: 13),
               ),
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -1399,7 +1399,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
             child: Text(
               'جارٍ البحث...',
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
                 fontSize: 12,
                 color: AdminColors.textSecondary,
               ),
@@ -1417,7 +1417,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
             child: Text(
               'لا توجد نتائج لهذا البحث',
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
                 fontSize: 12,
                 color: AdminColors.textSecondary,
               ),
@@ -1437,7 +1437,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
       child: Text(
         'الإحداثيات: ${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}',
         style: const TextStyle(
-          fontFamily: 'Cairo',
+          fontFamily: 'Tajawal',
           fontSize: 10.5,
           color: AdminColors.textSecondary,
         ),
@@ -1460,21 +1460,21 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
           const Text(
             'الأجرة المقدرة',
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: 'Tajawal',
               fontSize: 11,
               color: AdminColors.textSecondary,
             ),
           ),
           const SizedBox(height: 4),
           if (_loadingPricing)
-            const Text('...', style: TextStyle(fontFamily: 'Cairo'))
+            const Text('...', style: TextStyle(fontFamily: 'Tajawal'))
           else
             Text(
               fare != null
                   ? '${fare.toStringAsFixed(0)} أوقية'
                   : 'حدد نقطة الانطلاق والوجهة',
               style: const TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
                 color: AdminColors.primary,
@@ -1486,7 +1486,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
               child: Text(
                 'مشوار مفتوح: الأجرة النهائية تُحتسب حسب الوقت والمسافة الفعليين.',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                   fontSize: 10.5,
                   color: AdminColors.textSecondary,
                 ),
@@ -1499,7 +1499,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                 '* تقدير بخط مستقيم (وليست مسافة الطريق الفعلية): '
                 '${_distanceKm!.toStringAsFixed(1)} كم • ${_estimatedDurationMinutes ?? '-'} د تقريباً',
                 style: const TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                   fontSize: 10.5,
                   color: AdminColors.textSecondary,
                   fontStyle: FontStyle.italic,
@@ -1550,7 +1550,7 @@ class _SuggestionTile extends StatelessWidget {
                     suggestion.title,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: 'Tajawal',
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                     ),
@@ -1560,7 +1560,7 @@ class _SuggestionTile extends StatelessWidget {
                       suggestion.subtitle!,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontFamily: 'Cairo',
+                        fontFamily: 'Tajawal',
                         fontSize: 11,
                         color: AdminColors.textSecondary,
                       ),

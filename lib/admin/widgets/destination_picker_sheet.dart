@@ -180,7 +180,7 @@ class _DestinationPickerSheetState extends State<_DestinationPickerSheet> {
                       child: Text(
                         _titleForStep(),
                         style: const TextStyle(
-                          fontFamily: 'Cairo',
+                          fontFamily: 'Tajawal',
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
@@ -220,7 +220,7 @@ class _DestinationPickerSheetState extends State<_DestinationPickerSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(_error!, style: const TextStyle(fontFamily: 'Cairo')),
+            Text(_error!, style: const TextStyle(fontFamily: 'Tajawal')),
             const SizedBox(height: 8),
             ElevatedButton(
               onPressed: _retry,
@@ -243,7 +243,7 @@ class _DestinationPickerSheetState extends State<_DestinationPickerSheet> {
             return ListTile(
               title: Text(
                 district.nameAr,
-                style: const TextStyle(fontFamily: 'Cairo'),
+                style: const TextStyle(fontFamily: 'Tajawal'),
               ),
               trailing: const Icon(Icons.chevron_left_rounded),
               onTap: () => _selectDistrict(district),
@@ -263,13 +263,13 @@ class _DestinationPickerSheetState extends State<_DestinationPickerSheet> {
                 title: const Text(
                   'منزل أو موقع غير مسجل',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 subtitle: const Text(
                   'استخدم العنوان النصي والخريطة يدوياً',
-                  style: TextStyle(fontFamily: 'Cairo', fontSize: 11),
+                  style: TextStyle(fontFamily: 'Tajawal', fontSize: 11),
                 ),
                 onTap: _pickUnregistered,
               );
@@ -278,11 +278,11 @@ class _DestinationPickerSheetState extends State<_DestinationPickerSheet> {
             return ListTile(
               title: Text(
                 category.nameAr,
-                style: const TextStyle(fontFamily: 'Cairo'),
+                style: const TextStyle(fontFamily: 'Tajawal'),
               ),
               subtitle: Text(
                 '${category.placeCount} مكان مسجل',
-                style: const TextStyle(fontFamily: 'Cairo', fontSize: 11),
+                style: const TextStyle(fontFamily: 'Tajawal', fontSize: 11),
               ),
               enabled: category.placeCount > 0,
               trailing: const Icon(Icons.chevron_left_rounded),
@@ -298,14 +298,14 @@ class _DestinationPickerSheetState extends State<_DestinationPickerSheet> {
               children: [
                 const Text(
                   'لا توجد أماكن مسجلة في هذا التصنيف.',
-                  style: TextStyle(fontFamily: 'Cairo'),
+                  style: TextStyle(fontFamily: 'Tajawal'),
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton(
                   onPressed: _pickUnregistered,
                   child: const Text(
                     'استخدام منزل أو موقع غير مسجل',
-                    style: TextStyle(fontFamily: 'Cairo'),
+                    style: TextStyle(fontFamily: 'Tajawal'),
                   ),
                 ),
               ],
@@ -322,11 +322,11 @@ class _DestinationPickerSheetState extends State<_DestinationPickerSheet> {
             return ListTile(
               title: Text(
                 place.displayName,
-                style: const TextStyle(fontFamily: 'Cairo'),
+                style: const TextStyle(fontFamily: 'Tajawal'),
               ),
               subtitle: Text(
                 place.displayAddress ?? '-',
-                style: const TextStyle(fontFamily: 'Cairo', fontSize: 11),
+                style: const TextStyle(fontFamily: 'Tajawal', fontSize: 11),
               ),
               onTap: () => _pickPlace(place),
             );

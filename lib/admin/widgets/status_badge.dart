@@ -31,7 +31,7 @@ class StatusBadge extends StatelessWidget {
           fontSize: 11,
           fontWeight: FontWeight.bold,
           color: color,
-          fontFamily: 'Cairo',
+          fontFamily: 'Tajawal',
         ),
       ),
     );

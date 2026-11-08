@@ -62,7 +62,7 @@ class _SubscriptionDisputesScreenState
         const SnackBar(
           content: Text(
             'حدث خطأ، تحقق من صلاحياتك.',
-            style: TextStyle(fontFamily: 'Cairo'),
+            style: TextStyle(fontFamily: 'Tajawal'),
           ),
         ),
       );
@@ -79,7 +79,7 @@ class _SubscriptionDisputesScreenState
           const Text(
             'اشتراكات شهرية تحتاج مراجعة يدوية - راجع سجل المشوار/المحادثة، '
             'ثم صحّح الرصيد من "المحافظ والمالية" قبل تسجيل الحل هنا.',
-            style: TextStyle(fontFamily: 'Cairo', color: AdminColors.textSecondary),
+            style: TextStyle(fontFamily: 'Tajawal', color: AdminColors.textSecondary),
           ),
           const SizedBox(height: 16),
           Expanded(
@@ -89,7 +89,7 @@ class _SubscriptionDisputesScreenState
                 ? const Center(
                     child: Text(
                       'لا توجد حالات قيد المراجعة.',
-                      style: TextStyle(fontFamily: 'Cairo'),
+                      style: TextStyle(fontFamily: 'Tajawal'),
                     ),
                   )
                 : Card(
@@ -123,7 +123,7 @@ class _SubscriptionDisputesScreenState
                                   width: 260,
                                   child: Text(
                                     dispute['dispute_reason'] as String? ?? '-',
-                                    style: const TextStyle(fontFamily: 'Cairo'),
+                                    style: const TextStyle(fontFamily: 'Tajawal'),
                                   ),
                                 ),
                               ),

@@ -63,7 +63,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(_error!, style: const TextStyle(fontFamily: 'Cairo')),
+            Text(_error!, style: const TextStyle(fontFamily: 'Tajawal')),
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: _load,
@@ -235,7 +235,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final labelStyle = const TextStyle(
       color: AdminColors.textSecondary,
       fontSize: 10,
-      fontFamily: 'Cairo',
+      fontFamily: 'Tajawal',
     );
     return HoverLift(
       child: Card(
@@ -249,7 +249,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: AdminColors.textPrimary,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                 ),
               ),
               const SizedBox(height: 16),
@@ -261,7 +261,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           'لا توجد بيانات رحلات بعد',
                           style: TextStyle(
                             color: AdminColors.textSecondary,
-                            fontFamily: 'Cairo',
+                            fontFamily: 'Tajawal',
                           ),
                         ),
                       )
@@ -373,7 +373,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: AdminColors.textPrimary,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                 ),
               ),
               const SizedBox(height: 16),
@@ -385,7 +385,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           'لا توجد بيانات رحلات بعد',
                           style: TextStyle(
                             color: AdminColors.textSecondary,
-                            fontFamily: 'Cairo',
+                            fontFamily: 'Tajawal',
                           ),
                         ),
                       )
@@ -417,7 +417,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: AdminColors.textPrimary,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                 ),
               ),
             const SizedBox(height: 12),
@@ -428,7 +428,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   'لا توجد رحلات مسجلة بعد.',
                   style: TextStyle(
                     color: AdminColors.textSecondary,
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                   ),
                 ),
               )

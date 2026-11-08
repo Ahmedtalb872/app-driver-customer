@@ -64,7 +64,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                   style: TextStyle(
                     fontSize: 11,
                     color: AdminColors.textSecondary,
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -119,7 +119,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
             const SnackBar(
               content: Text(
                 'لا يوجد مستخدم مسجل بهذا الرقم.',
-                style: TextStyle(fontFamily: 'Cairo'),
+                style: TextStyle(fontFamily: 'Tajawal'),
               ),
             ),
           );
@@ -140,7 +140,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           const SnackBar(
             content: Text(
               'تعذر إضافة المسؤول، تحقق من صلاحياتك.',
-              style: TextStyle(fontFamily: 'Cairo'),
+              style: TextStyle(fontFamily: 'Tajawal'),
             ),
           ),
         );
@@ -166,7 +166,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           const SnackBar(
             content: Text(
               'تعذر تنفيذ الإجراء.',
-              style: TextStyle(fontFamily: 'Cairo'),
+              style: TextStyle(fontFamily: 'Tajawal'),
             ),
           ),
         );

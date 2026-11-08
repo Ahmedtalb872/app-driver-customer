@@ -89,7 +89,7 @@ GoRouter buildAdminRouter(AdminSession session) {
     routes: adminRoutes(session),
     errorBuilder: (context, state) => const Scaffold(
       body: Center(
-        child: Text('الصفحة غير موجودة', style: TextStyle(fontFamily: 'Cairo')),
+        child: Text('الصفحة غير موجودة', style: TextStyle(fontFamily: 'Tajawal')),
       ),
     ),
   );

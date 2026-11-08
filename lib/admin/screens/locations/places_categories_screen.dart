@@ -427,7 +427,7 @@ class _PlacesCategoriesScreenState extends State<PlacesCategoriesScreen>
   void _showError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message, style: const TextStyle(fontFamily: 'Cairo'))),
+      SnackBar(content: Text(message, style: const TextStyle(fontFamily: 'Tajawal'))),
     );
   }
 
@@ -728,7 +728,7 @@ class _PlacesCategoriesScreenState extends State<PlacesCategoriesScreen>
                             category.nameAr,
                             textAlign: TextAlign.center,
                             style: const TextStyle(
-                              fontFamily: 'Cairo',
+                              fontFamily: 'Tajawal',
                               fontWeight: FontWeight.bold,
                             ),
                           ),

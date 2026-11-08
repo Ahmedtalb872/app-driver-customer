@@ -92,7 +92,7 @@ class _AdminSupportTicketPanelState extends State<AdminSupportTicketPanel> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('حدث خطأ، حاول مرة أخرى.', style: TextStyle(fontFamily: 'Cairo')),
+        content: Text('حدث خطأ، حاول مرة أخرى.', style: TextStyle(fontFamily: 'Tajawal')),
       ),
     );
   }
@@ -155,7 +155,7 @@ class _AdminSupportTicketPanelState extends State<AdminSupportTicketPanel> {
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              fontFamily: 'Cairo',
+                              fontFamily: 'Tajawal',
                             ),
                           ),
                           Text(
@@ -166,7 +166,7 @@ class _AdminSupportTicketPanelState extends State<AdminSupportTicketPanel> {
                             ].join(' - '),
                             style: const TextStyle(
                               color: AdminColors.textSecondary,
-                              fontFamily: 'Cairo',
+                              fontFamily: 'Tajawal',
                               fontSize: 12,
                             ),
                           ),
@@ -181,7 +181,7 @@ class _AdminSupportTicketPanelState extends State<AdminSupportTicketPanel> {
                               value: e.key,
                               child: Text(
                                 e.value,
-                                style: const TextStyle(fontFamily: 'Cairo'),
+                                style: const TextStyle(fontFamily: 'Tajawal'),
                               ),
                             ),
                           )
@@ -203,7 +203,7 @@ class _AdminSupportTicketPanelState extends State<AdminSupportTicketPanel> {
                       icon: const Icon(Icons.local_taxi_rounded, size: 18),
                       label: const Text(
                         'فتح تفاصيل المشوار',
-                        style: TextStyle(fontFamily: 'Cairo'),
+                        style: TextStyle(fontFamily: 'Tajawal'),
                       ),
                     ),
                   ),
@@ -214,7 +214,7 @@ class _AdminSupportTicketPanelState extends State<AdminSupportTicketPanel> {
                     ? const Center(
                         child: Text(
                           'لا توجد رسائل بعد.',
-                          style: TextStyle(fontFamily: 'Cairo'),
+                          style: TextStyle(fontFamily: 'Tajawal'),
                         ),
                       )
                     : ListView.builder(
@@ -252,7 +252,7 @@ class _AdminSupportTicketPanelState extends State<AdminSupportTicketPanel> {
         child: Text(
           message.body,
           style: TextStyle(
-            fontFamily: 'Cairo',
+            fontFamily: 'Tajawal',
             fontSize: 13,
             color: isMine ? Colors.white : AdminColors.textPrimary,
           ),

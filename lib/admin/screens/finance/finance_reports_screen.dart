@@ -381,7 +381,7 @@ class _FinanceReportsScreenState extends State<FinanceReportsScreen> {
             Text(
               _error!,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontFamily: 'Cairo'),
+              style: const TextStyle(fontFamily: 'Tajawal'),
             ),
             const SizedBox(height: 10),
             OutlinedButton(onPressed: _load, child: const Text('إعادة المحاولة')),
@@ -446,7 +446,7 @@ class _FinanceReportsScreenState extends State<FinanceReportsScreen> {
       return const Center(
         child: Text(
           'لا توجد بيانات في هذه المدة.',
-          style: TextStyle(fontFamily: 'Cairo'),
+          style: TextStyle(fontFamily: 'Tajawal'),
         ),
       );
     }

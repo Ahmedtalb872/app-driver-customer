@@ -37,7 +37,7 @@ class _AdminAuditLogsScreenState extends State<AdminAuditLogsScreen> {
       return const Center(
         child: Text(
           'لا توجد أي عمليات مسجلة بعد.',
-          style: TextStyle(fontFamily: 'Cairo'),
+          style: TextStyle(fontFamily: 'Tajawal'),
         ),
       );
     }

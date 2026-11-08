@@ -83,7 +83,7 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
       return const Center(
         child: Text(
           'لا توجد محادثات دعم مطابقة.',
-          style: TextStyle(fontFamily: 'Cairo'),
+          style: TextStyle(fontFamily: 'Tajawal'),
         ),
       );
     }

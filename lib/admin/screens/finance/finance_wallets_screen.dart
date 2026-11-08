@@ -123,7 +123,7 @@ class _FinanceWalletsScreenState extends State<FinanceWalletsScreen> {
           const SnackBar(
             content: Text(
               'تعذر تعديل الرصيد.',
-              style: TextStyle(fontFamily: 'Cairo'),
+              style: TextStyle(fontFamily: 'Tajawal'),
             ),
           ),
         );

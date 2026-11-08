@@ -134,7 +134,7 @@ class _LiveOperationsScreenState extends State<LiveOperationsScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(_error!, style: const TextStyle(fontFamily: 'Cairo')),
+            Text(_error!, style: const TextStyle(fontFamily: 'Tajawal')),
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: _manualRefresh,
@@ -169,7 +169,7 @@ class _LiveOperationsScreenState extends State<LiveOperationsScreen> {
               const Text(
                 'مباشر - تحديث فوري عبر Supabase Realtime',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                   fontSize: 12,
                   color: AdminColors.textSecondary,
                 ),
@@ -179,7 +179,7 @@ class _LiveOperationsScreenState extends State<LiveOperationsScreen> {
                 Text(
                   'آخر تحديث: ${_lastUpdated!.hour.toString().padLeft(2, '0')}:${_lastUpdated!.minute.toString().padLeft(2, '0')}:${_lastUpdated!.second.toString().padLeft(2, '0')}',
                   style: const TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                     fontSize: 12,
                     color: AdminColors.textSecondary,
                   ),
@@ -241,7 +241,7 @@ class _LiveOperationsScreenState extends State<LiveOperationsScreen> {
           const Text(
             'الرحلات النشطة الآن',
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: 'Tajawal',
               fontSize: 16,
               fontWeight: FontWeight.bold,
               color: AdminColors.textPrimary,
@@ -255,7 +255,7 @@ class _LiveOperationsScreenState extends State<LiveOperationsScreen> {
               const Text(
                 'الكباتن المتصلون الآن',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: AdminColors.textPrimary,
@@ -266,12 +266,12 @@ class _LiveOperationsScreenState extends State<LiveOperationsScreen> {
                 segments: const [
                   ButtonSegment(
                     value: false,
-                    label: Text('قائمة', style: TextStyle(fontFamily: 'Cairo')),
+                    label: Text('قائمة', style: TextStyle(fontFamily: 'Tajawal')),
                     icon: Icon(Icons.list_rounded),
                   ),
                   ButtonSegment(
                     value: true,
-                    label: Text('خريطة', style: TextStyle(fontFamily: 'Cairo')),
+                    label: Text('خريطة', style: TextStyle(fontFamily: 'Tajawal')),
                     icon: Icon(Icons.map_rounded),
                   ),
                 ],
@@ -312,7 +312,7 @@ class _LiveOperationsScreenState extends State<LiveOperationsScreen> {
           child: Center(
             child: Text(
               'لا توجد رحلات نشطة حالياً.',
-              style: TextStyle(fontFamily: 'Cairo'),
+              style: TextStyle(fontFamily: 'Tajawal'),
             ),
           ),
         ),
@@ -384,7 +384,7 @@ class _LiveOperationsScreenState extends State<LiveOperationsScreen> {
           child: Center(
             child: Text(
               'لا يوجد كباتن متصلون حالياً.',
-              style: TextStyle(fontFamily: 'Cairo'),
+              style: TextStyle(fontFamily: 'Tajawal'),
             ),
           ),
         ),

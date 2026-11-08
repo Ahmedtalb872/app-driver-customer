@@ -117,7 +117,7 @@ class _AdminBusinessAccountsScreenState
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_accounts.isEmpty) {
       return const Center(
-        child: Text('لا توجد حسابات مطابقة.', style: TextStyle(fontFamily: 'Cairo')),
+        child: Text('لا توجد حسابات مطابقة.', style: TextStyle(fontFamily: 'Tajawal')),
       );
     }
     return Card(

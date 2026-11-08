@@ -82,7 +82,7 @@ class _AdminTripsScreenState extends State<AdminTripsScreen> {
           const SnackBar(
             content: Text(
               'تعذر إلغاء الرحلة.',
-              style: TextStyle(fontFamily: 'Cairo'),
+              style: TextStyle(fontFamily: 'Tajawal'),
             ),
           ),
         );
@@ -152,7 +152,7 @@ class _AdminTripsScreenState extends State<AdminTripsScreen> {
               ),
               Text(
                 'من ${_offset + 1}',
-                style: const TextStyle(fontFamily: 'Cairo'),
+                style: const TextStyle(fontFamily: 'Tajawal'),
               ),
               IconButton(
                 onPressed: _trips.length < _pageSize
@@ -177,7 +177,7 @@ class _AdminTripsScreenState extends State<AdminTripsScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(_error!, style: const TextStyle(fontFamily: 'Cairo')),
+            Text(_error!, style: const TextStyle(fontFamily: 'Tajawal')),
             const SizedBox(height: 8),
             ElevatedButton(
               onPressed: _load,
@@ -191,7 +191,7 @@ class _AdminTripsScreenState extends State<AdminTripsScreen> {
       return const Center(
         child: Text(
           'لا توجد رحلات مسجلة بعد.',
-          style: TextStyle(fontFamily: 'Cairo'),
+          style: TextStyle(fontFamily: 'Tajawal'),
         ),
       );
     }

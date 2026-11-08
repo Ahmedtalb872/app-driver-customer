@@ -70,7 +70,7 @@ class _RechargeRequestsScreenState extends State<RechargeRequestsScreen> {
       const SnackBar(
         content: Text(
           'حدث خطأ، تحقق من صلاحياتك.',
-          style: TextStyle(fontFamily: 'Cairo'),
+          style: TextStyle(fontFamily: 'Tajawal'),
         ),
       ),
     );
@@ -138,7 +138,7 @@ class _RechargeRequestsScreenState extends State<RechargeRequestsScreen> {
                 ? const Center(
                     child: Text(
                       'لا توجد طلبات.',
-                      style: TextStyle(fontFamily: 'Cairo'),
+                      style: TextStyle(fontFamily: 'Tajawal'),
                     ),
                   )
                 : Card(

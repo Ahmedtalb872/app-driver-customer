@@ -182,7 +182,7 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
               ),
               Text(
                 'من ${_offset + 1}',
-                style: const TextStyle(fontFamily: 'Cairo'),
+                style: const TextStyle(fontFamily: 'Tajawal'),
               ),
               IconButton(
                 onPressed: _customers.length < _pageSize
@@ -207,7 +207,7 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(_error!, style: const TextStyle(fontFamily: 'Cairo')),
+            Text(_error!, style: const TextStyle(fontFamily: 'Tajawal')),
             const SizedBox(height: 8),
             ElevatedButton(
               onPressed: _load,
@@ -221,7 +221,7 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
       return const Center(
         child: Text(
           'لا يوجد زبناء مطابقون.',
-          style: TextStyle(fontFamily: 'Cairo'),
+          style: TextStyle(fontFamily: 'Tajawal'),
         ),
       );
     }

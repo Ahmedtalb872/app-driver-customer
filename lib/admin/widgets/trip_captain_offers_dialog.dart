@@ -34,19 +34,19 @@ Future<void> showTripCaptainOffersDialog(
           children: [
             Text(
               '$liveCount كابتن متصل حالياً مؤهل لرؤية هذا الطلب (عدد حي الآن).',
-              style: const TextStyle(fontFamily: 'Cairo'),
+              style: const TextStyle(fontFamily: 'Tajawal'),
             ),
             const SizedBox(height: 16),
             const Text(
               'سجل من عُرض عليه الطلب فعلياً وقت إرساله:',
-              style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+              style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             if (offers.isEmpty)
               const Text(
                 'لا توجد بيانات مسجلة لهذا الطلب - إما أنه طُلب قبل تفعيل '
                 'هذه الميزة، أو لم يكن أي كابتن متصل ومؤهل في تلك اللحظة.',
-                style: TextStyle(fontFamily: 'Cairo', color: AdminColors.textSecondary),
+                style: TextStyle(fontFamily: 'Tajawal', color: AdminColors.textSecondary),
               )
             else
               Flexible(
@@ -72,7 +72,7 @@ Future<void> showTripCaptainOffersDialog(
                                 children: [
                                   Text(
                                     name,
-                                    style: const TextStyle(fontFamily: 'Cairo'),
+                                    style: const TextStyle(fontFamily: 'Tajawal'),
                                   ),
                                   CopyablePhone(phone),
                                 ],

@@ -140,7 +140,7 @@ class _AdminPricingScreenState extends State<AdminPricingScreen> {
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
-                          fontFamily: 'Cairo',
+                          fontFamily: 'Tajawal',
                         ),
                       ),
                       ElevatedButton.icon(
@@ -156,7 +156,7 @@ class _AdminPricingScreenState extends State<AdminPricingScreen> {
                     style: const TextStyle(
                       fontSize: 11,
                       color: AdminColors.textSecondary,
-                      fontFamily: 'Cairo',
+                      fontFamily: 'Tajawal',
                     ),
                   ),
                   const Divider(height: 24),
@@ -175,7 +175,7 @@ class _AdminPricingScreenState extends State<AdminPricingScreen> {
                                   style: const TextStyle(
                                     fontSize: 11,
                                     color: AdminColors.textSecondary,
-                                    fontFamily: 'Cairo',
+                                    fontFamily: 'Tajawal',
                                   ),
                                 ),
                                 Text(
@@ -183,7 +183,7 @@ class _AdminPricingScreenState extends State<AdminPricingScreen> {
                                   style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.bold,
-                                    fontFamily: 'Cairo',
+                                    fontFamily: 'Tajawal',
                                   ),
                                 ),
                               ],

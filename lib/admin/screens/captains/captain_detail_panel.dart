@@ -102,7 +102,7 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
       const SnackBar(
         content: Text(
           'جارٍ إعادة فحص المستند...',
-          style: TextStyle(fontFamily: 'Cairo'),
+          style: TextStyle(fontFamily: 'Tajawal'),
         ),
       ),
     );
@@ -164,7 +164,7 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
           const SnackBar(
             content: Text(
               'لا يمكن تفعيل الحساب قبل اعتماد جميع المستندات الإلزامية (٩ مستندات) أدناه.',
-              style: TextStyle(fontFamily: 'Cairo'),
+              style: TextStyle(fontFamily: 'Tajawal'),
             ),
           ),
         );
@@ -214,7 +214,7 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
           const SnackBar(
             content: Text(
               'لا يمكن حذف كابتن له سجل رحلات سابقة - استخدم إيقاف الحساب بدلاً من ذلك.',
-              style: TextStyle(fontFamily: 'Cairo'),
+              style: TextStyle(fontFamily: 'Tajawal'),
             ),
           ),
         );
@@ -225,7 +225,7 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
           const SnackBar(
             content: Text(
               'تعذر حذف الملف، تحقق من صلاحياتك وحاول مجدداً.',
-              style: TextStyle(fontFamily: 'Cairo'),
+              style: TextStyle(fontFamily: 'Tajawal'),
             ),
           ),
         );
@@ -261,7 +261,7 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
             const SnackBar(
               content: Text(
                 'تم اعتماد المستند، لكن تعذر تعيينه صورةً ظاهرة للزبون. حاول مجدداً لاحقاً.',
-                style: TextStyle(fontFamily: 'Cairo'),
+                style: TextStyle(fontFamily: 'Tajawal'),
               ),
             ),
           );
@@ -283,7 +283,7 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
           const SnackBar(
             content: Text(
               'تم تعيين الصورة لتظهر للزبون.',
-              style: TextStyle(fontFamily: 'Cairo'),
+              style: TextStyle(fontFamily: 'Tajawal'),
             ),
           ),
         );
@@ -331,7 +331,7 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
       const SnackBar(
         content: Text(
           'تعذر تنفيذ الإجراء، تحقق من صلاحياتك وحاول مجدداً.',
-          style: TextStyle(fontFamily: 'Cairo'),
+          style: TextStyle(fontFamily: 'Tajawal'),
         ),
       ),
     );
@@ -363,14 +363,14 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                 ),
               ),
               Text(
                 captain.phone ?? '-',
                 style: const TextStyle(
                   color: AdminColors.textSecondary,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                 ),
               ),
               if (captain.isPending) ...[
@@ -443,7 +443,7 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
                 style: TextStyle(
                   fontSize: 11,
                   color: AdminColors.textSecondary,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                   fontStyle: FontStyle.italic,
                 ),
               ),
@@ -576,7 +576,7 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
                   'لا توجد رحلات بعد.',
                   style: TextStyle(
                     color: AdminColors.textSecondary,
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                   ),
                 )
               else
@@ -613,7 +613,7 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
   Widget _sectionTitle(String text) {
     return Text(
       text,
-      style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+      style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Tajawal'),
     );
   }
 
@@ -628,7 +628,7 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
             style: const TextStyle(
               fontSize: 11,
               color: AdminColors.textSecondary,
-              fontFamily: 'Cairo',
+              fontFamily: 'Tajawal',
             ),
           ),
           Text(
@@ -636,7 +636,7 @@ class _CaptainDetailPanelState extends State<CaptainDetailPanel> {
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
-              fontFamily: 'Cairo',
+              fontFamily: 'Tajawal',
             ),
           ),
         ],
@@ -673,7 +673,7 @@ class _CompletionTile extends StatelessWidget {
           Text(
             '$approved/$total مستندات إلزامية معتمدة',
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: 'Tajawal',
               fontWeight: FontWeight.bold,
               fontSize: 12.5,
               color: color,
@@ -744,7 +744,7 @@ class _AdminDocumentCard extends StatelessWidget {
                       child: Text(
                         documentType.labelArabic,
                         style: const TextStyle(
-                          fontFamily: 'Cairo',
+                          fontFamily: 'Tajawal',
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
                         ),
@@ -762,7 +762,7 @@ class _AdminDocumentCard extends StatelessWidget {
                       child: Text(
                         label,
                         style: TextStyle(
-                          fontFamily: 'Cairo',
+                          fontFamily: 'Tajawal',
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                           color: color,
@@ -779,7 +779,7 @@ class _AdminDocumentCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 10.5,
                       color: AdminColors.textSecondary,
-                      fontFamily: 'Cairo',
+                      fontFamily: 'Tajawal',
                     ),
                   ),
                   if (doc.reviewedAt != null)
@@ -788,7 +788,7 @@ class _AdminDocumentCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 10.5,
                         color: AdminColors.textSecondary,
-                        fontFamily: 'Cairo',
+                        fontFamily: 'Tajawal',
                       ),
                     ),
                   if (doc.status == DocumentStatus.rejected &&
@@ -800,7 +800,7 @@ class _AdminDocumentCard extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 11,
                           color: AdminColors.error,
-                          fontFamily: 'Cairo',
+                          fontFamily: 'Tajawal',
                         ),
                       ),
                     ),
@@ -856,7 +856,7 @@ class _AdminDocumentCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 11,
                             color: AdminColors.textSecondary,
-                            fontFamily: 'Cairo',
+                            fontFamily: 'Tajawal',
                           ),
                         ),
                         const SizedBox(height: 6),
@@ -895,7 +895,7 @@ class _AdminDocumentCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 color: AdminColors.textSecondary,
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
                 fontStyle: FontStyle.italic,
               ),
             ),
@@ -920,13 +920,13 @@ class _AdminDocumentCard extends StatelessWidget {
                     fontSize: 10.5,
                     fontWeight: FontWeight.bold,
                     color: AdminColors.textSecondary,
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                   ),
                 ),
                 const SizedBox(height: 4),
                 SelectableText(
                   text,
-                  style: const TextStyle(fontSize: 11.5, fontFamily: 'Cairo'),
+                  style: const TextStyle(fontSize: 11.5, fontFamily: 'Tajawal'),
                 ),
               ],
             ),
@@ -949,7 +949,7 @@ class _AdminDocumentCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 11,
                   color: AdminColors.textSecondary,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                 ),
               ),
             ],
@@ -963,7 +963,7 @@ class _AdminDocumentCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 11,
               color: AdminColors.warning,
-              fontFamily: 'Cairo',
+              fontFamily: 'Tajawal',
             ),
           ),
         );
@@ -977,7 +977,7 @@ class _AdminDocumentCard extends StatelessWidget {
     return ActionChip(
       label: Text(
         label,
-        style: TextStyle(fontSize: 11, fontFamily: 'Cairo', color: color),
+        style: TextStyle(fontSize: 11, fontFamily: 'Tajawal', color: color),
       ),
       backgroundColor: color.withValues(alpha: 0.1),
       side: BorderSide(color: color.withValues(alpha: 0.4)),

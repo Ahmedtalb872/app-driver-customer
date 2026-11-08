@@ -1,17 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'admin_colors.dart';
 
-/// Material 3 theme for the AL HODHOD admin dashboard - RTL Arabic, Cairo
-/// font (matches the mobile app's font so both brands feel related), dark/
-/// glass [AdminColors] throughout. `brightness: dark` matters beyond the
-/// color values: it's what keeps every stock Material widget that isn't
-/// explicitly restyled here (default icon tints, overlay colors, etc.)
-/// legible against a dark background instead of assuming a light one.
+/// Material 3 theme for the AL HODHOD admin dashboard - RTL Arabic,
+/// Tajawal font, dark/glass [AdminColors] throughout. `brightness: dark`
+/// matters beyond the color values: it's what keeps every stock Material
+/// widget that isn't explicitly restyled here (default icon tints, overlay
+/// colors, etc.) legible against a dark background instead of assuming a
+/// light one.
 class AdminTheme {
   AdminTheme._();
 
   static ThemeData get theme {
+    // Registers the real Tajawal font under the 'Tajawal' family name via
+    // google_fonts - every TextStyle(fontFamily: 'Tajawal') hardcoded below
+    // (and across lib/admin/'s screens) resolves through this same loaded
+    // family, so this one call is enough to make it render everywhere.
+    final tajawalTextTheme = GoogleFonts.tajawalTextTheme(
+      ThemeData(brightness: Brightness.dark).textTheme,
+    );
+
     final colorScheme = ColorScheme.fromSeed(
       seedColor: AdminColors.primary,
       brightness: Brightness.dark,
@@ -26,7 +35,7 @@ class AdminTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: AdminColors.background,
-      fontFamily: 'Cairo',
+      fontFamily: GoogleFonts.tajawal().fontFamily,
       appBarTheme: const AppBarTheme(
         backgroundColor: AdminColors.surface,
         foregroundColor: AdminColors.textPrimary,
@@ -36,7 +45,7 @@ class AdminTheme {
           color: AdminColors.textPrimary,
           fontWeight: FontWeight.bold,
           fontSize: 18,
-          fontFamily: 'Cairo',
+          fontFamily: 'Tajawal',
         ),
       ),
       cardTheme: CardThemeData(
@@ -58,7 +67,7 @@ class AdminTheme {
           ),
           textStyle: const TextStyle(
             fontWeight: FontWeight.bold,
-            fontFamily: 'Cairo',
+            fontFamily: 'Tajawal',
           ),
         ),
       ),
@@ -101,14 +110,14 @@ class AdminTheme {
         ),
         hintStyle: const TextStyle(
           color: AdminColors.textSecondary,
-          fontFamily: 'Cairo',
+          fontFamily: 'Tajawal',
         ),
         labelStyle: const TextStyle(
           color: AdminColors.textSecondary,
-          fontFamily: 'Cairo',
+          fontFamily: 'Tajawal',
         ),
       ),
-      textTheme: const TextTheme().apply(
+      textTheme: tajawalTextTheme.apply(
         bodyColor: AdminColors.textPrimary,
         displayColor: AdminColors.textPrimary,
       ),
@@ -117,11 +126,11 @@ class AdminTheme {
         headingTextStyle: const TextStyle(
           fontWeight: FontWeight.bold,
           color: AdminColors.textPrimary,
-          fontFamily: 'Cairo',
+          fontFamily: 'Tajawal',
         ),
         dataTextStyle: const TextStyle(
           color: AdminColors.textPrimary,
-          fontFamily: 'Cairo',
+          fontFamily: 'Tajawal',
         ),
         dividerThickness: 0.6,
       ),
@@ -147,7 +156,7 @@ class AdminTheme {
       chipTheme: ChipThemeData(
         backgroundColor: AdminColors.surfaceGlass,
         labelStyle: const TextStyle(
-          fontFamily: 'Cairo',
+          fontFamily: 'Tajawal',
           fontSize: 12,
           color: AdminColors.textPrimary,
         ),

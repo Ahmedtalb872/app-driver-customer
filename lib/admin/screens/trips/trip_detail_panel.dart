@@ -212,7 +212,7 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
           const SnackBar(
             content: Text(
               'تعذر حفظ التعديل على المسار.',
-              style: TextStyle(fontFamily: 'Cairo'),
+              style: TextStyle(fontFamily: 'Tajawal'),
             ),
           ),
         );
@@ -285,7 +285,7 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
           const SnackBar(
             content: Text(
               'تعذر إلغاء الرحلة.',
-              style: TextStyle(fontFamily: 'Cairo'),
+              style: TextStyle(fontFamily: 'Tajawal'),
             ),
           ),
         );
@@ -308,7 +308,7 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
           const SnackBar(
             content: Text(
               'تعذر بدء الرحلة.',
-              style: TextStyle(fontFamily: 'Cairo'),
+              style: TextStyle(fontFamily: 'Tajawal'),
             ),
           ),
         );
@@ -334,7 +334,7 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
           const SnackBar(
             content: Text(
               'تعذر تعيين الكابتن.',
-              style: TextStyle(fontFamily: 'Cairo'),
+              style: TextStyle(fontFamily: 'Tajawal'),
             ),
           ),
         );
@@ -365,7 +365,7 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                 ),
               ),
               const SizedBox(height: 16),
@@ -412,7 +412,7 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
                 const SizedBox(height: 16),
                 const Text(
                   'بيانات المستلم',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Tajawal'),
                 ),
                 const SizedBox(height: 8),
                 Wrap(
@@ -442,7 +442,7 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
                 const SizedBox(height: 16),
                 const Text(
                   'تقييم الزبون للكابتن',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Tajawal'),
                 ),
                 const SizedBox(height: 8),
                 _infoTile('التقييم', '${trip['customer_rating']} / 5 ⭐'),
@@ -451,7 +451,7 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
                   const SizedBox(height: 8),
                   Text(
                     trip['customer_rating_note'] as String,
-                    style: const TextStyle(fontSize: 13, fontFamily: 'Cairo'),
+                    style: const TextStyle(fontSize: 13, fontFamily: 'Tajawal'),
                   ),
                 ],
               ],
@@ -460,7 +460,7 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
                 'ملاحظات إدارية',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                 ),
               ),
               const SizedBox(height: 8),
@@ -533,7 +533,7 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
               children: [
                 const Text(
                   'المسار',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Tajawal'),
                 ),
                 if (_captainLat != null && _captainLng != null) ...[
                   const SizedBox(width: 8),
@@ -543,7 +543,7 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
                     'موقع الكابتن مباشر',
                     style: TextStyle(
                       fontSize: 11,
-                      fontFamily: 'Cairo',
+                      fontFamily: 'Tajawal',
                       color: AdminColors.success,
                     ),
                   ),
@@ -588,7 +588,7 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
         else
           const Text(
             'لا توجد إحداثيات مسجّلة لهذه الرحلة.',
-            style: TextStyle(fontFamily: 'Cairo', color: AdminColors.textSecondary),
+            style: TextStyle(fontFamily: 'Tajawal', color: AdminColors.textSecondary),
           ),
         const SizedBox(height: 12),
         if (_editingRoute) ...[
@@ -596,7 +596,7 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
             'اسحب العلامة لتصحيح الموقع - العنوان يتحدّث تلقائياً ويمكن تعديله يدوياً.',
             style: TextStyle(
               fontSize: 11,
-              fontFamily: 'Cairo',
+              fontFamily: 'Tajawal',
               color: AdminColors.textSecondary,
             ),
           ),
@@ -644,7 +644,7 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
             style: const TextStyle(
               fontSize: 11,
               color: AdminColors.textSecondary,
-              fontFamily: 'Cairo',
+              fontFamily: 'Tajawal',
             ),
           ),
           Text(
@@ -652,7 +652,7 @@ class _TripDetailPanelState extends State<TripDetailPanel> {
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
-              fontFamily: 'Cairo',
+              fontFamily: 'Tajawal',
             ),
           ),
         ],

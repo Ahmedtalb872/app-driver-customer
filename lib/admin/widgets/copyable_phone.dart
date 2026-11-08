@@ -14,12 +14,12 @@ class CopyablePhone extends StatelessWidget {
   Widget build(BuildContext context) {
     final value = phone;
     if (value == null || value.isEmpty) {
-      return const Text('-', style: TextStyle(fontFamily: 'Cairo'));
+      return const Text('-', style: TextStyle(fontFamily: 'Tajawal'));
     }
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(value, style: const TextStyle(fontFamily: 'Cairo')),
+        Text(value, style: const TextStyle(fontFamily: 'Tajawal')),
         const SizedBox(width: 4),
         InkWell(
           borderRadius: BorderRadius.circular(16),
@@ -28,7 +28,7 @@ class CopyablePhone extends StatelessWidget {
             if (!context.mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('تم نسخ الرقم', style: TextStyle(fontFamily: 'Cairo')),
+                content: Text('تم نسخ الرقم', style: TextStyle(fontFamily: 'Tajawal')),
                 duration: Duration(seconds: 1),
               ),
             );

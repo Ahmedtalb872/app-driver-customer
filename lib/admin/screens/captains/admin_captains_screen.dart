@@ -169,7 +169,7 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
                   child: Text(
                     'هذا الكابتن لم يحدد نوع مركبته بعد، لذلك لا تصله أي '
                     'طلبات مشاوير إطلاقاً.',
-                    style: TextStyle(fontFamily: 'Cairo', fontSize: 12),
+                    style: TextStyle(fontFamily: 'Tajawal', fontSize: 12),
                   ),
                 ),
               DropdownButtonFormField<String>(
@@ -306,7 +306,7 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
       SnackBar(
         content: Text(
           message ?? 'حدث خطأ، تحقق من صلاحياتك وحاول مجدداً.',
-          style: const TextStyle(fontFamily: 'Cairo'),
+          style: const TextStyle(fontFamily: 'Tajawal'),
         ),
       ),
     );
@@ -431,7 +431,7 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
               ),
               Text(
                 'من ${_offset + 1}',
-                style: const TextStyle(fontFamily: 'Cairo'),
+                style: const TextStyle(fontFamily: 'Tajawal'),
               ),
               IconButton(
                 onPressed: _captains.length < _pageSize
@@ -456,7 +456,7 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(_error!, style: const TextStyle(fontFamily: 'Cairo')),
+            Text(_error!, style: const TextStyle(fontFamily: 'Tajawal')),
             const SizedBox(height: 8),
             ElevatedButton(
               onPressed: _load,
@@ -470,7 +470,7 @@ class _AdminCaptainsScreenState extends State<AdminCaptainsScreen> {
       return const Center(
         child: Text(
           'لا يوجد كباتن مطابقون.',
-          style: TextStyle(fontFamily: 'Cairo'),
+          style: TextStyle(fontFamily: 'Tajawal'),
         ),
       );
     }
