@@ -192,11 +192,14 @@ class AdminSidebar extends StatelessWidget {
                   const SizedBox(width: 10),
                   const Expanded(
                     child: Text(
-                      'الهدهد',
+                      'AL HODHOD',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: AdminColors.textPrimary,
                         fontWeight: FontWeight.bold,
-                        fontSize: 18,
+                        fontSize: 16,
+                        letterSpacing: 0.5,
                         fontFamily: 'Tajawal',
                       ),
                     ),
