@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../core/services/geocoding_service.dart';
 import '../../core/services/ride_repository.dart';
+import '../../core/services/saved_places_repository.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/models.dart';
 import '../../providers/app_state_provider.dart';
@@ -251,63 +252,206 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
 
   Widget _buildDashboardView() {
     return SingleChildScrollView(
-      child: Column(
-        children: [
-          // Full-bleed brand header - extends behind the status bar (hence
-          // SafeArea below is `top: false`, this Container handles that
-          // inset itself) so the gold reaches the very top edge instead of
-          // stopping short of it.
-          Container(
-            width: double.infinity,
-            color: AppColors.accent,
-            padding: EdgeInsets.only(
-              top: MediaQuery.of(context).padding.top + 14,
-              bottom: 14,
-            ),
-            child: const Text(
-              'Al-hudhud-lizeboun',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'Tajawal',
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                color: Colors.white,
-                letterSpacing: 0.5,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const _LogoBadge(),
+                  _CircleIconButton(
+                    icon: _isLocating
+                        ? Icons.hourglass_empty
+                        : Icons.my_location_rounded,
+                    onTap: _isLocating ? null : _determinePickup,
+                  ),
+                ],
               ),
+              const SizedBox(height: 12),
+              _buildLocationBar(),
+              const SizedBox(height: 20),
+              _buildHeroBanner(),
+              const SizedBox(height: 20),
+              _buildServiceTilesGrid(),
+              const SizedBox(height: 24),
+              _buildSavedPlacesSection(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Promo-style banner above the service grid - the "تنقّل بسهولة / اطلب
+  /// الآن" hook that opens [TripPlannerScreen] directly, same screen the
+  /// "where to" tile below also opens. Purely a second, more prominent
+  /// entry point to the single most common action on this screen.
+  Widget _buildHeroBanner() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [AppColors.primary, AppColors.primaryDark],
+        ),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: Stack(
+        children: [
+          Positioned(
+            left: -18,
+            bottom: -22,
+            child: Icon(
+              Icons.directions_car_filled_rounded,
+              size: 130,
+              color: Colors.white.withOpacity(0.14),
             ),
           ),
-          SafeArea(
-            top: false,
+          Padding(
+            padding: const EdgeInsets.all(22),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const _LogoBadge(),
-                      _CircleIconButton(
-                        icon: _isLocating
-                            ? Icons.hourglass_empty
-                            : Icons.my_location_rounded,
-                        onTap: _isLocating ? null : _determinePickup,
-                      ),
-                    ],
+                const Text(
+                  'تنقّل بكل سهولة',
+                  style: TextStyle(
+                    fontFamily: 'Tajawal',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22,
+                    color: Colors.white,
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-                  child: _buildLocationBar(),
+                const SizedBox(height: 6),
+                Text(
+                  'رحلات آمنة وسريعة في أي وقت',
+                  style: TextStyle(
+                    fontFamily: 'Tajawal',
+                    fontSize: 13,
+                    color: Colors.white.withOpacity(0.85),
+                  ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                  child: _buildServiceCards(),
+                const SizedBox(height: 18),
+                ElevatedButton(
+                  onPressed: _openTripPlanner,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: AppColors.primaryDark,
+                    shape: const StadiumBorder(),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 22,
+                      vertical: 12,
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'اطلب الآن',
+                        style: TextStyle(
+                          fontFamily: 'Tajawal',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      SizedBox(width: 6),
+                      Icon(Icons.arrow_forward_ios_rounded, size: 13),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  /// The four real entry points this screen offers, as a 2x2 grid of big
+  /// icon tiles (replaces the previous single-column list of rows) - same
+  /// visual language as the reference design's Courses/Livraison/Voyage
+  /// tiles, sized to this app's actual feature set instead of inventing
+  /// ones it doesn't have (there's no restaurant ordering here).
+  Widget _buildServiceTilesGrid() {
+    final tiles = [
+      _TileData(
+        icon: Icons.local_taxi_rounded,
+        color: AppColors.primary,
+        label: 'رحلة',
+        onTap: _openTripPlanner,
+      ),
+      _TileData(
+        icon: Icons.local_shipping_rounded,
+        color: AppColors.accent,
+        label: 'توصيل',
+        onTap: _startDeliveryRequest,
+      ),
+      _TileData(
+        icon: Icons.handshake_rounded,
+        color: AppColors.success,
+        label: 'اشتراك كابتن',
+        onTap: _openCaptainsBrowse,
+      ),
+      _TileData(
+        icon: Icons.payments_rounded,
+        color: AppColors.primaryDark,
+        label: 'سلفلي',
+        onTap: _openSelefli,
+      ),
+    ];
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 14,
+      crossAxisSpacing: 14,
+      childAspectRatio: 1.3,
+      children: [for (final t in tiles) _ServiceTile(data: t)],
+    );
+  }
+
+  /// Horizontal shortcut row for this customer's saved places (home/work/
+  /// other - see [SavedPlacesRepository]) - hidden entirely while none are
+  /// saved yet rather than showing an empty section. Each chip just opens
+  /// the trip planner today; it doesn't yet pre-fill that place as the
+  /// destination (TripPlannerScreen takes no initial-destination param).
+  Widget _buildSavedPlacesSection() {
+    return FutureBuilder<List<SavedPlace>>(
+      future: SavedPlacesRepository.instance.fetchMine(),
+      builder: (context, snapshot) {
+        final places = snapshot.data ?? const [];
+        if (places.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'الأماكن المحفوظة',
+              style: TextStyle(
+                fontFamily: 'Tajawal',
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: AppColors.darkText,
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 92,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: places.length,
+                separatorBuilder: (context, index) => const SizedBox(width: 10),
+                itemBuilder: (context, index) =>
+                    _SavedPlaceChip(place: places[index], onTap: _openTripPlanner),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -383,49 +527,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
           ),
         ),
       ),
-    );
-  }
-
-  /// Each service is its own elevated card with a gap between them
-  /// (previously one card with hairline dividers between rows) - easier to
-  /// scan and matches the spaced-card style used elsewhere in the app
-  /// (e.g. WalletScreen's Selefli/subscription banners).
-  Widget _buildServiceCards() {
-    final l10n = AppLocalizations.of(context)!;
-    return Column(
-      children: [
-        _ServiceCard(
-          onTap: _openTripPlanner,
-          leadingColor: AppColors.accent,
-          leadingIcon: Icons.search_rounded,
-          title: l10n.whereToTitle,
-          subtitle: l10n.whereToSubtitle,
-        ),
-        const SizedBox(height: 12),
-        _ServiceCard(
-          onTap: _startDeliveryRequest,
-          leadingColor: AppColors.accent,
-          leadingIcon: Icons.local_shipping_rounded,
-          title: l10n.deliveryServiceTitle,
-          subtitle: l10n.deliveryServiceSubtitle,
-        ),
-        const SizedBox(height: 12),
-        _ServiceCard(
-          onTap: _openCaptainsBrowse,
-          leadingColor: AppColors.accent,
-          leadingIcon: Icons.handshake_rounded,
-          title: l10n.subscriptionTitle,
-          subtitle: l10n.subscriptionSubtitle,
-        ),
-        const SizedBox(height: 12),
-        _ServiceCard(
-          onTap: _openSelefli,
-          leadingColor: AppColors.accent,
-          leadingIcon: Icons.payments_rounded,
-          title: l10n.selefliTitle,
-          subtitle: l10n.selefliSubtitle,
-        ),
-      ],
     );
   }
 
@@ -562,78 +663,100 @@ class _IconBadge extends StatelessWidget {
   }
 }
 
-/// One of the home dashboard's service entry points - its own elevated,
-/// rounded card (see [_CustomerHomeScreenState._buildServiceCards]).
-class _ServiceCard extends StatelessWidget {
-  final VoidCallback? onTap;
-  final Color leadingColor;
-  final IconData leadingIcon;
-  final String title;
-  final String subtitle;
-
-  /// Replaces the trailing arrow - used to show a small spinner in place of
-  /// it while a card's action is already running, instead of just
-  /// disabling the whole card with no feedback.
-  final Widget? trailing;
-
-  const _ServiceCard({
+class _TileData {
+  final IconData icon;
+  final Color color;
+  final String label;
+  final VoidCallback onTap;
+  const _TileData({
+    required this.icon,
+    required this.color,
+    required this.label,
     required this.onTap,
-    required this.leadingColor,
-    required this.leadingIcon,
-    required this.title,
-    required this.subtitle,
-    this.trailing,
   });
+}
+
+/// One of the home dashboard's four big service tiles (see
+/// [_CustomerHomeScreenState._buildServiceTilesGrid]) - a colored icon
+/// chip over a short label, the same "illustration tile" language as the
+/// reference design's service grid.
+class _ServiceTile extends StatelessWidget {
+  final _TileData data;
+  const _ServiceTile({required this.data});
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(20),
-      elevation: 6,
-      shadowColor: AppColors.primaryDark.withOpacity(0.2),
+      elevation: 4,
+      shadowColor: AppColors.primaryDark.withOpacity(0.15),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
+        onTap: data.onTap,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _IconBadge(icon: data.icon, color: data.color, size: 52, iconSize: 26),
+            const SizedBox(height: 10),
+            Text(
+              data.label,
+              style: const TextStyle(
+                fontFamily: 'Tajawal',
+                fontWeight: FontWeight.bold,
+                fontSize: 13.5,
+                color: AppColors.darkText,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One saved-place shortcut card (see
+/// [_CustomerHomeScreenState._buildSavedPlacesSection]).
+class _SavedPlaceChip extends StatelessWidget {
+  final SavedPlace place;
+  final VoidCallback onTap;
+  const _SavedPlaceChip({required this.place, required this.onTap});
+
+  IconData get _icon => switch (place.label) {
+    'home' => Icons.home_rounded,
+    'work' => Icons.work_rounded,
+    _ => Icons.place_rounded,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      elevation: 3,
+      shadowColor: AppColors.primaryDark.withOpacity(0.12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
+        child: Container(
+          width: 150,
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _IconBadge(icon: leadingIcon, color: leadingColor, size: 42, iconSize: 20),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontFamily: 'Tajawal',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14.5,
-                        color: AppColors.darkText,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: 'Tajawal',
-                        fontSize: 11.5,
-                        color: AppColors.secondaryText,
-                      ),
-                    ),
-                  ],
+              _IconBadge(icon: _icon, color: AppColors.primary, size: 30, iconSize: 15),
+              const Spacer(),
+              Text(
+                place.displayLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontFamily: 'Tajawal',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12.5,
+                  color: AppColors.darkText,
                 ),
               ),
-              trailing ??
-                  const Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 14,
-                    color: AppColors.secondaryText,
-                  ),
             ],
           ),
         ),
