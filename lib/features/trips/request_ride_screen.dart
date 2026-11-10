@@ -402,7 +402,14 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
             if (route != null) ...[
               const Divider(height: 24),
               Text(
-                'المسافة التقريبية ${route.distanceKm.toStringAsFixed(1)} كم - '
+                // Only ever says "تقريبية" (approximate) for the straight-
+                // line HaversineRouteEstimator fallback - once a real road
+                // route comes back from GoogleDirectionsRouteEstimator
+                // (isEstimate: false), this reads as an actual road
+                // distance instead, so testing on a real device makes it
+                // obvious at a glance which one priced this ride.
+                '${route.isEstimate ? 'المسافة التقريبية' : 'مسافة الطريق'} '
+                '${route.distanceKm.toStringAsFixed(1)} كم - '
                 'حوالي ${route.durationMinutes} دقيقة',
                 style: const TextStyle(
                   fontFamily: 'Tajawal',

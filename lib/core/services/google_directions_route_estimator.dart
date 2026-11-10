@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
@@ -35,7 +35,15 @@ class GoogleDirectionsRouteEstimator {
     required LatLng pickup,
     required LatLng destination,
   }) async {
-    if (kIsWeb || apiKey.isEmpty) return null;
+    if (kIsWeb) return null;
+    if (apiKey.isEmpty) {
+      debugPrint(
+        'GoogleDirectionsRouteEstimator: GOOGLE_MAPS_API_KEY is empty - '
+        'falling back to the straight-line estimate for every ride until '
+        'it is set in .env',
+      );
+      return null;
+    }
 
     try {
       final uri = Uri.https(
@@ -51,10 +59,30 @@ class GoogleDirectionsRouteEstimator {
       final response = await http
           .get(uri, headers: googleApiAndroidHeaders())
           .timeout(const Duration(seconds: 8));
-      if (response.statusCode != 200) return null;
+      if (response.statusCode != 200) {
+        // Visible via `adb logcat` or `flutter run`'s console - every call
+        // to this falls back to HaversineRouteEstimator's straight line on
+        // any failure (see the class doc comment), completely silently
+        // otherwise, which made a real misconfiguration (API not enabled,
+        // billing not set up, a bad key restriction, ...) indistinguishable
+        // from "it just works sometimes" - this one HTTP line usually names
+        // the exact cause in [response.body] (e.g. "This API project is not
+        // authorized to use this API", "You must enable Billing").
+        debugPrint(
+          'GoogleDirectionsRouteEstimator: HTTP ${response.statusCode}: '
+          '${response.body}',
+        );
+        return null;
+      }
 
       final body = jsonDecode(response.body) as Map<String, dynamic>;
-      if (body['status'] != 'OK') return null;
+      if (body['status'] != 'OK') {
+        debugPrint(
+          'GoogleDirectionsRouteEstimator: status=${body['status']} '
+          'error_message=${body['error_message']}',
+        );
+        return null;
+      }
 
       final routes = body['routes'] as List;
       if (routes.isEmpty) return null;
@@ -74,7 +102,8 @@ class GoogleDirectionsRouteEstimator {
         polyline: _decodePolyline(encodedPolyline),
         isEstimate: false,
       );
-    } catch (_) {
+    } catch (e) {
+      debugPrint('GoogleDirectionsRouteEstimator: $e');
       return null;
     }
   }
