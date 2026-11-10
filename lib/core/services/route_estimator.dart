@@ -50,10 +50,24 @@ class HaversineRouteEstimator extends RouteEstimator {
 
   static const _earthRadiusKm = 6371.0;
 
+  /// A raw great-circle line is always shorter than the road distance a
+  /// driver actually covers (it ignores every curve, detour and one-way
+  /// street), which silently undercharges every ride priced from this
+  /// fallback whenever [GoogleDirectionsRouteEstimator] fails or is
+  /// unavailable (no key, no network, web - see its own doc comment) -
+  /// reported as the quoted price sometimes coming in noticeably lower
+  /// than other apps' for the same trip. 1.3x is the commonly used rule of
+  /// thumb for the straight-line-to-road-distance ratio in a mixed
+  /// urban/suburban street grid (real routing, when it succeeds, is still
+  /// authoritative - this only makes the *fallback* a closer stand-in for
+  /// it instead of a lower bound).
+  static const _roadDistanceCorrectionFactor = 1.3;
+
   @override
   RouteEstimate? estimate({required LatLng pickup, LatLng? destination}) {
     if (destination == null) return null;
-    final distanceKm = _haversineKm(pickup, destination);
+    final distanceKm =
+        _haversineKm(pickup, destination) * _roadDistanceCorrectionFactor;
     final durationMinutes = ((distanceKm / averageSpeedKmh) * 60).round().clamp(
       1,
       999,
