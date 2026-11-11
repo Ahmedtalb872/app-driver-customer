@@ -45,21 +45,6 @@ class AuthWelcomeScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // A single soft brand-teal curve along the bottom edge - just
-          // enough presence to echo the splash screen without competing
-          // with it (that one uses the full two-tone curve).
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: IgnorePointer(
-              child: SizedBox(
-                height: 140,
-                width: double.infinity,
-                child: CustomPaint(painter: _WelcomeCurvePainter()),
-              ),
-            ),
-          ),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
@@ -133,29 +118,4 @@ class AuthWelcomeScreen extends StatelessWidget {
       ),
     );
   }
-}
-
-/// A single, low-opacity teal wave hugging the bottom edge - deliberately
-/// simpler than the splash screen's two-tone curves (this screen already
-/// has two colored buttons doing the heavy branding lifting).
-class _WelcomeCurvePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = AppColors.primary.withOpacity(0.08);
-    final path = Path()
-      ..moveTo(0, size.height * 0.55)
-      ..quadraticBezierTo(
-        size.width * 0.5,
-        size.height * 0.1,
-        size.width,
-        size.height * 0.45,
-      )
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
-      ..close();
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _WelcomeCurvePainter oldDelegate) => false;
 }
