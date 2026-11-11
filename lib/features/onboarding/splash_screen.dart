@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -31,47 +30,26 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
-  static const _brandText = 'Al hudhud lizeboun';
-
   late final AnimationController _controller;
-  late final Animation<double> _logoFade;
-  late final Animation<double> _logoScale;
   late final Animation<double> _contentFade;
-  late final AnimationController _brandController;
   Timer? _navigationTimer;
 
   @override
   void initState() {
     super.initState();
-    // A single, short fade+scale entrance - no rotation, no bounce/overshoot
-    // curve, and it never repeats.
+    // Only drives the loading indicator's fade-in now - the logo and
+    // animated brand text that used to show here are gone.
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 700),
     );
 
-    _logoFade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
-    _logoScale = Tween<double>(
-      begin: 0.92,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
     _contentFade = CurvedAnimation(
       parent: _controller,
       curve: const Interval(0.4, 1.0, curve: Curves.easeOut),
     );
 
-    // Separate controller so "Al hudhud lizeboun" types itself out letter by
-    // letter instead of just fading in with everything else - started a
-    // beat after the logo so the two don't compete for attention at once.
-    _brandController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    );
-
     _controller.forward();
-    Future.delayed(const Duration(milliseconds: 350), () {
-      if (mounted) _brandController.forward();
-    });
 
     _navigationTimer = Timer(const Duration(milliseconds: 2600), () {
       if (!mounted) return;
@@ -83,7 +61,6 @@ class _SplashScreenState extends State<SplashScreen>
   void dispose() {
     _navigationTimer?.cancel();
     _controller.dispose();
-    _brandController.dispose();
     super.dispose();
   }
 
@@ -220,17 +197,6 @@ class _SplashScreenState extends State<SplashScreen>
           final width = constraints.maxWidth;
           final height = constraints.maxHeight;
 
-          // The logo gets a generous, responsive slice of the available
-          // space - never a fixed height box, so BoxFit.contain always has
-          // room to lay out the full image without cropping it. Bounded by
-          // height as well as width so short/wide viewports (tablets in
-          // landscape, split-screen, ...) never push the content below the
-          // fold - the SingleChildScrollView further down is only a safety
-          // net for anything still tighter than that.
-          final logoWidth = math
-              .min(width * 0.55, height * 0.3)
-              .clamp(140.0, 300.0);
-          final taglineFontSize = (width * 0.038).clamp(13.0, 17.0);
           final curveHeight = (height * 0.2).clamp(110.0, 200.0);
 
           return Stack(
@@ -254,79 +220,11 @@ class _SplashScreenState extends State<SplashScreen>
               SafeArea(
                 child: Column(
                   children: [
-                    Expanded(
-                      child: LayoutBuilder(
-                        builder: (context, innerConstraints) {
-                          return SingleChildScrollView(
-                            child: ConstrainedBox(
-                              constraints: BoxConstraints(
-                                minHeight: innerConstraints.maxHeight,
-                              ),
-                              child: Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 24,
-                                    vertical: 16,
-                                  ),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      FadeTransition(
-                                        opacity: _logoFade,
-                                        child: ScaleTransition(
-                                          scale: _logoScale,
-                                          child: ConstrainedBox(
-                                            constraints: BoxConstraints(
-                                              maxWidth: logoWidth,
-                                            ),
-                                            child: Image.asset(
-                                              // Icon-only crop of the full
-                                              // lockup (no baked-in "الهدهد"
-                                              // text) - the brand name below
-                                              // is now its own animated
-                                              // widget instead.
-                                              'assets/images/al-houdhoud-logo-icon.png',
-                                              width: logoWidth,
-                                              fit: BoxFit.contain,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      SizedBox(height: logoWidth * 0.1),
-                                      Directionality(
-                                        textDirection: TextDirection.ltr,
-                                        child: AnimatedBuilder(
-                                          animation: _brandController,
-                                          builder: (context, child) {
-                                            final visibleCount =
-                                                (_brandText.length *
-                                                        _brandController.value)
-                                                    .ceil()
-                                                    .clamp(0, _brandText.length);
-                                            return Text(
-                                              _brandText.substring(
-                                                0,
-                                                visibleCount,
-                                              ),
-                                              style: TextStyle(
-                                                fontSize: taglineFontSize + 2,
-                                                fontWeight: FontWeight.bold,
-                                                letterSpacing: 1.2,
-                                                color: AppColors.primaryDark,
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                    // No logo or brand text here anymore - the first thing
+                    // this screen shows now is just the loading indicator
+                    // below, after whatever blank beat this Expanded leaves
+                    // at the top.
+                    const Expanded(child: SizedBox.shrink()),
                     FadeTransition(
                       opacity: _contentFade,
                       child: Padding(
