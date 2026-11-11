@@ -19,11 +19,17 @@ class VersionGateService {
   /// just proceed rather than get stuck).
   static Future<String?> requiredMinVersionOrNull() async {
     try {
+      // A hung connection (no response ever arriving, rather than a quick
+      // failure) would otherwise sit on this await forever - nothing below
+      // would then run, leaving the splash screen stuck indefinitely
+      // instead of falling through to "no update required" the way a fast
+      // failure already does via the catch block below.
       final row = await SupabaseConfig.client
           .from('app_settings')
           .select('min_supported_version, force_update')
           .eq('id', true)
-          .single();
+          .single()
+          .timeout(const Duration(seconds: 6));
 
       final forceUpdate = row['force_update'] as bool? ?? false;
       final minVersion = row['min_supported_version'] as String?;

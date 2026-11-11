@@ -126,10 +126,9 @@ class AuthService {
   /// `SessionGuardService`) and signs itself out the moment it sees one
   /// that isn't its own.
   Future<void> setActiveSession(String sessionId) async {
-    await SupabaseConfig.client.rpc(
-      'set_active_session',
-      params: {'p_session_id': sessionId},
-    );
+    await SupabaseConfig.client
+        .rpc('set_active_session', params: {'p_session_id': sessionId})
+        .timeout(const Duration(seconds: 6));
   }
 
   /// Requests a verification code for [phone]. This is Hudhud's "normal
@@ -202,11 +201,17 @@ class AuthService {
     final uid = currentUser?.id;
     if (uid == null) return null;
 
+    // Called on every app open (see SplashScreen._navigateNext) for an
+    // already-signed-in user - a hung connection here (no response ever
+    // arriving, rather than a quick failure) would otherwise leave the
+    // splash screen stuck indefinitely instead of falling through to the
+    // welcome screen the way a fast failure already does there.
     final row = await SupabaseConfig.client
         .from('profiles')
         .select('role')
         .eq('id', uid)
-        .maybeSingle();
+        .maybeSingle()
+        .timeout(const Duration(seconds: 6));
 
     return AppRoleX.fromValue(row?['role'] as String?);
   }
@@ -223,7 +228,8 @@ class AuthService {
         .from('profiles')
         .select('full_name')
         .eq('id', uid)
-        .maybeSingle();
+        .maybeSingle()
+        .timeout(const Duration(seconds: 6));
 
     return (row?['full_name'] as String?)?.trim() ?? '';
   }
