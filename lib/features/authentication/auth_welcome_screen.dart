@@ -42,7 +42,7 @@ class AuthWelcomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
           // A single soft brand-teal curve along the bottom edge - just
@@ -65,7 +65,7 @@ class AuthWelcomeScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
               child: Column(
                 children: [
-                  const Spacer(),
+                  const Spacer(flex: 2),
                   // Soft radial teal glow behind the logo. The logo artwork
                   // itself is a wide composition (fanned feathers, the car,
                   // the wordmark below it) rather than a centered circular
@@ -112,7 +112,7 @@ class AuthWelcomeScreen extends StatelessWidget {
                       color: AppColors.secondaryText,
                     ),
                   ),
-                  const Spacer(),
+                  const Spacer(flex: 2),
                   ElevatedButton(
                     onPressed: () =>
                         _goToPhoneLogin(context, returningUser: false),
@@ -124,7 +124,7 @@ class AuthWelcomeScreen extends StatelessWidget {
                         _goToPhoneLogin(context, returningUser: true),
                     child: Text(l10n.haveAccount),
                   ),
-                  const SizedBox(height: 12),
+                  const Spacer(flex: 1),
                 ],
               ),
             ),
