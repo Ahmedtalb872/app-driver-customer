@@ -32,14 +32,10 @@ class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
   static const _brandText = 'Al hudhud lizeboun';
 
-  // Drives the loading indicator's fade-in, independent of the HZ/logo
-  // phases below.
+  // Drives the loading indicator's fade-in, independent of the logo/brand
+  // animations below.
   late final AnimationController _controller;
   late final Animation<double> _contentFade;
-
-  // First thing shown on open: a brief "HZ" mark, before the full logo and
-  // brand name take over (see _showIntro/_phaseTimer below).
-  bool _showIntro = true;
 
   late final AnimationController _logoController;
   late final Animation<double> _logoFade;
@@ -51,7 +47,6 @@ class _SplashScreenState extends State<SplashScreen>
   late final AnimationController _brandController;
 
   Timer? _navigationTimer;
-  Timer? _phaseTimer;
 
   @override
   void initState() {
@@ -81,16 +76,12 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(milliseconds: 900),
     );
 
-    _phaseTimer = Timer(const Duration(milliseconds: 800), () {
-      if (!mounted) return;
-      setState(() => _showIntro = false);
-      _logoController.forward();
-      Future.delayed(const Duration(milliseconds: 350), () {
-        if (mounted) _brandController.forward();
-      });
+    _logoController.forward();
+    Future.delayed(const Duration(milliseconds: 350), () {
+      if (mounted) _brandController.forward();
     });
 
-    _navigationTimer = Timer(const Duration(milliseconds: 2900), () {
+    _navigationTimer = Timer(const Duration(milliseconds: 2600), () {
       if (!mounted) return;
       unawaited(_navigateNext());
     });
@@ -99,7 +90,6 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void dispose() {
     _navigationTimer?.cancel();
-    _phaseTimer?.cancel();
     _controller.dispose();
     _logoController.dispose();
     _brandController.dispose();
@@ -276,86 +266,71 @@ class _SplashScreenState extends State<SplashScreen>
                     Expanded(
                       child: LayoutBuilder(
                         builder: (context, innerConstraints) {
-                          return AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 450),
-                            child: _showIntro
-                                ? const _HzMark(key: ValueKey('hz'))
-                                : SingleChildScrollView(
-                                    key: const ValueKey('brand'),
-                                    child: ConstrainedBox(
-                                      constraints: BoxConstraints(
-                                        minHeight: innerConstraints.maxHeight,
-                                      ),
-                                      child: Center(
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 24,
-                                            vertical: 16,
-                                          ),
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              FadeTransition(
-                                                opacity: _logoFade,
-                                                child: ScaleTransition(
-                                                  scale: _logoScale,
-                                                  child: ConstrainedBox(
-                                                    constraints: BoxConstraints(
-                                                      maxWidth: logoWidth,
-                                                    ),
-                                                    child: Image.asset(
-                                                      // Icon-only crop of the
-                                                      // full lockup (no
-                                                      // baked-in "الهدهد"
-                                                      // text) - the brand
-                                                      // name below is its
-                                                      // own animated widget.
-                                                      'assets/images/al-houdhoud-logo-icon.png',
-                                                      width: logoWidth,
-                                                      fit: BoxFit.contain,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                              SizedBox(height: logoWidth * 0.1),
-                                              Directionality(
-                                                textDirection: TextDirection.ltr,
-                                                child: AnimatedBuilder(
-                                                  animation: _brandController,
-                                                  builder: (context, child) {
-                                                    final visibleCount =
-                                                        (_brandText.length *
-                                                                _brandController
-                                                                    .value)
-                                                            .ceil()
-                                                            .clamp(
-                                                              0,
-                                                              _brandText.length,
-                                                            );
-                                                    return Text(
-                                                      _brandText.substring(
-                                                        0,
-                                                        visibleCount,
-                                                      ),
-                                                      style: TextStyle(
-                                                        fontSize:
-                                                            taglineFontSize + 2,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        letterSpacing: 1.2,
-                                                        color:
-                                                            AppColors.primaryDark,
-                                                      ),
-                                                    );
-                                                  },
-                                                ),
-                                              ),
-                                            ],
+                          return SingleChildScrollView(
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                minHeight: innerConstraints.maxHeight,
+                              ),
+                              child: Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 16,
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      FadeTransition(
+                                        opacity: _logoFade,
+                                        child: ScaleTransition(
+                                          scale: _logoScale,
+                                          child: ConstrainedBox(
+                                            constraints: BoxConstraints(
+                                              maxWidth: logoWidth,
+                                            ),
+                                            child: Image.asset(
+                                              // Icon-only crop of the full
+                                              // lockup (no baked-in "الهدهد"
+                                              // text) - the brand name below
+                                              // is its own animated widget.
+                                              'assets/images/al-houdhoud-logo-icon.png',
+                                              width: logoWidth,
+                                              fit: BoxFit.contain,
+                                            ),
                                           ),
                                         ),
                                       ),
-                                    ),
+                                      SizedBox(height: logoWidth * 0.1),
+                                      Directionality(
+                                        textDirection: TextDirection.ltr,
+                                        child: AnimatedBuilder(
+                                          animation: _brandController,
+                                          builder: (context, child) {
+                                            final visibleCount =
+                                                (_brandText.length *
+                                                        _brandController.value)
+                                                    .ceil()
+                                                    .clamp(0, _brandText.length);
+                                            return Text(
+                                              _brandText.substring(
+                                                0,
+                                                visibleCount,
+                                              ),
+                                              style: TextStyle(
+                                                fontSize: taglineFontSize + 2,
+                                                fontWeight: FontWeight.bold,
+                                                letterSpacing: 1.2,
+                                                color: AppColors.primaryDark,
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ],
                                   ),
+                                ),
+                              ),
+                            ),
                           );
                         },
                       ),
@@ -400,39 +375,6 @@ class _SplashScreenState extends State<SplashScreen>
             ],
           );
         },
-      ),
-    );
-  }
-}
-
-/// The very first thing shown when the app opens - a plain two-letter
-/// mark, up before the full logo and animated brand name take over (see
-/// `_showIntro`/`_phaseTimer` in [_SplashScreenState]).
-class _HzMark extends StatelessWidget {
-  const _HzMark({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 96,
-      height: 96,
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.primary, AppColors.primaryDark],
-        ),
-      ),
-      alignment: Alignment.center,
-      child: const Text(
-        'HZ',
-        style: TextStyle(
-          fontSize: 34,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-          letterSpacing: 1,
-        ),
       ),
     );
   }
