@@ -51,33 +51,6 @@ class AuthWelcomeScreen extends StatelessWidget {
               child: Column(
                 children: [
                   const Spacer(flex: 2),
-                  // Soft radial teal glow behind the logo. The logo artwork
-                  // itself is a wide composition (fanned feathers, the car,
-                  // the wordmark below it) rather than a centered circular
-                  // mark, so it must never be forced into a circle - a
-                  // ClipOval + BoxFit.cover here previously cropped off most
-                  // of the feathers and the car, leaving barely more than a
-                  // sliver of the artwork visible. BoxFit.contain in a plain
-                  // (unclipped) box always shows it in full.
-                  Container(
-                    width: 150,
-                    height: 150,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          AppColors.primary.withOpacity(0.12),
-                          AppColors.primary.withOpacity(0.0),
-                        ],
-                      ),
-                    ),
-                    child: Image.asset(
-                      'assets/images/al-houdhoud-logo-mark.png',
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
                   Text(
                     l10n.welcomeTitle,
                     style: const TextStyle(
