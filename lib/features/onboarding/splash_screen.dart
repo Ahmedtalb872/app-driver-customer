@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/auth/app_role.dart';
 import '../../core/auth/auth_service.dart';
@@ -31,11 +30,14 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
+  static const _brandText = 'Al hudhud lizeboun';
+
   late final AnimationController _controller;
   late final Animation<double> _logoFade;
   late final Animation<double> _logoScale;
   late final Animation<double> _contentFade;
+  late final AnimationController _brandController;
   Timer? _navigationTimer;
 
   @override
@@ -58,7 +60,18 @@ class _SplashScreenState extends State<SplashScreen>
       curve: const Interval(0.4, 1.0, curve: Curves.easeOut),
     );
 
+    // Separate controller so "Al hudhud lizeboun" types itself out letter by
+    // letter instead of just fading in with everything else - started a
+    // beat after the logo so the two don't compete for attention at once.
+    _brandController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+
     _controller.forward();
+    Future.delayed(const Duration(milliseconds: 350), () {
+      if (mounted) _brandController.forward();
+    });
 
     _navigationTimer = Timer(const Duration(milliseconds: 2600), () {
       if (!mounted) return;
@@ -70,6 +83,7 @@ class _SplashScreenState extends State<SplashScreen>
   void dispose() {
     _navigationTimer?.cancel();
     _controller.dispose();
+    _brandController.dispose();
     super.dispose();
   }
 
@@ -279,23 +293,29 @@ class _SplashScreenState extends State<SplashScreen>
                                         ),
                                       ),
                                       SizedBox(height: logoWidth * 0.1),
-                                      FadeTransition(
-                                        opacity: _contentFade,
-                                        child: Shimmer.fromColors(
-                                          baseColor: AppColors.primaryDark,
-                                          highlightColor: AppColors.accent,
-                                          period: const Duration(
-                                            milliseconds: 1800,
-                                          ),
-                                          child: Text(
-                                            'Al hudhud lizeboun',
-                                            style: TextStyle(
-                                              fontSize: taglineFontSize + 2,
-                                              fontWeight: FontWeight.bold,
-                                              letterSpacing: 1.2,
-                                              color: AppColors.primaryDark,
-                                            ),
-                                          ),
+                                      Directionality(
+                                        textDirection: TextDirection.ltr,
+                                        child: AnimatedBuilder(
+                                          animation: _brandController,
+                                          builder: (context, child) {
+                                            final visibleCount =
+                                                (_brandText.length *
+                                                        _brandController.value)
+                                                    .ceil()
+                                                    .clamp(0, _brandText.length);
+                                            return Text(
+                                              _brandText.substring(
+                                                0,
+                                                visibleCount,
+                                              ),
+                                              style: TextStyle(
+                                                fontSize: taglineFontSize + 2,
+                                                fontWeight: FontWeight.bold,
+                                                letterSpacing: 1.2,
+                                                color: AppColors.primaryDark,
+                                              ),
+                                            );
+                                          },
                                         ),
                                       ),
                                     ],
