@@ -156,7 +156,7 @@ class _DestinationMapPickerScreenState
                                     ? 'جارٍ تحديد العنوان...'
                                     : _address ?? ''),
                           style: const TextStyle(
-                            fontFamily: 'Tajawal',
+                            fontFamily: 'El Messiri',
                             fontSize: 13,
                             color: AppColors.darkText,
                           ),

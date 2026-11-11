@@ -174,7 +174,7 @@ class _LocationSearchFieldState extends State<LocationSearchField> {
         SnackBar(
           content: Text(
             AppLocalizations.of(context)!.locateMeError,
-            style: const TextStyle(fontFamily: 'Tajawal'),
+            style: const TextStyle(fontFamily: 'El Messiri'),
           ),
         ),
       );
@@ -192,7 +192,7 @@ class _LocationSearchFieldState extends State<LocationSearchField> {
         Text(
           widget.label,
           style: const TextStyle(
-            fontFamily: 'Tajawal',
+            fontFamily: 'El Messiri',
             fontSize: 10.5,
             color: AppColors.secondaryText,
           ),
@@ -208,7 +208,7 @@ class _LocationSearchFieldState extends State<LocationSearchField> {
                 onChanged: _onChanged,
                 textInputAction: TextInputAction.search,
                 onSubmitted: _runSearch,
-                style: const TextStyle(fontFamily: 'Tajawal', fontSize: 13),
+                style: const TextStyle(fontFamily: 'El Messiri', fontSize: 13),
                 decoration: InputDecoration(
                   isDense: true,
                   hintText: l10n.typePlaceNameHint,
@@ -227,7 +227,7 @@ class _LocationSearchFieldState extends State<LocationSearchField> {
                 ),
                 child: Text(
                   l10n.searchButton,
-                  style: const TextStyle(fontFamily: 'Tajawal', fontSize: 12),
+                  style: const TextStyle(fontFamily: 'El Messiri', fontSize: 12),
                 ),
               ),
             ),
@@ -277,13 +277,13 @@ class _LocationSearchFieldState extends State<LocationSearchField> {
                   dense: true,
                   title: Text(
                     option.title,
-                    style: const TextStyle(fontFamily: 'Tajawal', fontSize: 13),
+                    style: const TextStyle(fontFamily: 'El Messiri', fontSize: 13),
                   ),
                   subtitle: option.subtitle == null
                       ? null
                       : Text(
                           option.subtitle!,
-                          style: const TextStyle(fontFamily: 'Tajawal', fontSize: 11),
+                          style: const TextStyle(fontFamily: 'El Messiri', fontSize: 11),
                         ),
                   onTap: () => _select(option),
                 );
@@ -296,7 +296,7 @@ class _LocationSearchFieldState extends State<LocationSearchField> {
             child: Text(
               l10n.noSearchResults,
               style: const TextStyle(
-                fontFamily: 'Tajawal',
+                fontFamily: 'El Messiri',
                 fontSize: 11.5,
                 color: AppColors.secondaryText,
               ),

@@ -80,7 +80,7 @@ class CustomStateWidget extends StatelessWidget {
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: AppColors.darkText,
-                fontFamily: 'Tajawal',
+                fontFamily: 'El Messiri',
               ),
               textAlign: TextAlign.center,
             ),
@@ -90,7 +90,7 @@ class CustomStateWidget extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 14,
                 color: AppColors.secondaryText,
-                fontFamily: 'Tajawal',
+                fontFamily: 'El Messiri',
               ),
               textAlign: TextAlign.center,
             ),

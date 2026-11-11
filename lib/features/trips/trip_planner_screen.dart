@@ -102,7 +102,7 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
               child: Text(
                 'اختر أحد أماكن "$title" المحفوظة',
                 style: const TextStyle(
-                  fontFamily: 'Tajawal',
+                  fontFamily: 'El Messiri',
                   fontWeight: FontWeight.bold,
                   fontSize: 15,
                 ),
@@ -113,12 +113,12 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
                 leading: Icon(icon, color: AppColors.accent),
                 title: Text(
                   place.displayLabel,
-                  style: const TextStyle(fontFamily: 'Tajawal'),
+                  style: const TextStyle(fontFamily: 'El Messiri'),
                 ),
                 subtitle: place.customName != null
                     ? Text(
                         place.address,
-                        style: const TextStyle(fontFamily: 'Tajawal', fontSize: 11),
+                        style: const TextStyle(fontFamily: 'El Messiri', fontSize: 11),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       )
@@ -293,7 +293,7 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
           const SnackBar(
             content: Text(
               'تعذر فتح المحادثة حالياً - تحقق من اتصالك وحاول مرة أخرى.',
-              style: TextStyle(fontFamily: 'Tajawal'),
+              style: TextStyle(fontFamily: 'El Messiri'),
             ),
           ),
         );
@@ -476,7 +476,7 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
           SnackBar(
             content: Text(
               'لم تحفظ "$text" بعد - يمكنك حفظه من شاشة ملخص الرحلة بعد انتهاء مشوارك القادم.',
-              style: const TextStyle(fontFamily: 'Tajawal'),
+              style: const TextStyle(fontFamily: 'El Messiri'),
             ),
           ),
         );
@@ -507,7 +507,7 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
         icon: Icon(icon, size: 15),
         label: Text(
           text,
-          style: const TextStyle(fontFamily: 'Tajawal', fontSize: 11),
+          style: const TextStyle(fontFamily: 'El Messiri', fontSize: 11),
           overflow: TextOverflow.ellipsis,
         ),
       ),
@@ -550,7 +550,7 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
                     Text(
                       title,
                       style: const TextStyle(
-                        fontFamily: 'Tajawal',
+                        fontFamily: 'El Messiri',
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
                         color: AppColors.darkText,
@@ -560,7 +560,7 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
                     Text(
                       subtitle,
                       style: const TextStyle(
-                        fontFamily: 'Tajawal',
+                        fontFamily: 'El Messiri',
                         fontSize: 11,
                         color: AppColors.secondaryText,
                       ),

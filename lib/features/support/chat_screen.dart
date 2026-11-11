@@ -67,7 +67,7 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           title: const Text(
             'اتصال هاتفي',
-            style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.bold),
+            style: TextStyle(fontFamily: 'El Messiri', fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
           content: Column(
@@ -82,7 +82,7 @@ class _ChatScreenState extends State<ChatScreen> {
               Text(
                 'جاري الاتصال بـ $targetName...',
                 style: const TextStyle(
-                  fontFamily: 'Tajawal',
+                  fontFamily: 'El Messiri',
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -92,7 +92,7 @@ class _ChatScreenState extends State<ChatScreen> {
               const Text(
                 'سيتم فتح تطبيق الاتصال الافتراضي في جهازك.',
                 style: TextStyle(
-                  fontFamily: 'Tajawal',
+                  fontFamily: 'El Messiri',
                   fontSize: 12,
                   color: AppColors.secondaryText,
                 ),
@@ -146,7 +146,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      fontFamily: 'Tajawal',
+                      fontFamily: 'El Messiri',
                     ),
                   ),
                   const Text(
@@ -154,7 +154,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     style: TextStyle(
                       fontSize: 10,
                       color: AppColors.success,
-                      fontFamily: 'Tajawal',
+                      fontFamily: 'El Messiri',
                     ),
                   ),
                 ],
@@ -213,7 +213,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           style: TextStyle(
                             color: isMe ? Colors.white : AppColors.darkText,
                             fontSize: 14,
-                            fontFamily: 'Tajawal',
+                            fontFamily: 'El Messiri',
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -227,7 +227,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                     ? Colors.white70
                                     : AppColors.secondaryText,
                                 fontSize: 9,
-                                fontFamily: 'Tajawal',
+                                fontFamily: 'El Messiri',
                               ),
                             ),
                             if (isMe) ...[

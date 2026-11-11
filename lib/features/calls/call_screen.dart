@@ -274,7 +274,7 @@ class _CallScreenState extends State<CallScreen> {
             Text(
               widget.peerName,
               style: const TextStyle(
-                fontFamily: 'Tajawal',
+                fontFamily: 'El Messiri',
                 fontWeight: FontWeight.bold,
                 fontSize: 22,
                 color: Colors.white,
@@ -284,7 +284,7 @@ class _CallScreenState extends State<CallScreen> {
             Text(
               _statusText,
               style: TextStyle(
-                fontFamily: 'Tajawal',
+                fontFamily: 'El Messiri',
                 fontSize: 14,
                 color: Colors.white.withOpacity(0.85),
               ),
@@ -314,7 +314,7 @@ class _CallScreenState extends State<CallScreen> {
               child: Text(
                 widget.peerName.isNotEmpty ? widget.peerName.substring(0, 1) : '؟',
                 style: const TextStyle(
-                  fontFamily: 'Tajawal',
+                  fontFamily: 'El Messiri',
                   fontWeight: FontWeight.bold,
                   fontSize: 38,
                   color: Colors.white,
@@ -465,7 +465,7 @@ class _CallButton extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            fontFamily: 'Tajawal',
+            fontFamily: 'El Messiri',
             fontSize: 12,
             color: Colors.white,
           ),

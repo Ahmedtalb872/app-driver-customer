@@ -385,7 +385,7 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
           title: const Text(
             'مرحباً بك في الهدهد!',
-            style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.bold),
+            style: TextStyle(fontFamily: 'El Messiri', fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
           content: Form(
@@ -396,7 +396,7 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
               children: [
                 const Text(
                   'ما اسمك الكامل؟',
-                  style: TextStyle(fontFamily: 'Tajawal', fontSize: 13),
+                  style: TextStyle(fontFamily: 'El Messiri', fontSize: 13),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
@@ -443,7 +443,7 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: const TextStyle(fontFamily: 'Tajawal')),
+        content: Text(message, style: const TextStyle(fontFamily: 'El Messiri')),
         backgroundColor: AppColors.error,
       ),
     );
@@ -479,7 +479,7 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
     fontSize: 14,
     fontWeight: FontWeight.bold,
     color: AppColors.darkText,
-    fontFamily: 'Tajawal',
+    fontFamily: 'El Messiri',
   );
 
   Widget _buildPhoneStep() {
@@ -508,7 +508,7 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
             style: const TextStyle(
               fontSize: 14,
               color: AppColors.secondaryText,
-              fontFamily: 'Tajawal',
+              fontFamily: 'El Messiri',
             ),
           ),
           const SizedBox(height: 32),
@@ -574,7 +574,7 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
               style: TextStyle(
                 fontSize: 12,
                 color: AppColors.secondaryText,
-                fontFamily: 'Tajawal',
+                fontFamily: 'El Messiri',
               ),
             ),
           ],
@@ -609,7 +609,7 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
             style: const TextStyle(
               fontSize: 14,
               color: AppColors.secondaryText,
-              fontFamily: 'Tajawal',
+              fontFamily: 'El Messiri',
             ),
           ),
           const SizedBox(height: 24),
@@ -678,7 +678,7 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
           Text(
             _isPasswordReset ? 'أنشئ كلمة سر جديدة' : 'أنشئ كلمة سر لحسابك',
             style: const TextStyle(
-              fontFamily: 'Tajawal',
+              fontFamily: 'El Messiri',
               fontWeight: FontWeight.bold,
               fontSize: 16,
               color: AppColors.darkText,
@@ -692,7 +692,7 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
             style: const TextStyle(
               fontSize: 13,
               color: AppColors.secondaryText,
-              fontFamily: 'Tajawal',
+              fontFamily: 'El Messiri',
             ),
           ),
           const SizedBox(height: 24),
@@ -765,7 +765,7 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
             style: const TextStyle(
               fontSize: 14,
               color: AppColors.secondaryText,
-              fontFamily: 'Tajawal',
+              fontFamily: 'El Messiri',
             ),
           ),
           const SizedBox(height: 24),
@@ -854,7 +854,7 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
             style: TextStyle(
               fontSize: 14,
               color: AppColors.secondaryText,
-              fontFamily: 'Tajawal',
+              fontFamily: 'El Messiri',
             ),
           ),
           const SizedBox(height: 32),

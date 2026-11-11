@@ -33,7 +33,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           title: Text(
             l10n.deleteAccount,
             style: const TextStyle(
-              fontFamily: 'Tajawal',
+              fontFamily: 'El Messiri',
               fontWeight: FontWeight.bold,
               color: AppColors.error,
             ),
@@ -41,7 +41,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           content: Text(
             l10n.deleteAccountDialogContent,
-            style: const TextStyle(fontFamily: 'Tajawal', fontSize: 13),
+            style: const TextStyle(fontFamily: 'El Messiri', fontSize: 13),
             textAlign: TextAlign.center,
           ),
           actions: [
@@ -106,7 +106,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           : l10n.deleteAccountErrorGeneric;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(message, style: const TextStyle(fontFamily: 'Tajawal')),
+          content: Text(message, style: const TextStyle(fontFamily: 'El Messiri')),
           backgroundColor: AppColors.error,
           duration: const Duration(seconds: 6),
         ),
@@ -144,7 +144,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: Text(
                       l10n.appLanguage,
                       style: const TextStyle(
-                        fontFamily: 'Tajawal',
+                        fontFamily: 'El Messiri',
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
@@ -153,7 +153,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       value: localeProvider.locale.languageCode,
                       underline: Container(),
                       style: const TextStyle(
-                        fontFamily: 'Tajawal',
+                        fontFamily: 'El Messiri',
                         fontSize: 13,
                         color: AppColors.primary,
                         fontWeight: FontWeight.bold,
@@ -186,14 +186,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: Text(
                       l10n.enableNotifications,
                       style: const TextStyle(
-                        fontFamily: 'Tajawal',
+                        fontFamily: 'El Messiri',
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
                     ),
                     subtitle: Text(
                       l10n.notificationsSubtitle,
-                      style: const TextStyle(fontFamily: 'Tajawal', fontSize: 11),
+                      style: const TextStyle(fontFamily: 'El Messiri', fontSize: 11),
                     ),
                     value: _notificationsEnabled,
                     onChanged: (bool value) {
@@ -210,14 +210,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: Text(
                       l10n.darkMode,
                       style: const TextStyle(
-                        fontFamily: 'Tajawal',
+                        fontFamily: 'El Messiri',
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
                     ),
                     subtitle: Text(
                       l10n.darkModeSubtitle,
-                      style: const TextStyle(fontFamily: 'Tajawal', fontSize: 11),
+                      style: const TextStyle(fontFamily: 'El Messiri', fontSize: 11),
                     ),
                     value: _darkModeEnabled,
                     onChanged: (bool value) {
@@ -228,7 +228,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         SnackBar(
                           content: Text(
                             l10n.darkModeSnack,
-                            style: const TextStyle(fontFamily: 'Tajawal'),
+                            style: const TextStyle(fontFamily: 'El Messiri'),
                           ),
                           duration: const Duration(seconds: 1),
                         ),
@@ -243,14 +243,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: Text(
                       l10n.shareLocation,
                       style: const TextStyle(
-                        fontFamily: 'Tajawal',
+                        fontFamily: 'El Messiri',
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
                     ),
                     subtitle: Text(
                       l10n.shareLocationSubtitle,
-                      style: const TextStyle(fontFamily: 'Tajawal', fontSize: 11),
+                      style: const TextStyle(fontFamily: 'El Messiri', fontSize: 11),
                     ),
                     value: _shareLocationEnabled,
                     onChanged: (bool value) {
@@ -271,7 +271,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: AppColors.darkText,
-                fontFamily: 'Tajawal',
+                fontFamily: 'El Messiri',
               ),
             ),
             const SizedBox(height: 8),
@@ -286,7 +286,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: Text(
                       l10n.deleteAccount,
                       style: const TextStyle(
-                        fontFamily: 'Tajawal',
+                        fontFamily: 'El Messiri',
                         fontSize: 14,
                         color: AppColors.error,
                       ),
@@ -316,7 +316,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title: Text(
                   l10n.aboutApp,
                   style: const TextStyle(
-                    fontFamily: 'Tajawal',
+                    fontFamily: 'El Messiri',
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),

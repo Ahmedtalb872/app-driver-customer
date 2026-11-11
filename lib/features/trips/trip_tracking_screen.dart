@@ -179,7 +179,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
           const SnackBar(
             content: Text(
               'تم إلغاء المشوار.',
-              style: TextStyle(fontFamily: 'Tajawal'),
+              style: TextStyle(fontFamily: 'El Messiri'),
             ),
           ),
         );
@@ -201,7 +201,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
           const SnackBar(
             content: Text(
               'تعذر إلغاء المشوار الآن، حاول مرة أخرى.',
-              style: TextStyle(fontFamily: 'Tajawal'),
+              style: TextStyle(fontFamily: 'El Messiri'),
             ),
           ),
         );
@@ -269,7 +269,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
                   const Text(
                     'جاري البحث عن كابتن قريب منك...',
                     style: TextStyle(
-                      fontFamily: 'Tajawal',
+                      fontFamily: 'El Messiri',
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                       color: AppColors.darkText,
@@ -279,7 +279,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
                   const Text(
                     'سيصلك إشعار فور قبول أحد الكباتن لطلبك.',
                     style: TextStyle(
-                      fontFamily: 'Tajawal',
+                      fontFamily: 'El Messiri',
                       fontSize: 12,
                       color: AppColors.secondaryText,
                     ),
@@ -371,7 +371,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 13,
-                fontFamily: 'Tajawal',
+                fontFamily: 'El Messiri',
               ),
             ),
           ],
@@ -419,7 +419,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
             Text(
               trip.isOpenTrip ? 'مشوار مفتوح' : trip.destinationLocation,
               style: const TextStyle(
-                fontFamily: 'Tajawal',
+                fontFamily: 'El Messiri',
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
               ),
@@ -468,7 +468,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
                 child: Text(
                   '${trip.price.toStringAsFixed(0)} أوقية',
                   style: const TextStyle(
-                    fontFamily: 'Tajawal',
+                    fontFamily: 'El Messiri',
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
                     color: AppColors.secondary,
@@ -511,7 +511,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
                             ? trip.captainName!.substring(0, 1)
                             : '؟',
                         style: const TextStyle(
-                          fontFamily: 'Tajawal',
+                          fontFamily: 'El Messiri',
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
                           color: AppColors.primary,
@@ -527,7 +527,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
                   Text(
                     trip.captainName!,
                     style: const TextStyle(
-                      fontFamily: 'Tajawal',
+                      fontFamily: 'El Messiri',
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
                     ),
@@ -538,7 +538,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
                       child: Text(
                         trip.vehicleName!,
                         style: const TextStyle(
-                          fontFamily: 'Tajawal',
+                          fontFamily: 'El Messiri',
                           fontSize: 12,
                           color: AppColors.secondaryText,
                         ),
@@ -564,7 +564,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
                 const Text(
                   'رقم اللوحة',
                   style: TextStyle(
-                    fontFamily: 'Tajawal',
+                    fontFamily: 'El Messiri',
                     fontSize: 10,
                     color: AppColors.secondaryText,
                   ),
@@ -573,7 +573,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
                 Text(
                   trip.vehiclePlate!,
                   style: const TextStyle(
-                    fontFamily: 'Tajawal',
+                    fontFamily: 'El Messiri',
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.2,
@@ -598,7 +598,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
                 Text(
                   trip.captainPhone!,
                   style: const TextStyle(
-                    fontFamily: 'Tajawal',
+                    fontFamily: 'El Messiri',
                     fontSize: 12,
                     color: AppColors.secondaryText,
                   ),
@@ -678,7 +678,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
         Text(
           value,
           style: const TextStyle(
-            fontFamily: 'Tajawal',
+            fontFamily: 'El Messiri',
             fontWeight: FontWeight.bold,
             fontSize: 13,
             color: AppColors.darkText,
@@ -689,7 +689,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
           label,
           textAlign: TextAlign.center,
           style: const TextStyle(
-            fontFamily: 'Tajawal',
+            fontFamily: 'El Messiri',
             fontSize: 10,
             color: AppColors.secondaryText,
           ),

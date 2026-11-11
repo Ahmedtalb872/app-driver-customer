@@ -268,7 +268,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
               'Al-hudhud-lizeboun',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'Tajawal',
+                fontFamily: 'El Messiri',
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
                 color: Colors.white,
@@ -345,7 +345,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
                     Text(
                       l10n.currentLocationLabel,
                       style: const TextStyle(
-                        fontFamily: 'Tajawal',
+                        fontFamily: 'El Messiri',
                         fontSize: 10.5,
                         color: AppColors.secondaryText,
                       ),
@@ -358,7 +358,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontFamily: 'Tajawal',
+                        fontFamily: 'El Messiri',
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                         color: AppColors.darkText,
@@ -608,7 +608,7 @@ class _ServiceCard extends StatelessWidget {
                     Text(
                       title,
                       style: const TextStyle(
-                        fontFamily: 'Tajawal',
+                        fontFamily: 'El Messiri',
                         fontWeight: FontWeight.bold,
                         fontSize: 14.5,
                         color: AppColors.darkText,
@@ -620,7 +620,7 @@ class _ServiceCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontFamily: 'Tajawal',
+                        fontFamily: 'El Messiri',
                         fontSize: 11.5,
                         color: AppColors.secondaryText,
                       ),
@@ -691,7 +691,7 @@ class _NavItem extends StatelessWidget {
                 color: color,
                 fontSize: 11,
                 fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                fontFamily: 'Tajawal',
+                fontFamily: 'El Messiri',
               ),
             ),
           ],

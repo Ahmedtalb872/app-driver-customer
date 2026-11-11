@@ -5,12 +5,12 @@ import '../constants/colors.dart';
 
 class AppTheme {
   static ThemeData get lightTheme {
-    // Registers the real Tajawal font under the 'Tajawal' family name via
-    // google_fonts. Every TextStyle(fontFamily: 'Tajawal') already
+    // Registers the real El Messiri font under the 'El Messiri' family name
+    // via google_fonts. Every TextStyle(fontFamily: 'El Messiri') already
     // hardcoded across the app's screens resolves through this same
     // font-family name once it's loaded here, so this one call is enough
-    // to make Tajawal render everywhere - no per-widget changes needed.
-    final tajawalTextTheme = GoogleFonts.tajawalTextTheme();
+    // to make El Messiri render everywhere - no per-widget changes needed.
+    final elMessiriTextTheme = GoogleFonts.elMessiriTextTheme();
 
     return ThemeData(
       useMaterial3: true,
@@ -23,9 +23,9 @@ class AppTheme {
         error: AppColors.error,
       ),
       scaffoldBackgroundColor: AppColors.background,
-      fontFamily: GoogleFonts.tajawal().fontFamily,
-      textTheme: tajawalTextTheme,
-      primaryTextTheme: tajawalTextTheme,
+      fontFamily: GoogleFonts.elMessiri().fontFamily,
+      textTheme: elMessiriTextTheme,
+      primaryTextTheme: elMessiriTextTheme,
 
       cardTheme: ThemeData.light().cardTheme.copyWith(
         color: AppColors.surface,
@@ -46,7 +46,7 @@ class AppTheme {
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            fontFamily: 'Tajawal',
+            fontFamily: 'El Messiri',
           ),
         ),
       ),
@@ -62,7 +62,7 @@ class AppTheme {
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            fontFamily: 'Tajawal',
+            fontFamily: 'El Messiri',
           ),
         ),
       ),
@@ -73,7 +73,7 @@ class AppTheme {
           textStyle: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            fontFamily: 'Tajawal',
+            fontFamily: 'El Messiri',
           ),
         ),
       ),
@@ -108,12 +108,12 @@ class AppTheme {
         hintStyle: const TextStyle(
           color: AppColors.secondaryText,
           fontSize: 14,
-          fontFamily: 'Tajawal',
+          fontFamily: 'El Messiri',
         ),
         labelStyle: const TextStyle(
           color: AppColors.darkText,
           fontSize: 14,
-          fontFamily: 'Tajawal',
+          fontFamily: 'El Messiri',
         ),
       ),
 
@@ -127,7 +127,7 @@ class AppTheme {
           color: Colors.white,
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          fontFamily: 'Tajawal',
+          fontFamily: 'El Messiri',
         ),
       ),
 

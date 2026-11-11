@@ -165,12 +165,12 @@ class _SplashScreenState extends State<SplashScreen>
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
           title: const Text(
             'يتوفر تحديث جديد',
-            style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.bold),
+            style: TextStyle(fontFamily: 'El Messiri', fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
           content: Text(
             'يجب تحديث التطبيق إلى الإصدار $requiredVersion أو أحدث للمتابعة.',
-            style: const TextStyle(fontFamily: 'Tajawal'),
+            style: const TextStyle(fontFamily: 'El Messiri'),
             textAlign: TextAlign.center,
           ),
           actions: [
@@ -186,7 +186,7 @@ class _SplashScreenState extends State<SplashScreen>
                 },
                 child: const Text(
                   'تحديث الآن',
-                  style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.bold),
+                  style: TextStyle(fontFamily: 'El Messiri', fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -295,7 +295,7 @@ class _SplashScreenState extends State<SplashScreen>
                                               fontSize: taglineFontSize,
                                               fontWeight: FontWeight.w600,
                                               color: AppColors.primaryDark,
-                                              fontFamily: 'Tajawal',
+                                              fontFamily: 'El Messiri',
                                             ),
                                           ),
                                         ),
@@ -336,7 +336,7 @@ class _SplashScreenState extends State<SplashScreen>
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.secondaryText,
-                                fontFamily: 'Tajawal',
+                                fontFamily: 'El Messiri',
                               ),
                             ),
                           ],

@@ -44,7 +44,7 @@ class _BpayRechargeScreenState extends State<BpayRechargeScreen> {
     Clipboard.setData(const ClipboardData(text: _kBpayMerchantCode));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('تم نسخ الكود', style: TextStyle(fontFamily: 'Tajawal')),
+        content: Text('تم نسخ الكود', style: TextStyle(fontFamily: 'El Messiri')),
       ),
     );
   }
@@ -118,7 +118,7 @@ class _BpayRechargeScreenState extends State<BpayRechargeScreen> {
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: const TextStyle(fontFamily: 'Tajawal')),
+        content: Text(message, style: const TextStyle(fontFamily: 'El Messiri')),
         backgroundColor: AppColors.error,
       ),
     );
@@ -176,7 +176,7 @@ class _BpayRechargeScreenState extends State<BpayRechargeScreen> {
                       'ادفع كود Bpay من تطبيق Bankily، ثم أدخل تفاصيل الدفع أدناه.',
                       style: TextStyle(
                         fontSize: 13,
-                        fontFamily: 'Tajawal',
+                        fontFamily: 'El Messiri',
                         color: AppColors.secondaryText,
                       ),
                     ),
@@ -187,7 +187,7 @@ class _BpayRechargeScreenState extends State<BpayRechargeScreen> {
                           'كود Bpay الهدهد: ',
                           style: TextStyle(
                             fontSize: 15,
-                            fontFamily: 'Tajawal',
+                            fontFamily: 'El Messiri',
                             color: AppColors.darkText,
                           ),
                         ),
@@ -197,7 +197,7 @@ class _BpayRechargeScreenState extends State<BpayRechargeScreen> {
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                             color: AppColors.secondary,
-                            fontFamily: 'Tajawal',
+                            fontFamily: 'El Messiri',
                           ),
                         ),
                         const SizedBox(width: 4),
@@ -217,7 +217,7 @@ class _BpayRechargeScreenState extends State<BpayRechargeScreen> {
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
                   color: AppColors.darkText,
-                  fontFamily: 'Tajawal',
+                  fontFamily: 'El Messiri',
                 ),
               ),
               const SizedBox(height: 4),
@@ -226,7 +226,7 @@ class _BpayRechargeScreenState extends State<BpayRechargeScreen> {
                 style: TextStyle(
                   fontSize: 12,
                   color: AppColors.secondaryText,
-                  fontFamily: 'Tajawal',
+                  fontFamily: 'El Messiri',
                 ),
               ),
               const SizedBox(height: 14),

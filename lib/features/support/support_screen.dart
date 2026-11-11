@@ -23,7 +23,7 @@ class SupportScreen extends StatelessWidget {
         const SnackBar(
           content: Text(
             'تعذر فتح المحادثة الآن، حاول مرة أخرى.',
-            style: TextStyle(fontFamily: 'Tajawal'),
+            style: TextStyle(fontFamily: 'El Messiri'),
           ),
           backgroundColor: AppColors.error,
         ),
@@ -49,7 +49,7 @@ class SupportScreen extends StatelessWidget {
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: AppColors.darkText,
-                  fontFamily: 'Tajawal',
+                  fontFamily: 'El Messiri',
                 ),
               ),
               const SizedBox(height: 16),
@@ -68,7 +68,7 @@ class SupportScreen extends StatelessWidget {
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: AppColors.darkText,
-                        fontFamily: 'Tajawal',
+                        fontFamily: 'El Messiri',
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -77,7 +77,7 @@ class SupportScreen extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.secondaryText,
-                        fontFamily: 'Tajawal',
+                        fontFamily: 'El Messiri',
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -101,7 +101,7 @@ class SupportScreen extends StatelessWidget {
                               const SnackBar(
                                 content: Text(
                                   'جاري الاتصال بخدمة العملاء الموحدة...',
-                                  style: TextStyle(fontFamily: 'Tajawal'),
+                                  style: TextStyle(fontFamily: 'El Messiri'),
                                 ),
                                 backgroundColor: AppColors.success,
                               ),
@@ -119,7 +119,7 @@ class SupportScreen extends StatelessWidget {
                               const SnackBar(
                                 content: Text(
                                   'تم نسخ البريد الإلكتروني للدعم support@alhudhud.mr',
-                                  style: TextStyle(fontFamily: 'Tajawal'),
+                                  style: TextStyle(fontFamily: 'El Messiri'),
                                 ),
                                 backgroundColor: AppColors.darkText,
                               ),
@@ -141,7 +141,7 @@ class SupportScreen extends StatelessWidget {
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: AppColors.darkText,
-                fontFamily: 'Tajawal',
+                fontFamily: 'El Messiri',
               ),
             ),
             const SizedBox(height: 12),
@@ -205,7 +205,7 @@ class SupportScreen extends StatelessWidget {
                   color: color,
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
-                  fontFamily: 'Tajawal',
+                  fontFamily: 'El Messiri',
                 ),
               ),
             ],
@@ -226,7 +226,7 @@ class SupportScreen extends StatelessWidget {
             fontSize: 14,
             fontWeight: FontWeight.bold,
             color: AppColors.darkText,
-            fontFamily: 'Tajawal',
+            fontFamily: 'El Messiri',
           ),
         ),
         children: [
@@ -237,7 +237,7 @@ class SupportScreen extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 13,
                 color: AppColors.secondaryText,
-                fontFamily: 'Tajawal',
+                fontFamily: 'El Messiri',
                 height: 1.5,
               ),
             ),
