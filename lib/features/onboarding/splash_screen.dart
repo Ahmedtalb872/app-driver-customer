@@ -30,28 +30,67 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
+  static const _brandText = 'Al hudhud lizeboun';
+
+  // Drives the loading indicator's fade-in, independent of the HZ/logo
+  // phases below.
   late final AnimationController _controller;
   late final Animation<double> _contentFade;
+
+  // First thing shown on open: a brief "HZ" mark, before the full logo and
+  // brand name take over (see _showIntro/_phaseTimer below).
+  bool _showIntro = true;
+
+  late final AnimationController _logoController;
+  late final Animation<double> _logoFade;
+  late final Animation<double> _logoScale;
+
+  // Separate controller so "Al hudhud lizeboun" types itself out letter by
+  // letter instead of just fading in with the logo - started a beat after
+  // the logo so the two don't compete for attention at once.
+  late final AnimationController _brandController;
+
   Timer? _navigationTimer;
+  Timer? _phaseTimer;
 
   @override
   void initState() {
     super.initState();
-    // Only drives the loading indicator's fade-in now - the logo and
-    // animated brand text that used to show here are gone.
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 700),
     );
-
     _contentFade = CurvedAnimation(
       parent: _controller,
       curve: const Interval(0.4, 1.0, curve: Curves.easeOut),
     );
-
     _controller.forward();
 
-    _navigationTimer = Timer(const Duration(milliseconds: 2600), () {
+    _logoController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    _logoFade = CurvedAnimation(parent: _logoController, curve: Curves.easeOut);
+    _logoScale = Tween<double>(
+      begin: 0.92,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _logoController, curve: Curves.easeOut));
+
+    _brandController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+
+    _phaseTimer = Timer(const Duration(milliseconds: 800), () {
+      if (!mounted) return;
+      setState(() => _showIntro = false);
+      _logoController.forward();
+      Future.delayed(const Duration(milliseconds: 350), () {
+        if (mounted) _brandController.forward();
+      });
+    });
+
+    _navigationTimer = Timer(const Duration(milliseconds: 2900), () {
       if (!mounted) return;
       unawaited(_navigateNext());
     });
@@ -60,7 +99,10 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void dispose() {
     _navigationTimer?.cancel();
+    _phaseTimer?.cancel();
     _controller.dispose();
+    _logoController.dispose();
+    _brandController.dispose();
     super.dispose();
   }
 
@@ -197,6 +239,17 @@ class _SplashScreenState extends State<SplashScreen>
           final width = constraints.maxWidth;
           final height = constraints.maxHeight;
 
+          // The logo gets a generous, responsive slice of the available
+          // space - never a fixed height box, so BoxFit.contain always has
+          // room to lay out the full image without cropping it. Bounded by
+          // height as well as width so short/wide viewports (tablets in
+          // landscape, split-screen, ...) never push the content below the
+          // fold.
+          final logoWidthCandidate = width * 0.55 < height * 0.3
+              ? width * 0.55
+              : height * 0.3;
+          final logoWidth = logoWidthCandidate.clamp(140.0, 300.0);
+          final taglineFontSize = (width * 0.038).clamp(13.0, 17.0);
           final curveHeight = (height * 0.2).clamp(110.0, 200.0);
 
           return Stack(
@@ -220,11 +273,93 @@ class _SplashScreenState extends State<SplashScreen>
               SafeArea(
                 child: Column(
                   children: [
-                    // No logo or brand text here anymore - the first thing
-                    // this screen shows now is just the loading indicator
-                    // below, after whatever blank beat this Expanded leaves
-                    // at the top.
-                    const Expanded(child: SizedBox.shrink()),
+                    Expanded(
+                      child: LayoutBuilder(
+                        builder: (context, innerConstraints) {
+                          return AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 450),
+                            child: _showIntro
+                                ? const _HzMark(key: ValueKey('hz'))
+                                : SingleChildScrollView(
+                                    key: const ValueKey('brand'),
+                                    child: ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                        minHeight: innerConstraints.maxHeight,
+                                      ),
+                                      child: Center(
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 24,
+                                            vertical: 16,
+                                          ),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              FadeTransition(
+                                                opacity: _logoFade,
+                                                child: ScaleTransition(
+                                                  scale: _logoScale,
+                                                  child: ConstrainedBox(
+                                                    constraints: BoxConstraints(
+                                                      maxWidth: logoWidth,
+                                                    ),
+                                                    child: Image.asset(
+                                                      // Icon-only crop of the
+                                                      // full lockup (no
+                                                      // baked-in "الهدهد"
+                                                      // text) - the brand
+                                                      // name below is its
+                                                      // own animated widget.
+                                                      'assets/images/al-houdhoud-logo-icon.png',
+                                                      width: logoWidth,
+                                                      fit: BoxFit.contain,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              SizedBox(height: logoWidth * 0.1),
+                                              Directionality(
+                                                textDirection: TextDirection.ltr,
+                                                child: AnimatedBuilder(
+                                                  animation: _brandController,
+                                                  builder: (context, child) {
+                                                    final visibleCount =
+                                                        (_brandText.length *
+                                                                _brandController
+                                                                    .value)
+                                                            .ceil()
+                                                            .clamp(
+                                                              0,
+                                                              _brandText.length,
+                                                            );
+                                                    return Text(
+                                                      _brandText.substring(
+                                                        0,
+                                                        visibleCount,
+                                                      ),
+                                                      style: TextStyle(
+                                                        fontSize:
+                                                            taglineFontSize + 2,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        letterSpacing: 1.2,
+                                                        color:
+                                                            AppColors.primaryDark,
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                          );
+                        },
+                      ),
+                    ),
                     FadeTransition(
                       opacity: _contentFade,
                       child: Padding(
@@ -265,6 +400,39 @@ class _SplashScreenState extends State<SplashScreen>
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// The very first thing shown when the app opens - a plain two-letter
+/// mark, up before the full logo and animated brand name take over (see
+/// `_showIntro`/`_phaseTimer` in [_SplashScreenState]).
+class _HzMark extends StatelessWidget {
+  const _HzMark({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 96,
+      height: 96,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.primary, AppColors.primaryDark],
+        ),
+      ),
+      alignment: Alignment.center,
+      child: const Text(
+        'HZ',
+        style: TextStyle(
+          fontSize: 34,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+          letterSpacing: 1,
+        ),
       ),
     );
   }
