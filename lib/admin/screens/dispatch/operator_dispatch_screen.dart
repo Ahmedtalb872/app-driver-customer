@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -277,6 +278,24 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
     }
   }
 
+  /// A pin move further than this is treated as "placed somewhere else
+  /// entirely", not fine-tuning - see [_setPickup]/[_setDestination].
+  static const _samePlaceThresholdMeters = 60.0;
+
+  double _metersBetween(double lat1, double lng1, double lat2, double lng2) {
+    const earthRadiusM = 6371000.0;
+    final dLat = (lat2 - lat1) * math.pi / 180.0;
+    final dLng = (lng2 - lng1) * math.pi / 180.0;
+    final a =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1 * math.pi / 180.0) *
+            math.cos(lat2 * math.pi / 180.0) *
+            math.sin(dLng / 2) *
+            math.sin(dLng / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return earthRadiusM * c;
+  }
+
   // Shared by tap-to-place and marker dragging, so fine-tuning a pin's
   // position after the initial tap keeps working the same way either time.
   // Also triggers a debounced reverse-geocode to auto-fill the address
@@ -284,10 +303,25 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
   // marker moves, so the actual network call is debounced to fire once
   // after the operator stops moving it, not on every frame (see
   // GeocodingService's Nominatim usage-policy note).
+  //
+  // Bug this guards against: an operator picks "Carrefour X" from the
+  // registry/search for pickup, then later taps/drags that same pin a
+  // street or two away to the real spot - the address text used to just
+  // sit there unchanged ("still owned" by the pin's *first* position),
+  // so the dashboard showed one identical place name for two genuinely
+  // different coordinates. A move past [_samePlaceThresholdMeters] now
+  // clears the stale text first so the reverse-geocode below actually
+  // replaces it, instead of only ever filling an empty field.
   void _setPickup(LatLng point) {
+    final movedToNewPlace =
+        _pickupLat != null &&
+        _pickupLng != null &&
+        _metersBetween(_pickupLat!, _pickupLng!, point.latitude, point.longitude) >
+            _samePlaceThresholdMeters;
     setState(() {
       _pickupLat = point.latitude;
       _pickupLng = point.longitude;
+      if (movedToNewPlace) _pickupAddressController.clear();
     });
     _pickupGeocodeDebounce?.cancel();
     _pickupGeocodeDebounce = Timer(const Duration(milliseconds: 700), () {
@@ -300,9 +334,15 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
   }
 
   void _setDestination(LatLng point) {
+    final movedToNewPlace =
+        _destLat != null &&
+        _destLng != null &&
+        _metersBetween(_destLat!, _destLng!, point.latitude, point.longitude) >
+            _samePlaceThresholdMeters;
     setState(() {
       _destLat = point.latitude;
       _destLng = point.longitude;
+      if (movedToNewPlace) _destAddressController.clear();
     });
     _destGeocodeDebounce?.cancel();
     _destGeocodeDebounce = Timer(const Duration(milliseconds: 700), () {
@@ -314,10 +354,13 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
     });
   }
 
-  /// Auto-fills [controller] from reverse geocoding only when it's still
-  /// empty (never overwrites an address the operator typed or picked from
-  /// the registry/autocomplete) - manual edit afterward always remains
-  /// possible, this only ever seeds an initial value.
+  /// Auto-fills [controller] from reverse geocoding only when it's empty -
+  /// never overwrites an address the operator typed or picked from the
+  /// registry/autocomplete while the pin is still roughly where it was
+  /// (manual edits/picks always remain possible). [_setPickup]/
+  /// [_setDestination] clear the field first when the pin actually moved to
+  /// a different place, so this then runs as a normal "seed an empty
+  /// field" fill, not an overwrite.
   Future<void> _maybeReverseGeocode({
     required double lat,
     required double lng,
