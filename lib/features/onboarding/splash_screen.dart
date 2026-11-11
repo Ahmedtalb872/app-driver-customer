@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/auth/app_role.dart';
 import '../../core/auth/auth_service.dart';
@@ -265,14 +266,39 @@ class _SplashScreenState extends State<SplashScreen>
                                               maxWidth: logoWidth,
                                             ),
                                             child: Image.asset(
-                                              'assets/images/al-houdhoud-logo-mark.png',
+                                              // Icon-only crop of the full
+                                              // lockup (no baked-in "الهدهد"
+                                              // text) - the brand name below
+                                              // is now its own animated
+                                              // widget instead.
+                                              'assets/images/al-houdhoud-logo-icon.png',
                                               width: logoWidth,
                                               fit: BoxFit.contain,
                                             ),
                                           ),
                                         ),
                                       ),
-                                      SizedBox(height: logoWidth * 0.12),
+                                      SizedBox(height: logoWidth * 0.1),
+                                      FadeTransition(
+                                        opacity: _contentFade,
+                                        child: Shimmer.fromColors(
+                                          baseColor: AppColors.primaryDark,
+                                          highlightColor: AppColors.accent,
+                                          period: const Duration(
+                                            milliseconds: 1800,
+                                          ),
+                                          child: Text(
+                                            'Al hudhud lizeboun',
+                                            style: TextStyle(
+                                              fontSize: taglineFontSize + 2,
+                                              fontWeight: FontWeight.bold,
+                                              letterSpacing: 1.2,
+                                              color: AppColors.primaryDark,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      SizedBox(height: logoWidth * 0.1),
                                       FadeTransition(
                                         opacity: _contentFade,
                                         child: Container(
