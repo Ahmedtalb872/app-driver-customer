@@ -1,17 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../constants/colors.dart';
 
 class AppTheme {
   static ThemeData get lightTheme {
-    // Registers the real El Messiri font under the 'El Messiri' family name
-    // via google_fonts. Every TextStyle(fontFamily: 'El Messiri') already
-    // hardcoded across the app's screens resolves through this same
-    // font-family name once it's loaded here, so this one call is enough
-    // to make El Messiri render everywhere - no per-widget changes needed.
-    final elMessiriTextTheme = GoogleFonts.elMessiriTextTheme();
-
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
@@ -23,9 +15,16 @@ class AppTheme {
         error: AppColors.error,
       ),
       scaffoldBackgroundColor: AppColors.background,
-      fontFamily: GoogleFonts.elMessiri().fontFamily,
-      textTheme: elMessiriTextTheme,
-      primaryTextTheme: elMessiriTextTheme,
+      // 'El Messiri' here resolves through the font bundled in pubspec.yaml
+      // (assets/fonts/ElMessiri-*.ttf) - every TextStyle(fontFamily: 'El
+      // Messiri') already hardcoded across the app's screens resolves
+      // through that same registered family name too, no per-widget
+      // changes needed.
+      fontFamily: 'El Messiri',
+      textTheme: ThemeData.light().textTheme.apply(fontFamily: 'El Messiri'),
+      primaryTextTheme: ThemeData.light().primaryTextTheme.apply(
+        fontFamily: 'El Messiri',
+      ),
 
       cardTheme: ThemeData.light().cardTheme.copyWith(
         color: AppColors.surface,
