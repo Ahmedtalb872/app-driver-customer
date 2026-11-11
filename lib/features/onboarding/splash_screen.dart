@@ -298,34 +298,6 @@ class _SplashScreenState extends State<SplashScreen>
                                           ),
                                         ),
                                       ),
-                                      SizedBox(height: logoWidth * 0.1),
-                                      FadeTransition(
-                                        opacity: _contentFade,
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 18,
-                                            vertical: 8,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.primary.withValues(
-                                              alpha: 0.08,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              30,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            'نقل سريع، آمن وأسهل',
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              fontSize: taglineFontSize,
-                                              fontWeight: FontWeight.w600,
-                                              color: AppColors.primaryDark,
-                                              fontFamily: 'El Messiri',
-                                            ),
-                                          ),
-                                        ),
-                                      ),
                                     ],
                                   ),
                                 ),
