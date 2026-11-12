@@ -88,6 +88,12 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
   Map<String, dynamic>? _pricing;
   bool _loadingPricing = false;
 
+  /// Lets the operator override the auto-calculated estimate (phone orders
+  /// sometimes need a negotiated/exception price) instead of being forced
+  /// to send whatever the pricing table computes.
+  bool _manualFareOverride = false;
+  final _manualFareController = TextEditingController();
+
   bool _lookingUpCustomer = false;
   Map<String, dynamic>? _foundCustomer;
   bool _customerLookupFailed = false;
@@ -135,6 +141,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
     _recipientNameController.dispose();
     _recipientPhoneController.dispose();
     _packageDescriptionController.dispose();
+    _manualFareController.dispose();
     _pickupFocusNode.dispose();
     _destFocusNode.dispose();
     _pickupSearchDebounce?.cancel();
@@ -238,6 +245,17 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
     final billableKm = km > baseDistanceKm ? km - baseDistanceKm : 0;
     final subtotal = (baseFare + (billableKm * pricePerKm)) * surge;
     return subtotal < minimumFare ? minimumFare : subtotal;
+  }
+
+  /// What actually gets sent to [_repository.dispatchTrip] - the operator's
+  /// manually-typed price when override is on and it parses to something
+  /// positive, otherwise the auto-calculated [_estimatedFare] unchanged.
+  double? get _finalFare {
+    if (_manualFareOverride) {
+      final typed = double.tryParse(_manualFareController.text.trim());
+      if (typed != null && typed > 0) return typed;
+    }
+    return _estimatedFare;
   }
 
   Future<void> _lookupCustomer() async {
@@ -559,6 +577,13 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
       }
     }
 
+    if (_manualFareOverride) {
+      final typed = double.tryParse(_manualFareController.text.trim());
+      if (typed == null || typed <= 0) {
+        messages.add('أدخل سعراً صحيحاً للمشوار أو ألغِ التعديل اليدوي');
+      }
+    }
+
     return messages;
   }
 
@@ -577,6 +602,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
       'pickup=(${_pickupLat ?? '-'}, ${_pickupLng ?? '-'}) '
       'destination=(${_destLat ?? '-'}, ${_destLng ?? '-'}) '
       'estimatedFare=$_estimatedFare '
+      'manualFareOverride=$_manualFareOverride finalFare=$_finalFare '
       'dispatching=$_dispatching '
       '=> canDispatch=$_canDispatch',
     );
@@ -603,7 +629,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
         destinationLng: !_needsDestination ? null : _destLng,
         vehicleType: _effectiveVehicleType,
         paymentMethod: _paymentMethod,
-        estimatedPrice: _estimatedFare,
+        estimatedPrice: _finalFare,
         estimatedDurationMinutes: _estimatedDurationMinutes,
         distanceKm: _distanceKm,
         customerNote: _noteController.text.trim().isEmpty
@@ -1489,7 +1515,7 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
   }
 
   Widget _buildEstimateCard() {
-    final fare = _estimatedFare;
+    final fare = _finalFare;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
@@ -1500,16 +1526,76 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'الأجرة المقدرة',
-            style: TextStyle(
-              fontFamily: 'Tajawal',
-              fontSize: 11,
-              color: AdminColors.textSecondary,
-            ),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'الأجرة المقدرة',
+                  style: TextStyle(
+                    fontFamily: 'Tajawal',
+                    fontSize: 11,
+                    color: AdminColors.textSecondary,
+                  ),
+                ),
+              ),
+              // Lets the operator send a negotiated/exception price
+              // instead of whatever the pricing table auto-calculates -
+              // e.g. a phone order where the customer and operator agreed
+              // on a fare up front.
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'تعديل يدوي',
+                    style: TextStyle(
+                      fontFamily: 'Tajawal',
+                      fontSize: 11,
+                      color: AdminColors.textSecondary,
+                    ),
+                  ),
+                  Switch(
+                    value: _manualFareOverride,
+                    onChanged: (value) {
+                      setState(() {
+                        _manualFareOverride = value;
+                        if (value && _manualFareController.text.isEmpty) {
+                          final auto = _estimatedFare;
+                          if (auto != null) {
+                            _manualFareController.text = auto
+                                .toStringAsFixed(0);
+                          }
+                        }
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ],
           ),
           const SizedBox(height: 4),
-          if (_loadingPricing)
+          if (_manualFareOverride)
+            TextField(
+              controller: _manualFareController,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+              ],
+              onChanged: (_) => setState(() {}),
+              style: const TextStyle(
+                fontFamily: 'Tajawal',
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: AdminColors.primary,
+              ),
+              decoration: const InputDecoration(
+                isDense: true,
+                suffixText: 'أوقية',
+                border: OutlineInputBorder(),
+              ),
+            )
+          else if (_loadingPricing)
             const Text('...', style: TextStyle(fontFamily: 'Tajawal'))
           else
             Text(
@@ -1521,6 +1607,18 @@ class _OperatorDispatchScreenState extends State<OperatorDispatchScreen> {
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
                 color: AdminColors.primary,
+              ),
+            ),
+          if (_manualFareOverride && _estimatedFare != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'السعر المحسوب تلقائياً: ${_estimatedFare!.toStringAsFixed(0)} أوقية',
+                style: const TextStyle(
+                  fontFamily: 'Tajawal',
+                  fontSize: 10.5,
+                  color: AdminColors.textSecondary,
+                ),
               ),
             ),
           if (_tripType == 'open')
