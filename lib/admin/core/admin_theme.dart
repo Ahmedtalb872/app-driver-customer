@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'admin_colors.dart';
 
-/// Material 3 theme for the AL HODHOD admin dashboard - RTL Arabic,
+/// Material 3 theme for the TRENDE admin dashboard - RTL Arabic,
 /// Tajawal font, dark/glass [AdminColors] throughout. `brightness: dark`
 /// matters beyond the color values: it's what keeps every stock Material
 /// widget that isn't explicitly restyled here (default icon tints, overlay

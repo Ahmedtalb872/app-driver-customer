@@ -265,7 +265,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
               bottom: 14,
             ),
             child: const Text(
-              'Al-hudhud-lizeboun',
+              'TRENDE',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'El Messiri',
@@ -492,7 +492,7 @@ class _LogoBadge extends StatelessWidget {
           ),
         ],
       ),
-      child: Image.asset('assets/images/al-houdhoud-logo-mark.png', fit: BoxFit.contain),
+      child: Image.asset('assets/images/trende-logo-mark.png', fit: BoxFit.contain),
     );
   }
 }

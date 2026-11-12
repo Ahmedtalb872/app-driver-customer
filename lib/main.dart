@@ -65,7 +65,7 @@ Future<void> main() async {
     debugPrint('Startup initialization failed: $e\n$stackTrace');
   }
 
-  // Web only ever serves the AL HODHOD admin dashboard - the customer
+  // Web only ever serves the TRENDE admin dashboard - the customer
   // mobile flow below is completely untouched on every other platform.
   // usePathUrlStrategy() is a documented no-op off web, so it's safe to
   // call unconditionally.
@@ -95,7 +95,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final localeProvider = context.watch<LocaleProvider>();
     return MaterialApp(
-      title: 'الهدهد',
+      title: 'TRENDE',
       debugShowCheckedModeBanner: false,
       navigatorKey: AppNavigator.key,
       theme: AppTheme.lightTheme,

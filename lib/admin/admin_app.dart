@@ -7,7 +7,7 @@ import 'core/admin_theme.dart';
 import 'routes/admin_router.dart';
 import 'services/admin_session.dart';
 
-/// The AL HODHOD admin dashboard - reached directly on web (the `kIsWeb`
+/// The TRENDE admin dashboard - reached directly on web (the `kIsWeb`
 /// branch in `lib/main.dart`), and pushed on top of the mobile customer
 /// app's navigation stack once `PhoneCodeLoginScreen` sees an `admin`
 /// account sign in. Both entry points share the same `AdminSession`/
@@ -47,7 +47,7 @@ class _AdminAppState extends State<AdminApp> {
     return ChangeNotifierProvider<AdminSession>.value(
       value: _session,
       child: MaterialApp.router(
-        title: 'الهدهد | لوحة التحكم',
+        title: 'اترينـد | لوحة التحكم',
         debugShowCheckedModeBanner: false,
         theme: AdminTheme.theme,
         routerConfig: _router,

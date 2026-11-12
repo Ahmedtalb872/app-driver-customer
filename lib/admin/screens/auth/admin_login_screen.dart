@@ -159,14 +159,14 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
                       child: Image.asset(
-                        'assets/images/al-houdhoud-logo-mark.png',
+                        'assets/images/trende-logo-mark.png',
                         height: 96,
                         fit: BoxFit.contain,
                       ),
                     ),
                     const SizedBox(height: 20),
                     const Text(
-                      'لوحة تحكم الهدهد',
+                      'لوحة تحكم اترينـد',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 22,
@@ -177,7 +177,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'AL HODHOD Admin Dashboard',
+                      'TRENDE Admin Dashboard',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 12,

@@ -158,12 +158,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           APK=build/app/outputs/flutter-apk/app-release.apk
-          mv "$APK" "hudhud-customer-${GITHUB_SHA::7}.apk"
-          ASSETS=("hudhud-customer-${GITHUB_SHA::7}.apk")
+          mv "$APK" "trende-customer-${GITHUB_SHA::7}.apk"
+          ASSETS=("trende-customer-${GITHUB_SHA::7}.apk")
           AAB=build/app/outputs/bundle/release/app-release.aab
           if [ -f "$AAB" ]; then
-            mv "$AAB" "hudhud-customer-${GITHUB_SHA::7}.aab"
-            ASSETS+=("hudhud-customer-${GITHUB_SHA::7}.aab")
+            mv "$AAB" "trende-customer-${GITHUB_SHA::7}.aab"
+            ASSETS+=("trende-customer-${GITHUB_SHA::7}.aab")
           fi
           gh release delete customer-apk-latest --yes --cleanup-tag || true
           gh release create customer-apk-latest "${ASSETS[@]}" \

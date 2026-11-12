@@ -19,7 +19,7 @@ import '../home/customer_home_screen.dart';
 // opens the App Store app to a name search instead of the exact listing.
 const String _androidStoreUrl =
     'https://play.google.com/store/apps/details?id=com.alhudhud.lizeboun';
-const String _iosStoreUrl = 'https://apps.apple.com/search?term=الهدهد';
+const String _iosStoreUrl = 'https://apps.apple.com/search?term=TRENDE';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -30,7 +30,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
-  static const _brandText = 'Al hudhud lizeboun';
+  static const _brandText = 'TRENDE';
 
   // Drives the loading indicator's fade-in, independent of the logo/brand
   // animations below.
@@ -41,9 +41,9 @@ class _SplashScreenState extends State<SplashScreen>
   late final Animation<double> _logoFade;
   late final Animation<double> _logoScale;
 
-  // Separate controller so "Al hudhud lizeboun" types itself out letter by
-  // letter instead of just fading in with the logo - started a beat after
-  // the logo so the two don't compete for attention at once.
+  // Separate controller so "TRENDE" types itself out letter by letter
+  // instead of just fading in with the logo - started a beat after the
+  // logo so the two don't compete for attention at once.
   late final AnimationController _brandController;
 
   Timer? _navigationTimer;
@@ -290,10 +290,10 @@ class _SplashScreenState extends State<SplashScreen>
                                             ),
                                             child: Image.asset(
                                               // Icon-only crop of the full
-                                              // lockup (no baked-in "الهدهد"
+                                              // lockup (no baked-in "TRENDE"
                                               // text) - the brand name below
                                               // is its own animated widget.
-                                              'assets/images/al-houdhoud-logo-icon.png',
+                                              'assets/images/trende-logo-icon.png',
                                               width: logoWidth,
                                               fit: BoxFit.contain,
                                             ),

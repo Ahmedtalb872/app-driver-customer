@@ -90,7 +90,7 @@ class _BusinessLoginScreenState extends State<BusinessLoginScreen> {
                       ),
                       const SizedBox(height: 16),
                       const Text(
-                        'بوابة الأعمال - الهدهد',
+                        'بوابة الأعمال - اترينـد',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 20,

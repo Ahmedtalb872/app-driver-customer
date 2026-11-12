@@ -118,19 +118,19 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/al-houdhoud-logo.png"
+  image_path: "assets/images/trende-logo.png"
   min_sdk_android: 21
   web:
     generate: true
-    image_path: "assets/images/al-houdhoud-logo.png"
+    image_path: "assets/images/trende-logo.png"
     background_color: "#F8FAFC"
-    theme_color: "#0B6E72"
+    theme_color: "#006D36"
   windows:
     generate: true
-    image_path: "assets/images/al-houdhoud-logo.png"
+    image_path: "assets/images/trende-logo.png"
   macos:
     generate: true
-    image_path: "assets/images/al-houdhoud-logo.png"
+    image_path: "assets/images/trende-logo.png"
 
 flutter_native_splash:
   color: "#ffffff"
@@ -155,9 +155,9 @@ flutter:
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
   assets:
-    - assets/images/al-houdhoud-logo.png
-    - assets/images/al-houdhoud-logo-mark.png
-    - assets/images/al-houdhoud-logo-icon.png
+    - assets/images/trende-logo.png
+    - assets/images/trende-logo-mark.png
+    - assets/images/trende-logo-icon.png
     - assets/audio/hudhud_ride_request.wav
     - assets/geo/nouakchott_districts.geojson
     - assets/data/places.json

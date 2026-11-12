@@ -180,11 +180,10 @@ class AdminSidebar extends StatelessWidget {
                   width: 40,
                   height: 40,
                   // BoxFit.cover inside a circular clip cropped most of the
-                  // logo's fanned feathers and car away - contain always
-                  // shows the full artwork (same fix as the customer app's
-                  // login screens).
+                  // logo's artwork away - contain always shows the full
+                  // mark (same fix as the customer app's login screens).
                   child: Image.asset(
-                    'assets/images/al-houdhoud-logo-mark.png',
+                    'assets/images/trende-logo-mark.png',
                     fit: BoxFit.contain,
                   ),
                 ),
@@ -192,7 +191,7 @@ class AdminSidebar extends StatelessWidget {
                   const SizedBox(width: 10),
                   const Expanded(
                     child: Text(
-                      'AL HODHOD',
+                      'TRENDE',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(

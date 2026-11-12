@@ -123,7 +123,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     final userName = provider.customerName.isNotEmpty
         ? provider.customerName
-        : 'زبون الهدهد';
+        : 'زبون اترينـد';
     final userPhone = provider.customerPhone;
 
     return Scaffold(
@@ -133,7 +133,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               leading: Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Image.asset(
-                  'assets/images/al-houdhoud-logo-mark.png',
+                  'assets/images/trende-logo-mark.png',
                   fit: BoxFit.contain,
                 ),
               ),

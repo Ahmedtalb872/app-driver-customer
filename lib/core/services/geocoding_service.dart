@@ -16,7 +16,7 @@ class GeocodingService {
   static final GeocodingService instance = GeocodingService._();
 
   static const String _userAgent =
-      'HudhudAdminDashboard/1.0 (+https://alhodhod.example)';
+      'TrendeAdminDashboard/1.0 (+https://trende.example)';
 
   /// Best-effort - returns null on any failure (network, rate limit,
   /// unparseable response) rather than throwing, since this only ever

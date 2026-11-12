@@ -45,7 +45,7 @@ class TripForegroundService : Service() {
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("جارٍ تتبع مشوارك")
-            .setContentText("الهدهد يعمل في الخلفية لإبقائك على اطلاع بمشوارك.")
+            .setContentText("اترينـد يعمل في الخلفية لإبقائك على اطلاع بمشوارك.")
             .setSmallIcon(R.mipmap.ic_launcher)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)

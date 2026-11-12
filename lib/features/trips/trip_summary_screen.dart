@@ -190,7 +190,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
               ),
               const SizedBox(height: 6),
               const Text(
-                'شكراً لاستخدامك الهدهد.',
+                'شكراً لاستخدامك اترينـد.',
                 style: TextStyle(
                   fontSize: 13,
                   color: AppColors.secondaryText,

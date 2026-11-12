@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Brand palette, matching the actual logo artwork's colors: primary/
-  // primaryDark are the teal used for the gradient on the bird's body,
-  // secondary/accent are the gold used for its feathers and the
-  // "AL HODHOD" wordmark.
+  // Brand palette - teal/gold, matching the old Al Hodhod logo. Left
+  // unchanged during the TRENDE rebrand (only the logo artwork and
+  // brand text were swapped) - update these if the UI should also match
+  // TRENDE's green/black mark.
   static const Color primary = Color(0xFF2F666F);
   static const Color primaryDark = Color(0xFF234B52);
   static const Color secondary = Color(0xFFD9963F);

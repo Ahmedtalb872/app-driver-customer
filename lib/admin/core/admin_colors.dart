@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// The AL HODHOD admin dashboard palette - dark, glass-panel aesthetic
+/// The TRENDE admin dashboard palette - dark, glass-panel aesthetic
 /// tuned to the actual Hudhud logo mark (deep teal hoopoe/car silhouette +
 /// warm gold crest), replacing the earlier blue/violet accent family that
 /// didn't relate to the brand mark at all. [primary]/[teal] carry the

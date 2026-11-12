@@ -384,7 +384,7 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
         child: AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
           title: const Text(
-            'مرحباً بك في الهدهد!',
+            'مرحباً بك في اترينـد!',
             style: TextStyle(fontFamily: 'El Messiri', fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
@@ -497,7 +497,7 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
               // logo's fanned feathers and car away - contain always shows
               // the full artwork.
               child: Image.asset(
-                'assets/images/al-houdhoud-logo-mark.png',
+                'assets/images/trende-logo-mark.png',
                 fit: BoxFit.contain,
               ),
             ),
@@ -843,7 +843,7 @@ class _PhoneCodeLoginScreenState extends State<PhoneCodeLoginScreen> {
               // logo's fanned feathers and car away - contain always shows
               // the full artwork.
               child: Image.asset(
-                'assets/images/al-houdhoud-logo-mark.png',
+                'assets/images/trende-logo-mark.png',
                 fit: BoxFit.contain,
               ),
             ),

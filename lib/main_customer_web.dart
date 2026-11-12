@@ -9,7 +9,7 @@ import 'providers/locale_provider.dart';
 import 'main.dart' show MyApp, installVisibleErrorWidget;
 
 /// Alternate web entrypoint that always serves the customer app, instead of
-/// `main.dart`'s `kIsWeb` branch (which is reserved for the AL HODHOD admin
+/// `main.dart`'s `kIsWeb` branch (which is reserved for the TRENDE admin
 /// dashboard). Built and deployed separately for previewing the customer
 /// app in a browser - see .github/workflows/deploy-customer-web.yml. Not
 /// used by the real mobile builds or the admin web deployment.

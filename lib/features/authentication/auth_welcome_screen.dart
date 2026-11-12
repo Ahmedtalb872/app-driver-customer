@@ -73,7 +73,7 @@ class AuthWelcomeScreen extends StatelessWidget {
                       ),
                     ),
                     child: Image.asset(
-                      'assets/images/al-houdhoud-logo-mark.png',
+                      'assets/images/trende-logo-mark.png',
                       fit: BoxFit.contain,
                     ),
                   ),

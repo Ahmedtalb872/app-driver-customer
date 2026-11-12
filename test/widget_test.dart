@@ -1,4 +1,4 @@
-// Smoke tests for the Hudhud ("الهدهد") app entrypoint: the app boots
+// Smoke tests for the TRENDE app entrypoint: the app boots
 // without throwing, and the splash screen auto-navigates straight to the
 // customer phone-code login screen. See test/features/**/*.dart for the
 // rest of the required front-end smoke-test coverage.
@@ -33,7 +33,7 @@ void main() {
   ) async {
     await tester.pumpWidget(wrappedApp());
 
-    // The "الهدهد" / "AL HODHOD" wordmark is baked into the logo artwork
+    // The "TRENDE" wordmark is baked into the logo artwork
     // itself (shown uncropped via BoxFit.contain) rather than duplicated
     // as separate text, so the meaningful check here is that the logo
     // image renders and the tagline copy is present.

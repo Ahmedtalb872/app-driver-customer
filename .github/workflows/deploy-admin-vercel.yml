@@ -1,6 +1,6 @@
 name: Deploy admin dashboard to Vercel
 
-# Builds the real AL HODHOD admin dashboard (lib/main.dart's default
+# Builds the real TRENDE admin dashboard (lib/main.dart's default
 # kIsWeb branch - see AdminApp) and deploys the static output to Vercel,
 # separately from the customer app's own GitHub Pages preview
 # (deploy-customer-web.yml). Vercel has no native Flutter build support, so

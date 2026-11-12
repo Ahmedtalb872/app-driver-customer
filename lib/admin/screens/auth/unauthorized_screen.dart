@@ -42,7 +42,7 @@ class UnauthorizedScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               const Text(
-                'هذا الحساب غير مصرح له بالدخول إلى لوحة تحكم الهدهد.\nتواصل مع المدير العام إذا كنت تعتقد أن هذا خطأ.',
+                'هذا الحساب غير مصرح له بالدخول إلى لوحة تحكم اترينـد.\nتواصل مع المدير العام إذا كنت تعتقد أن هذا خطأ.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,

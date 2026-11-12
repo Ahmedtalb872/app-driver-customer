@@ -1,4 +1,4 @@
-# AL HODHOD Admin Dashboard — Web Deployment Guide
+# TRENDE Admin Dashboard — Web Deployment Guide
 
 Reference only — nothing here has been deployed. Follow this when you're
 ready to put the dashboard on a real domain.

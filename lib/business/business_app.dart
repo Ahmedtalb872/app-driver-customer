@@ -47,7 +47,7 @@ class _BusinessAppState extends State<BusinessApp> {
     return ChangeNotifierProvider<BusinessSession>.value(
       value: _session,
       child: MaterialApp.router(
-        title: 'بوابة الأعمال - الهدهد',
+        title: 'بوابة الأعمال - اترينـد',
         debugShowCheckedModeBanner: false,
         theme: BusinessTheme.theme,
         routerConfig: _router,

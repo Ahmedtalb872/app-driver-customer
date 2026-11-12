@@ -55,14 +55,14 @@ class _AboutScreenState extends State<AboutScreen> {
                 width: 120,
                 height: 120,
                 child: Image.asset(
-                  'assets/images/al-houdhoud-logo-mark.png',
+                  'assets/images/trende-logo-mark.png',
                   fit: BoxFit.contain,
                 ),
               ),
             ),
             const SizedBox(height: 20),
             const Text(
-              'الهدهد',
+              'اترينـد',
               style: TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.w900,
@@ -90,7 +90,7 @@ class _AboutScreenState extends State<AboutScreen> {
                   children: [
                     _buildInfoRow('رقم الإصدار', _versionLabel),
                     const Divider(height: 1),
-                    _buildInfoRow('المطور', 'Al Hodhod'),
+                    _buildInfoRow('المطور', 'TRENDE'),
                   ],
                 ),
               ),
@@ -100,7 +100,7 @@ class _AboutScreenState extends State<AboutScreen> {
               child: Padding(
                 padding: EdgeInsets.all(20.0),
                 child: Text(
-                  'الهدهد هو تطبيق نقل ذكي يربط الزبائن بالكباتن لتوفير رحلات آمنة وسريعة وسهلة داخل المدينة، مع دعم كامل لطرق الدفع المحلية وتتبع مباشر لسير الرحلة.',
+                  'اترينـد هو تطبيق نقل ذكي يربط الزبائن بالكباتن لتوفير رحلات آمنة وسريعة وسهلة داخل المدينة، مع دعم كامل لطرق الدفع المحلية وتتبع مباشر لسير الرحلة.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 13,
@@ -113,7 +113,7 @@ class _AboutScreenState extends State<AboutScreen> {
             ),
             const SizedBox(height: 16),
             const Text(
-              '© 2026 الهدهد. جميع الحقوق محفوظة.',
+              '© 2026 اترينـد. جميع الحقوق محفوظة.',
               style: TextStyle(
                 fontSize: 11,
                 color: AppColors.secondaryText,

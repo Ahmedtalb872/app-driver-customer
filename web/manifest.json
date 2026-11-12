@@ -1,11 +1,11 @@
 {
-    "name": "الهدهد - لوحة التحكم",
-    "short_name": "الهدهد",
+    "name": "اترينـد - لوحة التحكم",
+    "short_name": "TRENDE",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#F8FAFC",
-    "theme_color": "#0B6E72",
-    "description": "لوحة تحكم الهدهد (AL HODHOD) - إدارة تطبيق النقل الذكي.",
+    "theme_color": "#006D36",
+    "description": "لوحة تحكم اترينـد (TRENDE) - إدارة تطبيق النقل الذكي.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

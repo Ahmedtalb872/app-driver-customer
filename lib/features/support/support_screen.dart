@@ -73,7 +73,7 @@ class SupportScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      'فريق دعم الهدهد متاح على مدار الساعة لمساعدتك في أي استفسار.',
+                      'فريق دعم اترينـد متاح على مدار الساعة لمساعدتك في أي استفسار.',
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.secondaryText,
@@ -165,7 +165,7 @@ class SupportScreen extends StatelessWidget {
             ),
             _buildFAQItem(
               'طرق الدفع المتوفرة بالتطبيق',
-              'يدعم الهدهد الدفع النقدي المباشر، والدفع بواسطة المحفظة الداخلية، بالإضافة لخدمات الدفع الوطنية مثل Bankily و Masrvi و Sedad بشكل سلس.',
+              'يدعم اترينـد الدفع النقدي المباشر، والدفع بواسطة المحفظة الداخلية، بالإضافة لخدمات الدفع الوطنية مثل Bankily و Masrvi و Sedad بشكل سلس.',
             ),
             _buildFAQItem(
               'شروط الأمان والسلامة في الرحلة',

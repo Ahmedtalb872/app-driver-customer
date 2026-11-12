@@ -158,7 +158,7 @@ class _FinanceReportsScreenState extends State<FinanceReportsScreen> {
   void _exportPdf() {
     final buffer = StringBuffer()
       ..writeln('<header>')
-      ..writeln('<h1>الهدهد — التقرير المالي '
+      ..writeln('<h1>اترينـد — التقرير المالي '
           '(${_monthly ? 'شهري' : 'يومي'})</h1>')
       ..writeln('<p class="meta">${_esc(_rangeLabel)} — '
           'أُصدر في ${_isoDate.format(DateTime.now())}</p>')
@@ -215,7 +215,7 @@ class _FinanceReportsScreenState extends State<FinanceReportsScreen> {
           '(من شحن في أكثر من يوم يُحسب مرة واحدة).'
           '</footer>');
 
-    printReportHtml('التقرير المالي - الهدهد', buffer.toString());
+    printReportHtml('التقرير المالي - اترينـد', buffer.toString());
   }
 
   static String _htmlCard(String value, String label) =>
