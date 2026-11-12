@@ -7,6 +7,14 @@
 -- any Google result, but only once the local search actually matches the
 -- query text - see 20261007000111, which added alt_names for exactly this
 -- "teach it a spelling variant" case).
+--
+-- Guards the column's own existence too (`if not exists`) - 20261007000111
+-- added it, but this project's migrations are applied by hand one at a
+-- time rather than through a CI pipeline, and that one apparently never
+-- got run before this one did.
+alter table public.places
+  add column if not exists alt_names text[] not null default '{}';
+
 update public.places
 set alt_names = array_append(alt_names, 'سوق توجونين')
 where name_ar = 'سوق توجنين'
