@@ -21,6 +21,12 @@ const String _androidStoreUrl =
     'https://play.google.com/store/apps/details?id=com.alhudhud.lizeboun';
 const String _iosStoreUrl = 'https://apps.apple.com/search?term=TRENDE';
 
+// The TRENDE logo's own green (sampled from assets/images/trende-logo.png,
+// same value as pubspec.yaml's flutter_launcher_icons theme_color and
+// web/manifest.json) - AppColors itself still carries the old Al Hodhod
+// teal/gold palette, so the animated brand text below needs its own.
+const Color _brandGreen = Color(0xFF006D36);
+
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -320,7 +326,7 @@ class _SplashScreenState extends State<SplashScreen>
                                                 fontSize: taglineFontSize + 2,
                                                 fontWeight: FontWeight.bold,
                                                 letterSpacing: 1.2,
-                                                color: AppColors.primaryDark,
+                                                color: _brandGreen,
                                               ),
                                             );
                                           },
