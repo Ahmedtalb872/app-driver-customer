@@ -1,0 +1,32 @@
+name: Debug - Supabase connectivity check
+
+# Temporary, manual-only diagnostic: confirms whether the SUPABASE_URL /
+# SUPABASE_ANON_KEY repository secrets this app's builds use actually point
+# at a live, reachable Supabase project - without ever printing the secret
+# values themselves. Safe to delete once the live login issue is diagnosed.
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve DNS for SUPABASE_URL's host
+        env:
+          URL: ${{ secrets.SUPABASE_URL }}
+        run: |
+          host=$(echo "$URL" | sed -E 's#^https?://##; s#/.*##')
+          echo "Host (safe to show - this is just the hostname, not the key): $host"
+          getent hosts "$host" || echo "DNS resolution FAILED for $host"
+
+      - name: Call Supabase REST root with the anon key
+        env:
+          URL: ${{ secrets.SUPABASE_URL }}
+          ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          code=$(curl -s -o /tmp/resp.json -w "%{http_code}" --max-time 10 \
+            "$URL/rest/v1/" -H "apikey: $ANON_KEY")
+          echo "HTTP status: $code"
+          echo "Response body (first 500 chars):"
+          head -c 500 /tmp/resp.json
+          echo
