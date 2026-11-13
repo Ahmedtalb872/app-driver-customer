@@ -175,14 +175,18 @@ Deno.serve(async (req: Request) => {
     );
     const results = candidates.map((c, i) => {
       const area = areas[i];
-      let subtitle = c.subtitle;
-      if (area.neighborhood_name) {
-        subtitle = subtitle
-          ? `${subtitle} - حي ${area.neighborhood_name}`
-          : `حي ${area.neighborhood_name}`;
-      } else if (area.district_name) {
-        subtitle = subtitle ? `${subtitle} - ${area.district_name}` : area.district_name;
-      }
+      // The district/neighborhood name from this app's own registry
+      // *replaces* Google's raw formatted_address entirely when available,
+      // rather than being appended to it - that address string carries the
+      // wilaya (e.g. "نواكشوط الشمالية") and country on top of the street,
+      // so prepending it here used to leave captains reading a multi-part
+      // chain ("مدرسة X، ..., نواكشوط الشمالية, موريتانيا - توجنين")
+      // instead of the short "اسم المكان - توجنين" every local-registry
+      // result already shows. Falls back to the raw address only for a
+      // point outside every mapped district (nearestArea found nothing).
+      const subtitle = area.neighborhood_name
+        ? `حي ${area.neighborhood_name}`
+        : area.district_name ?? c.subtitle;
       return { ...c, subtitle };
     });
 
