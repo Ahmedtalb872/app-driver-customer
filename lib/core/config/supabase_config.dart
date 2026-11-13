@@ -65,4 +65,24 @@ class SupabaseConfig {
 
   /// The shared Supabase client. Only valid after [initialize] has run.
   static SupabaseClient get client => Supabase.instance.client;
+
+  /// Re-attempts [initialize] if the one-shot call `main()` makes at cold
+  /// start never succeeded (all 4 of its own retries exhausted - a longer
+  /// network blip than those cover, not just a one-off). Without this,
+  /// [_initialized] stays false for the rest of that app session: every
+  /// later [client] access throws `LateInitializationError` forever, even
+  /// once connectivity recovers, since nothing else ever calls [initialize]
+  /// again. Call this before any action that's a user's first real chance
+  /// to retry (signing in, the splash screen's own navigation) - a no-op,
+  /// cheap check if [initialize] already succeeded.
+  static Future<void> ensureInitialized() async {
+    if (_initialized) return;
+    try {
+      await initialize();
+    } catch (_) {
+      // Still down - callers already handle a thrown/propagated failure
+      // the same way a direct [client] access would (timeouts, catch-all
+      // fallbacks), so just leave [_initialized] false for the next try.
+    }
+  }
 }

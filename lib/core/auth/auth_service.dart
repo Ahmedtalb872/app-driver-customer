@@ -181,6 +181,15 @@ class AuthService {
   /// one-off timeout. Never retries a real [AuthException] (wrong
   /// password, invalid code, ...) since trying again can't change that.
   Future<T> _withRetry<T>(Future<T> Function() action) async {
+    // If the app's own cold-start Supabase.initialize() call never
+    // succeeded (see SupabaseConfig.initialize's own retry comment), every
+    // _auth/SupabaseConfig.client access below throws a synchronous
+    // LateInitializationError instead of the SocketException/ClientException
+    // this loop already retries on - unrelated to those, and never
+    // recovers on its own since nothing else re-attempts initialization.
+    // A no-op if it already succeeded.
+    await SupabaseConfig.ensureInitialized();
+
     const maxAttempts = 3;
     for (var attempt = 1; attempt <= maxAttempts; attempt++) {
       try {

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/auth/app_role.dart';
 import '../../core/auth/auth_service.dart';
+import '../../core/config/supabase_config.dart';
 import '../../core/constants/colors.dart';
 import '../../core/services/push_notifications.dart';
 import '../../core/services/session_guard_service.dart';
@@ -20,12 +21,6 @@ import '../home/customer_home_screen.dart';
 const String _androidStoreUrl =
     'https://play.google.com/store/apps/details?id=com.alhudhud.lizeboun';
 const String _iosStoreUrl = 'https://apps.apple.com/search?term=TRENDE';
-
-// The TRENDE logo's own green (sampled from assets/images/trende-logo.png,
-// same value as pubspec.yaml's flutter_launcher_icons theme_color and
-// web/manifest.json) - AppColors itself still carries the old Al Hodhod
-// teal/gold palette, so the animated brand text below needs its own.
-const Color _brandGreen = Color(0xFF006D36);
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -165,6 +160,13 @@ class _SplashScreenState extends State<SplashScreen>
   /// screen instead of forcing a fresh login every time the app is closed
   /// and reopened.
   Future<void> _navigateNext() async {
+    // Gives the app's one-shot cold-start Supabase connection (main()) a
+    // fresh retry if it never succeeded, instead of every call below
+    // (VersionGateService, isAuthenticated, fetchCurrentRole/FullName)
+    // silently failing against a permanently uninitialized client for the
+    // rest of this session - see SupabaseConfig.ensureInitialized.
+    await SupabaseConfig.ensureInitialized();
+
     final requiredVersion = await VersionGateService.requiredMinVersionOrNull();
     if (!mounted) return;
     if (requiredVersion != null) {
@@ -360,7 +362,7 @@ class _SplashScreenState extends State<SplashScreen>
                                                 fontSize: taglineFontSize + 2,
                                                 fontWeight: FontWeight.bold,
                                                 letterSpacing: 1.2,
-                                                color: _brandGreen,
+                                                color: AppColors.primary,
                                               ),
                                             );
                                           },
