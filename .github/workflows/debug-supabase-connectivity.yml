@@ -6,6 +6,9 @@ name: Debug - Supabase connectivity check
 # values themselves. Safe to delete once the live login issue is diagnosed.
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - claude/project-nature-3gwftj
 
 jobs:
   check:
