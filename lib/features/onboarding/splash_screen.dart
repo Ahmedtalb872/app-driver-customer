@@ -89,8 +89,35 @@ class _SplashScreenState extends State<SplashScreen>
 
     _navigationTimer = Timer(const Duration(milliseconds: 2600), () {
       if (!mounted) return;
-      unawaited(_navigateNext());
+      unawaited(_navigateNextWithDeadline());
     });
+  }
+
+  /// Absolute backstop on top of _navigateNext's own per-call timeouts
+  /// (VersionGateService, AuthService.fetchCurrentRole/fetchCurrentFullName/
+  /// setActiveSession already each cap at 6s and fall through gracefully on
+  /// their own) - still reported stuck on this screen despite those, so
+  /// this guarantees forward progress no matter what turns out to be
+  /// hanging, known or not: if _navigateNext hasn't finished by this
+  /// deadline, stop waiting on it and go to the welcome screen directly,
+  /// the same safe destination every other failure path above already
+  /// falls back to.
+  Future<void> _navigateNextWithDeadline() async {
+    try {
+      await _navigateNext().timeout(const Duration(seconds: 20));
+    } on TimeoutException {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const AuthWelcomeScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 500),
+        ),
+      );
+    }
   }
 
   @override
@@ -246,24 +273,9 @@ class _SplashScreenState extends State<SplashScreen>
               : height * 0.3;
           final logoWidth = logoWidthCandidate.clamp(140.0, 300.0);
           final taglineFontSize = (width * 0.038).clamp(13.0, 17.0);
-          final curveHeight = (height * 0.2).clamp(110.0, 200.0);
 
           return Stack(
             children: [
-              // Decorative bottom curves in the logo's brand colors - a
-              // full-bleed background layer, intentionally outside the
-              // SafeArea below so it can still touch the screen edges.
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: SizedBox(
-                  width: width,
-                  height: curveHeight,
-                  child: CustomPaint(painter: _SplashCurvesPainter()),
-                ),
-              ),
-
               // All real content (logo, tagline, loading indicator) stays
               // clear of the status bar and the bottom system/gesture bar.
               SafeArea(
@@ -344,7 +356,7 @@ class _SplashScreenState extends State<SplashScreen>
                     FadeTransition(
                       opacity: _contentFade,
                       child: Padding(
-                        padding: EdgeInsets.only(bottom: curveHeight + 20),
+                        padding: const EdgeInsets.only(bottom: 32),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -386,50 +398,3 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-class _SplashCurvesPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final greenPaint = Paint()..color = AppColors.primary;
-    final greenPath = Path()
-      ..moveTo(0, size.height * 0.58)
-      ..quadraticBezierTo(
-        size.width * 0.22,
-        size.height * 0.28,
-        size.width * 0.52,
-        size.height * 0.46,
-      )
-      ..quadraticBezierTo(
-        size.width * 0.78,
-        size.height * 0.62,
-        size.width,
-        size.height * 0.32,
-      )
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
-      ..close();
-    canvas.drawPath(greenPath, greenPaint);
-
-    final orangePaint = Paint()..color = AppColors.accent;
-    final orangePath = Path()
-      ..moveTo(0, size.height * 0.8)
-      ..quadraticBezierTo(
-        size.width * 0.28,
-        size.height,
-        size.width * 0.58,
-        size.height * 0.8,
-      )
-      ..quadraticBezierTo(
-        size.width * 0.8,
-        size.height * 0.64,
-        size.width,
-        size.height * 0.86,
-      )
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
-      ..close();
-    canvas.drawPath(orangePath, orangePaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _SplashCurvesPainter oldDelegate) => false;
-}
