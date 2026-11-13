@@ -189,6 +189,17 @@ class AuthService {
     // recovers on its own since nothing else re-attempts initialization.
     // A no-op if it already succeeded.
     await SupabaseConfig.ensureInitialized();
+    if (!SupabaseConfig.isInitialized) {
+      // Replaces the opaque `LateInitializationError: Field 'client' has
+      // not been initialized` a direct SupabaseConfig.client access below
+      // would otherwise throw - that message says nothing about *why*
+      // connecting failed. SupabaseConfig.lastInitError carries the real
+      // exception from the most recent attempt (DNS/TLS/timeout/...),
+      // which is what actually explains a persistent (not one-off) failure.
+      throw StateError(
+        'تعذر الاتصال بالخادم: ${SupabaseConfig.lastInitError ?? "unknown"}',
+      );
+    }
 
     const maxAttempts = 3;
     for (var attempt = 1; attempt <= maxAttempts; attempt++) {

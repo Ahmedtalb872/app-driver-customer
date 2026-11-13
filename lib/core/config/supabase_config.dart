@@ -12,6 +12,17 @@ class SupabaseConfig {
 
   static bool _initialized = false;
 
+  /// The real exception [initialize] hit on its most recent failed attempt
+  /// (which attempt, and what it actually was - SocketException,
+  /// TimeoutException, HandshakeException, ...), kept only so a caller that
+  /// still ends up unable to reach [client] can surface something more
+  /// useful than the generic `LateInitializationError` that results from
+  /// [_initialized] staying false. Never the cause by itself - just the
+  /// most recent evidence of it.
+  static String? lastInitError;
+
+  static bool get isInitialized => _initialized;
+
   /// Loads credentials from the bundled `.env` file and initializes the
   /// Supabase client. Must be called once, before any [client] access,
   /// typically at app startup in `main()`.
@@ -55,8 +66,13 @@ class SupabaseConfig {
           httpClient: attempt == 1 ? buildAndroidCronetHttpClient() : null,
         ).timeout(const Duration(seconds: 8));
         _initialized = true;
+        lastInitError = null;
         return;
-      } catch (_) {
+      } catch (e) {
+        lastInitError =
+            'attempt $attempt/${maxAttempts} '
+            '(${attempt == 1 ? "Cronet" : "default"} client): '
+            '${e.runtimeType}: $e';
         if (attempt == maxAttempts) rethrow;
         await Future.delayed(Duration(milliseconds: 700 * attempt));
       }
