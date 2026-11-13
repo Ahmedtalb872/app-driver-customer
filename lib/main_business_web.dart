@@ -16,7 +16,10 @@ import 'main.dart' show installVisibleErrorWidget;
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   installVisibleErrorWidget();
-  await dotenv.load(fileName: '.env');
+  // Not ".env" - see pubspec.yaml's assets list (Android APK packaging
+  // reason; kept the same name here too for one consistent filename
+  // across every build target).
+  await dotenv.load(fileName: 'app.env');
   await SupabaseConfig.initialize();
   usePathUrlStrategy();
 

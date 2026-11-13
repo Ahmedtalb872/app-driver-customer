@@ -48,8 +48,11 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Environment variables (Supabase keys) - never commit real values
+# Environment variables (Supabase keys) - never commit real values. Not
+# ".env" - see pubspec.yaml's assets list for why the real runtime file is
+# named app.env; ignoring both in case a stray .env ever gets created.
 .env
+app.env
 
 # Local Vercel CLI project link (contains org/project ids - see
 # .github/workflows/deploy-admin-vercel.yml for the real, CI-driven deploy)

@@ -54,7 +54,9 @@ Future<void> main() async {
     HttpOverrides.global = DohFallbackHttpOverrides();
   }
   try {
-    await dotenv.load(fileName: '.env');
+    // Not ".env" - see pubspec.yaml's assets list for why (Android's
+    // aapt packaging silently drops dotfiles from the built APK).
+    await dotenv.load(fileName: 'app.env');
     await SupabaseConfig.initialize();
   } catch (e, stackTrace) {
     // Never let a startup failure leave the native splash screen frozen

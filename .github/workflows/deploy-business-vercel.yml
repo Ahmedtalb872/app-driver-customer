@@ -41,10 +41,14 @@ jobs:
         with:
           channel: stable
 
-      - name: Write .env
+      - name: Write app.env
+        # Not ".env" - same filename used by every other build target now
+        # (see build-customer-apk.yml's own comment for why: Android's
+        # aapt packaging silently drops dotfiles from the built APK; kept
+        # consistent here too even though web itself isn't affected).
         run: |
-          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
-          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> app.env
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> app.env
 
       - name: Install dependencies
         run: flutter pub get

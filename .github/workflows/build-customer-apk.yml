@@ -59,12 +59,19 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Write .env
+      - name: Write app.env
+        # Not ".env": Android's aapt packaging step silently drops any
+        # dotfile from the built APK (its default ignoreAssetsPattern
+        # matches ".*"), so dotenv.load() always failed at runtime despite
+        # this file being written and bundled correctly at every earlier
+        # step - confirmed by unzipping a built release APK and finding
+        # zero dotfiles under assets/flutter_assets/. See pubspec.yaml's
+        # assets list and lib/main.dart's dotenv.load call.
         run: |
-          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
-          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
-          echo "MAPTILER_API_KEY=${{ secrets.MAPTILER_API_KEY }}" >> .env
-          echo "GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" >> .env
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> app.env
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> app.env
+          echo "MAPTILER_API_KEY=${{ secrets.MAPTILER_API_KEY }}" >> app.env
+          echo "GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" >> app.env
 
       - name: Give this build a unique version code
         # pubspec.yaml's build number (the part after "+") was hardcoded at

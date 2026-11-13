@@ -26,7 +26,7 @@ In your Supabase project dashboard → **Authentication → URL Configuration**:
 
 No other Supabase configuration changes are needed — the admin dashboard
 reuses the exact same Supabase project, URL, and anon key as the mobile
-apps (`.env`, loaded by `SupabaseConfig.initialize()`), and the anon key is
+apps (`app.env`, loaded by `SupabaseConfig.initialize()`), and the anon key is
 safe to ship in a web build (it's designed for client-side use; RLS is
 what actually protects the data — see the migrations under
 `supabase/migrations/`).
@@ -37,7 +37,7 @@ The admin dashboard never uses the Supabase **service-role** key — every
 sensitive action (approvals, wallet adjustments, admin promotion, ...)
 goes through a `SECURITY DEFINER` Postgres function that re-checks the
 caller's role server-side (see `20260712000028_admin_functions.sql`).
-Do not add the service-role key to `.env`, to any Flutter file, or to any
+Do not add the service-role key to `app.env`, to any Flutter file, or to any
 hosting provider's environment variables for this app. If you ever need
 service-role-only operations (e.g. creating a brand new admin login from
 scratch instead of promoting an existing account), do that from a secure

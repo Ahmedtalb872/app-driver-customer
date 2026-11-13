@@ -161,7 +161,16 @@ flutter:
     - assets/audio/hudhud_ride_request.wav
     - assets/geo/nouakchott_districts.geojson
     - assets/data/places.json
-    - .env
+    # Not ".env": Android's aapt packaging step silently drops any file
+    # whose name starts with "." (its default ignoreAssetsPattern matches
+    # ".*") when it bundles flutter_assets into the final APK - the file
+    # is correctly declared here and present in Flutter's own intermediate
+    # asset bundle, but never makes it into a real built APK at all. Every
+    # dotenv.load() then fails at runtime on Android specifically (web/iOS
+    # don't package assets this way, so those builds were never affected).
+    # Confirmed by unzip -l on a built release APK: zero dotfiles anywhere
+    # under assets/flutter_assets/.
+    - app.env
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

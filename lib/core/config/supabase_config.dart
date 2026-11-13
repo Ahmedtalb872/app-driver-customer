@@ -53,7 +53,7 @@ class SupabaseConfig {
     if (url == null || url.isEmpty || anonKey == null || anonKey.isEmpty) {
       throw StateError(
         'Missing SUPABASE_URL / SUPABASE_ANON_KEY. '
-        'Copy .env.example to .env and fill in your Supabase project values.',
+        'Copy app.env.example to app.env and fill in your Supabase project values.',
       );
     }
 
