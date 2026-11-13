@@ -12048,7 +12048,7 @@ for(;;)switch(s){case 0:if($.ak==null)A.af9()
 $.ak.toString
 A.cck()
 s=2
-return A.d($.JJ().Rx(0,".env"),$async$auA)
+return A.d($.JJ().Rx(0,"app.env"),$async$auA)
 case 2:s=3
 return A.d(A.RD(),$async$auA)
 case 3:q=v.G.document.baseURI
@@ -43414,7 +43414,7 @@ var $async$RD=A.f(function(a,b){if(a===1){o.push(b)
 s=p}for(;;)switch(s){case 0:if($.b0v){s=1
 break}n=$.JJ().gGJ().h(0,"SUPABASE_URL")
 m=$.JJ().gGJ().h(0,"SUPABASE_ANON_KEY")
-if(n==null||n.length===0||m==null||m.length===0)throw A.m(A.ag("Missing SUPABASE_URL / SUPABASE_ANON_KEY. Copy .env.example to .env and fill in your Supabase project values."))
+if(n==null||n.length===0||m==null||m.length===0)throw A.m(A.ag("Missing SUPABASE_URL / SUPABASE_ANON_KEY. Copy app.env.example to app.env and fill in your Supabase project values."))
 l=1,j=t.z
 case 3:if(!(l<=4)){s=5
 break}p=7
