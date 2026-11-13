@@ -53,6 +53,12 @@ class _SplashScreenState extends State<SplashScreen>
   late final AnimationController _brandController;
 
   Timer? _navigationTimer;
+  Timer? _forceFallbackTimer;
+
+  // Set right before every Navigator.pushReplacement call below, so the
+  // independent force-fallback timer (see initState) knows navigation
+  // already happened and must not fire a second, conflicting one.
+  bool _navigated = false;
 
   @override
   void initState() {
@@ -91,38 +97,58 @@ class _SplashScreenState extends State<SplashScreen>
       if (!mounted) return;
       unawaited(_navigateNextWithDeadline());
     });
+
+    // Independent of _navigateNextWithDeadline's own .timeout() below - a
+    // 20s .timeout() only rescues a *hang* (an awaited Future that never
+    // completes), and only if nothing throws anything other than
+    // TimeoutException along the way. Reported stuck well past that
+    // deadline even after that fix shipped, which means some other
+    // exception is escaping uncaught and silently killing navigation with
+    // no visible error at all. This plain Timer doesn't care what
+    // _navigateNext is doing or why it failed - it just forces the same
+    // safe fallback once the deadline passes, unless normal navigation
+    // (_navigated) already got there first.
+    _forceFallbackTimer = Timer(const Duration(seconds: 23), () {
+      _goToWelcomeIfNeeded();
+    });
+  }
+
+  void _goToWelcomeIfNeeded() {
+    if (_navigated || !mounted) return;
+    _navigated = true;
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const AuthWelcomeScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 500),
+      ),
+    );
   }
 
   /// Absolute backstop on top of _navigateNext's own per-call timeouts
   /// (VersionGateService, AuthService.fetchCurrentRole/fetchCurrentFullName/
   /// setActiveSession already each cap at 6s and fall through gracefully on
-  /// their own) - still reported stuck on this screen despite those, so
-  /// this guarantees forward progress no matter what turns out to be
-  /// hanging, known or not: if _navigateNext hasn't finished by this
-  /// deadline, stop waiting on it and go to the welcome screen directly,
-  /// the same safe destination every other failure path above already
-  /// falls back to.
+  /// their own) - still reported stuck on this screen despite those. Catches
+  /// *any* failure, not just TimeoutException: an unrelated exception
+  /// thrown anywhere in _navigateNext would otherwise escape uncaught
+  /// through this unawaited call and silently leave the splash screen up
+  /// forever with no error ever shown. _forceFallbackTimer above is the
+  /// true last resort either way, in case even this catch doesn't run.
   Future<void> _navigateNextWithDeadline() async {
     try {
       await _navigateNext().timeout(const Duration(seconds: 20));
-    } on TimeoutException {
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              const AuthWelcomeScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-          transitionDuration: const Duration(milliseconds: 500),
-        ),
-      );
+    } catch (_) {
+      _goToWelcomeIfNeeded();
     }
   }
 
   @override
   void dispose() {
     _navigationTimer?.cancel();
+    _forceFallbackTimer?.cancel();
     _controller.dispose();
     _logoController.dispose();
     _brandController.dispose();
@@ -142,6 +168,11 @@ class _SplashScreenState extends State<SplashScreen>
     final requiredVersion = await VersionGateService.requiredMinVersionOrNull();
     if (!mounted) return;
     if (requiredVersion != null) {
+      // Deliberately permanent - the dialog itself has no "later" option by
+      // design, so this counts as "handled" for the force-fallback timer:
+      // it must not yank the welcome screen in underneath/over a force-
+      // update prompt still intentionally on screen once 23s pass.
+      _navigated = true;
       await _showForceUpdateDialog(requiredVersion);
       return;
     }
@@ -174,6 +205,7 @@ class _SplashScreenState extends State<SplashScreen>
           // failure here just means this device misses admin broadcast
           // notifications until the next successful sync.
           unawaited(PushNotifications.syncToken());
+          _navigated = true;
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
               builder: (context) => const CustomerHomeScreen(),
@@ -194,17 +226,7 @@ class _SplashScreenState extends State<SplashScreen>
       }
     }
 
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            const AuthWelcomeScreen(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 500),
-      ),
-    );
+    _goToWelcomeIfNeeded();
   }
 
   /// Blocks the splash screen indefinitely behind a non-dismissible dialog -
