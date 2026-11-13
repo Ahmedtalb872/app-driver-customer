@@ -33,3 +33,33 @@ jobs:
           echo "Response body (first 500 chars):"
           head -c 500 /tmp/resp.json
           echo
+
+      - name: Query an actual table the app queries (app_settings)
+        # The previous step hits /rest/v1/'s bare OpenAPI introspection
+        # endpoint, which newer Supabase key types may restrict regardless
+        # of whether the key is otherwise valid - inconclusive on its own.
+        # This mirrors exactly what VersionGateService.requiredMinVersionOrNull
+        # actually does at app startup, so its result is a direct answer.
+        env:
+          URL: ${{ secrets.SUPABASE_URL }}
+          ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          code=$(curl -s -o /tmp/resp2.json -w "%{http_code}" --max-time 10 \
+            "$URL/rest/v1/app_settings?select=force_update&limit=1" \
+            -H "apikey: $ANON_KEY" -H "Authorization: Bearer $ANON_KEY")
+          echo "HTTP status: $code"
+          echo "Response body (first 500 chars):"
+          head -c 500 /tmp/resp2.json
+          echo
+
+      - name: Check Supabase Auth health endpoint
+        env:
+          URL: ${{ secrets.SUPABASE_URL }}
+          ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          code=$(curl -s -o /tmp/resp3.json -w "%{http_code}" --max-time 10 \
+            "$URL/auth/v1/health" -H "apikey: $ANON_KEY")
+          echo "HTTP status: $code"
+          echo "Response body (first 500 chars):"
+          head -c 500 /tmp/resp3.json
+          echo
