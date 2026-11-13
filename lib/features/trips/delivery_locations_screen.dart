@@ -41,7 +41,7 @@ class _DeliveryLocationsScreenState extends State<DeliveryLocationsScreen> {
     setState(() {
       _pickupLat = result.latitude;
       _pickupLng = result.longitude;
-      _pickupAddress = result.title;
+      _pickupAddress = result.displayLabel;
     });
   }
 

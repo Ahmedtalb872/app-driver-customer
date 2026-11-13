@@ -207,7 +207,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
         pickupLat: widget.pickupLat,
         pickupLng: widget.pickupLng,
         tripType: _tripType,
-        destinationAddress: widget.destination?.title,
+        destinationAddress: widget.destination?.displayLabel,
         destinationLat: widget.destination?.latitude,
         destinationLng: widget.destination?.longitude,
         vehicleType: _vehicleType,

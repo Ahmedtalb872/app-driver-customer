@@ -149,7 +149,7 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
     setState(() {
       _normalPickupLat = result.latitude;
       _normalPickupLng = result.longitude;
-      _normalPickupAddress = result.title;
+      _normalPickupAddress = result.displayLabel;
     });
   }
 
@@ -161,7 +161,7 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
     setState(() {
       _openPickupLat = result.latitude;
       _openPickupLng = result.longitude;
-      _openPickupAddress = result.title;
+      _openPickupAddress = result.displayLabel;
     });
   }
 
@@ -222,7 +222,7 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
     setState(() {
       _normalPickupLat = result.pickup.latitude;
       _normalPickupLng = result.pickup.longitude;
-      _normalPickupAddress = result.pickup.title;
+      _normalPickupAddress = result.pickup.displayLabel;
       _normalDestination = result.destination;
     });
     _continueNormal();
@@ -238,7 +238,7 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
         builder: (context) => RequestRideScreen(
           pickupLat: lat,
           pickupLng: lng,
-          pickupAddress: _normalPickupAddress ?? destination.title,
+          pickupAddress: _normalPickupAddress ?? destination.displayLabel,
           destination: destination,
           tripType: TripType.normal,
         ),

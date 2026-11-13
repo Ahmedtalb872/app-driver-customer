@@ -140,7 +140,7 @@ class _DeliveryRequestScreenState extends State<DeliveryRequestScreen> {
         pickupLat: widget.pickupLat,
         pickupLng: widget.pickupLng,
         tripType: TripType.normal,
-        destinationAddress: widget.destination.title,
+        destinationAddress: widget.destination.displayLabel,
         destinationLat: widget.destination.latitude,
         destinationLng: widget.destination.longitude,
         vehicleType: _vehicleType,
