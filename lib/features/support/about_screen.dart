@@ -1,8 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../core/constants/colors.dart';
 
-class AboutScreen extends StatelessWidget {
+class AboutScreen extends StatefulWidget {
   const AboutScreen({super.key});
+
+  @override
+  State<AboutScreen> createState() => _AboutScreenState();
+}
+
+class _AboutScreenState extends State<AboutScreen> {
+  // Was a hardcoded "1.0.0+1" string that never reflected what was
+  // actually installed - every build stamps a real, unique version+build
+  // number since build-customer-apk.yml started bumping it per run, but
+  // this screen kept showing the same placeholder regardless.
+  String _versionLabel = '...';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    if (!mounted) return;
+    setState(() => _versionLabel = '${info.version}+${info.buildNumber}');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,23 +51,23 @@ class AboutScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              child: ClipOval(
+              child: SizedBox(
+                width: 120,
+                height: 120,
                 child: Image.asset(
-                  'assets/images/al-houdhoud-logo.png',
-                  width: 120,
-                  height: 120,
-                  fit: BoxFit.cover,
+                  'assets/images/trende-logo-mark.png',
+                  fit: BoxFit.contain,
                 ),
               ),
             ),
             const SizedBox(height: 20),
             const Text(
-              'الهدهد',
+              'اترينـد',
               style: TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.w900,
                 color: AppColors.darkText,
-                fontFamily: 'Cairo',
+                fontFamily: 'El Messiri',
               ),
             ),
             const SizedBox(height: 6),
@@ -52,7 +76,7 @@ class AboutScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 color: AppColors.secondaryText,
-                fontFamily: 'Cairo',
+                fontFamily: 'El Messiri',
               ),
             ),
             const SizedBox(height: 24),
@@ -64,9 +88,9 @@ class AboutScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    _buildInfoRow('رقم الإصدار', '1.0.0+1'),
+                    _buildInfoRow('رقم الإصدار', _versionLabel),
                     const Divider(height: 1),
-                    _buildInfoRow('المطور', 'Al Hodhod'),
+                    _buildInfoRow('المطور', 'TRENDE'),
                   ],
                 ),
               ),
@@ -76,12 +100,12 @@ class AboutScreen extends StatelessWidget {
               child: Padding(
                 padding: EdgeInsets.all(20.0),
                 child: Text(
-                  'الهدهد هو تطبيق نقل ذكي يربط الزبائن بالكباتن لتوفير رحلات آمنة وسريعة وسهلة داخل المدينة، مع دعم كامل لطرق الدفع المحلية وتتبع مباشر لسير الرحلة.',
+                  'اترينـد هو تطبيق نقل ذكي يربط الزبائن بالكباتن لتوفير رحلات آمنة وسريعة وسهلة داخل المدينة، مع دعم كامل لطرق الدفع المحلية وتتبع مباشر لسير الرحلة.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 13,
                     color: AppColors.secondaryText,
-                    fontFamily: 'Cairo',
+                    fontFamily: 'El Messiri',
                     height: 1.7,
                   ),
                 ),
@@ -89,11 +113,11 @@ class AboutScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             const Text(
-              '© 2026 الهدهد. جميع الحقوق محفوظة.',
+              '© 2026 اترينـد. جميع الحقوق محفوظة.',
               style: TextStyle(
                 fontSize: 11,
                 color: AppColors.secondaryText,
-                fontFamily: 'Cairo',
+                fontFamily: 'El Messiri',
               ),
             ),
             const SizedBox(height: 20),
@@ -114,7 +138,7 @@ class AboutScreen extends StatelessWidget {
             style: const TextStyle(
               fontSize: 13,
               color: AppColors.secondaryText,
-              fontFamily: 'Cairo',
+              fontFamily: 'El Messiri',
             ),
           ),
           Text(
@@ -123,7 +147,7 @@ class AboutScreen extends StatelessWidget {
               fontSize: 13,
               fontWeight: FontWeight.bold,
               color: AppColors.darkText,
-              fontFamily: 'Cairo',
+              fontFamily: 'El Messiri',
             ),
           ),
         ],

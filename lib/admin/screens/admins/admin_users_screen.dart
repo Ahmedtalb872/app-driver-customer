@@ -5,6 +5,7 @@ import '../../core/admin_colors.dart';
 import '../../repositories/admin_users_repository.dart';
 import '../../services/admin_session.dart';
 import '../../widgets/confirm_dialog.dart';
+import '../../widgets/copyable_phone.dart';
 import '../../widgets/status_badge.dart';
 
 class AdminUsersScreen extends StatefulWidget {
@@ -63,7 +64,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                   style: TextStyle(
                     fontSize: 11,
                     color: AdminColors.textSecondary,
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -118,7 +119,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
             const SnackBar(
               content: Text(
                 'لا يوجد مستخدم مسجل بهذا الرقم.',
-                style: TextStyle(fontFamily: 'Cairo'),
+                style: TextStyle(fontFamily: 'Tajawal'),
               ),
             ),
           );
@@ -139,7 +140,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           const SnackBar(
             content: Text(
               'تعذر إضافة المسؤول، تحقق من صلاحياتك.',
-              style: TextStyle(fontFamily: 'Cairo'),
+              style: TextStyle(fontFamily: 'Tajawal'),
             ),
           ),
         );
@@ -165,7 +166,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           const SnackBar(
             content: Text(
               'تعذر تنفيذ الإجراء.',
-              style: TextStyle(fontFamily: 'Cairo'),
+              style: TextStyle(fontFamily: 'Tajawal'),
             ),
           ),
         );
@@ -222,7 +223,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                 ),
                               ),
                               DataCell(
-                                Text((profile?['phone'] as String?) ?? '-'),
+                                CopyablePhone(profile?['phone'] as String?),
                               ),
                               DataCell(
                                 Text(

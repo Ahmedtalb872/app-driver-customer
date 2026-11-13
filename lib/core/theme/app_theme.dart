@@ -1,16 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/services.dart';
 import '../constants/colors.dart';
 
 class AppTheme {
   static ThemeData get lightTheme {
-    // Registers the real Cairo font under the 'Cairo' family name via
-    // google_fonts. Every TextStyle(fontFamily: 'Cairo') already
-    // hardcoded across the app's screens resolves through this same
-    // font-family name once it's loaded here, so this one call is enough
-    // to make Cairo render everywhere - no per-widget changes needed.
-    final cairoTextTheme = GoogleFonts.cairoTextTheme();
-
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
@@ -22,9 +15,16 @@ class AppTheme {
         error: AppColors.error,
       ),
       scaffoldBackgroundColor: AppColors.background,
-      fontFamily: GoogleFonts.cairo().fontFamily,
-      textTheme: cairoTextTheme,
-      primaryTextTheme: cairoTextTheme,
+      // 'El Messiri' here resolves through the font bundled in pubspec.yaml
+      // (assets/fonts/ElMessiri-*.ttf) - every TextStyle(fontFamily: 'El
+      // Messiri') already hardcoded across the app's screens resolves
+      // through that same registered family name too, no per-widget
+      // changes needed.
+      fontFamily: 'El Messiri',
+      textTheme: ThemeData.light().textTheme.apply(fontFamily: 'El Messiri'),
+      primaryTextTheme: ThemeData.light().primaryTextTheme.apply(
+        fontFamily: 'El Messiri',
+      ),
 
       cardTheme: ThemeData.light().cardTheme.copyWith(
         color: AppColors.surface,
@@ -35,17 +35,17 @@ class AppTheme {
 
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
+          backgroundColor: AppColors.accent,
           foregroundColor: Colors.white,
           elevation: 0,
           minimumSize: const Size(double.infinity, 56),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(28),
           ),
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            fontFamily: 'Cairo',
+            fontFamily: 'El Messiri',
           ),
         ),
       ),
@@ -56,12 +56,12 @@ class AppTheme {
           side: const BorderSide(color: AppColors.primary, width: 1.5),
           minimumSize: const Size(double.infinity, 56),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(28),
           ),
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            fontFamily: 'Cairo',
+            fontFamily: 'El Messiri',
           ),
         ),
       ),
@@ -72,7 +72,7 @@ class AppTheme {
           textStyle: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            fontFamily: 'Cairo',
+            fontFamily: 'El Messiri',
           ),
         ),
       ),
@@ -107,25 +107,26 @@ class AppTheme {
         hintStyle: const TextStyle(
           color: AppColors.secondaryText,
           fontSize: 14,
-          fontFamily: 'Cairo',
+          fontFamily: 'El Messiri',
         ),
         labelStyle: const TextStyle(
           color: AppColors.darkText,
           fontSize: 14,
-          fontFamily: 'Cairo',
+          fontFamily: 'El Messiri',
         ),
       ),
 
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.surface,
-        foregroundColor: AppColors.darkText,
+        backgroundColor: AppColors.accent,
+        foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
+        systemOverlayStyle: SystemUiOverlayStyle.light,
         titleTextStyle: TextStyle(
-          color: AppColors.darkText,
+          color: Colors.white,
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          fontFamily: 'Cairo',
+          fontFamily: 'El Messiri',
         ),
       ),
 

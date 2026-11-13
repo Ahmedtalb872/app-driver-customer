@@ -20,6 +20,7 @@ class _AdminPricingScreenState extends State<AdminPricingScreen> {
     'economy': 'إقتصادية',
     'comfort': 'مريحة',
     'family': 'عائلية',
+    'motorcycle': 'دراجة نارية (توصيل)',
   };
   static const _fields = [
     ('base_fare', 'الأجرة الأساسية'),
@@ -30,6 +31,9 @@ class _AdminPricingScreenState extends State<AdminPricingScreen> {
     ('cancellation_fee', 'رسوم الإلغاء'),
     ('commission_percentage', 'نسبة عمولة المنصة (%)'),
     ('surge_multiplier', 'معامل التسعير المرتفع'),
+    ('open_trip_base_fare', 'أجرة بداية المشوار المفتوح'),
+    ('open_trip_base_distance_km', 'مسافة بداية المشوار المفتوح (كم)'),
+    ('open_trip_base_minutes', 'مدة بداية المشوار المفتوح (دقيقة)'),
   ];
 
   @override
@@ -136,7 +140,7 @@ class _AdminPricingScreenState extends State<AdminPricingScreen> {
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
-                          fontFamily: 'Cairo',
+                          fontFamily: 'Tajawal',
                         ),
                       ),
                       ElevatedButton.icon(
@@ -152,7 +156,7 @@ class _AdminPricingScreenState extends State<AdminPricingScreen> {
                     style: const TextStyle(
                       fontSize: 11,
                       color: AdminColors.textSecondary,
-                      fontFamily: 'Cairo',
+                      fontFamily: 'Tajawal',
                     ),
                   ),
                   const Divider(height: 24),
@@ -171,7 +175,7 @@ class _AdminPricingScreenState extends State<AdminPricingScreen> {
                                   style: const TextStyle(
                                     fontSize: 11,
                                     color: AdminColors.textSecondary,
-                                    fontFamily: 'Cairo',
+                                    fontFamily: 'Tajawal',
                                   ),
                                 ),
                                 Text(
@@ -179,7 +183,7 @@ class _AdminPricingScreenState extends State<AdminPricingScreen> {
                                   style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.bold,
-                                    fontFamily: 'Cairo',
+                                    fontFamily: 'Tajawal',
                                   ),
                                 ),
                               ],

@@ -159,30 +159,30 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
                       child: Image.asset(
-                        'assets/images/al-houdhoud-logo.png',
+                        'assets/images/trende-logo-mark.png',
                         height: 96,
                         fit: BoxFit.contain,
                       ),
                     ),
                     const SizedBox(height: 20),
                     const Text(
-                      'لوحة تحكم الهدهد',
+                      'لوحة تحكم اترينـد',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                         color: AdminColors.textPrimary,
-                        fontFamily: 'Cairo',
+                        fontFamily: 'Tajawal',
                       ),
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'AL HODHOD Admin Dashboard',
+                      'TRENDE Admin Dashboard',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 12,
                         color: AdminColors.textSecondary,
-                        fontFamily: 'Cairo',
+                        fontFamily: 'Tajawal',
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -211,7 +211,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                         style: const TextStyle(
                           color: AdminColors.error,
                           fontSize: 12,
-                          fontFamily: 'Cairo',
+                          fontFamily: 'Tajawal',
                         ),
                       ),
                     ],
@@ -236,6 +236,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               controller: _identifierController,
               decoration: const InputDecoration(
                 labelText: 'رقم الهاتف أو البريد الإلكتروني',
+                helperText: 'رقم الهاتف بدون +222 (مثال: 20522064)',
               ),
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? 'مطلوب' : null,
@@ -292,7 +293,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                 style: const TextStyle(
                   fontSize: 12,
                   color: AdminColors.textSecondary,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                 ),
               ),
               const SizedBox(height: 16),
@@ -371,7 +372,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                 style: TextStyle(
                   fontSize: 11,
                   color: AdminColors.textSecondary,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                 ),
               ),
             ],

@@ -18,6 +18,11 @@ class PaymentProviderConfig {
   final int phoneDigits;
   final int pinDigits;
 
+  /// Not accepting payments yet - matches the captain app's wallet-recharge
+  /// screen, where Masrvi/Sedad show a disabled "قريباً" row instead of
+  /// opening the (manual-review) payment gateway.
+  final bool comingSoon;
+
   const PaymentProviderConfig({
     required this.id,
     required this.displayName,
@@ -31,6 +36,7 @@ class PaymentProviderConfig {
     required this.accountLabel,
     this.phoneDigits = 8,
     this.pinDigits = 4,
+    this.comingSoon = false,
   });
 }
 
@@ -45,7 +51,7 @@ class PaymentProviders {
     onPrimaryColor: Colors.white,
     logoIcon: Icons.account_balance_wallet_rounded,
     merchantId: 'MER-458213',
-    merchantName: 'شركة الهدهد للنقل الذكي',
+    merchantName: 'شركة اترينـد للنقل الذكي',
     merchantAccountNumber: '22244490001',
     accountLabel: 'رقم حساب بنكيلي التجاري',
   );
@@ -58,9 +64,10 @@ class PaymentProviders {
     onPrimaryColor: Colors.white,
     logoIcon: Icons.credit_score_rounded,
     merchantId: 'MER-773190',
-    merchantName: 'شركة الهدهد للنقل الذكي',
+    merchantName: 'شركة اترينـد للنقل الذكي',
     merchantAccountNumber: '22233390002',
     accountLabel: 'رقم حساب مصرفي التجاري',
+    comingSoon: true,
   );
 
   static const sedad = PaymentProviderConfig(
@@ -71,9 +78,10 @@ class PaymentProviders {
     onPrimaryColor: Colors.white,
     logoIcon: Icons.qr_code_scanner_rounded,
     merchantId: 'MER-621047',
-    merchantName: 'شركة الهدهد للنقل الذكي',
+    merchantName: 'شركة اترينـد للنقل الذكي',
     merchantAccountNumber: '22255590003',
     accountLabel: 'رقم حساب سداد التجاري',
+    comingSoon: true,
   );
 
   static const bankCard = PaymentProviderConfig(
@@ -84,7 +92,7 @@ class PaymentProviders {
     onPrimaryColor: Colors.white,
     logoIcon: Icons.credit_card_rounded,
     merchantId: 'MER-990045',
-    merchantName: 'شركة الهدهد للنقل الذكي',
+    merchantName: 'شركة اترينـد للنقل الذكي',
     merchantAccountNumber: '22200090004',
     accountLabel: 'رقم الحساب التجاري',
   );

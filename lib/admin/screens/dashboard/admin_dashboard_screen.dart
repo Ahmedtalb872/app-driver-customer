@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../core/admin_colors.dart';
 import '../../models/dashboard_stats.dart';
 import '../../repositories/admin_dashboard_repository.dart';
+import '../../widgets/glass_card.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/status_badge.dart';
 
@@ -62,7 +63,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(_error!, style: const TextStyle(fontFamily: 'Cairo')),
+            Text(_error!, style: const TextStyle(fontFamily: 'Tajawal')),
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: _load,
@@ -231,63 +232,105 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       for (var i = 0; i < _tripsPerDay.length; i++)
         FlSpot(i.toDouble(), (_tripsPerDay[i]['count'] as int).toDouble()),
     ];
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'الرحلات خلال آخر 7 أيام',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Cairo',
+    final labelStyle = const TextStyle(
+      color: AdminColors.textSecondary,
+      fontSize: 10,
+      fontFamily: 'Tajawal',
+    );
+    return HoverLift(
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'الرحلات خلال آخر 7 أيام',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: AdminColors.textPrimary,
+                  fontFamily: 'Tajawal',
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 180,
-              child: spots.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'لا توجد بيانات رحلات بعد',
-                        style: TextStyle(
-                          color: AdminColors.textSecondary,
-                          fontFamily: 'Cairo',
-                        ),
-                      ),
-                    )
-                  : LineChart(
-                      LineChartData(
-                        gridData: const FlGridData(show: false),
-                        titlesData: const FlTitlesData(
-                          topTitles: AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          rightTitles: AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 180,
+                child: spots.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'لا توجد بيانات رحلات بعد',
+                          style: TextStyle(
+                            color: AdminColors.textSecondary,
+                            fontFamily: 'Tajawal',
                           ),
                         ),
-                        borderData: FlBorderData(show: false),
-                        lineBarsData: [
-                          LineChartBarData(
-                            spots: spots,
-                            isCurved: true,
-                            color: AdminColors.primary,
-                            barWidth: 3,
-                            dotData: const FlDotData(show: true),
-                            belowBarData: BarAreaData(
-                              show: true,
-                              color: AdminColors.primary.withValues(
-                                alpha: 0.08,
+                      )
+                    : LineChart(
+                        LineChartData(
+                          gridData: FlGridData(
+                            show: true,
+                            drawVerticalLine: false,
+                            getDrawingHorizontalLine: (_) => FlLine(
+                              color: AdminColors.border,
+                              strokeWidth: 1,
+                            ),
+                          ),
+                          titlesData: FlTitlesData(
+                            topTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                            rightTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 20,
+                                getTitlesWidget: (value, meta) => Text(
+                                  value.toInt().toString(),
+                                  style: labelStyle,
+                                ),
+                              ),
+                            ),
+                            leftTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 28,
+                                getTitlesWidget: (value, meta) => Text(
+                                  value.toInt().toString(),
+                                  style: labelStyle,
+                                ),
                               ),
                             ),
                           ),
-                        ],
+                          borderData: FlBorderData(show: false),
+                          lineBarsData: [
+                            LineChartBarData(
+                              spots: spots,
+                              isCurved: true,
+                              color: AdminColors.primary,
+                              barWidth: 3,
+                              dotData: const FlDotData(show: true),
+                              belowBarData: BarAreaData(
+                                show: true,
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    AdminColors.primary.withValues(
+                                      alpha: 0.25,
+                                    ),
+                                    AdminColors.primary.withValues(alpha: 0),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -318,60 +361,65 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ),
     ].where((s) => s.value > 0).toList();
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'توزيع حالات الرحلات',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Cairo',
+    return HoverLift(
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'توزيع حالات الرحلات',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: AdminColors.textPrimary,
+                  fontFamily: 'Tajawal',
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 180,
-              child: sections.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'لا توجد بيانات رحلات بعد',
-                        style: TextStyle(
-                          color: AdminColors.textSecondary,
-                          fontFamily: 'Cairo',
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 180,
+                child: sections.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'لا توجد بيانات رحلات بعد',
+                          style: TextStyle(
+                            color: AdminColors.textSecondary,
+                            fontFamily: 'Tajawal',
+                          ),
+                        ),
+                      )
+                    : PieChart(
+                        PieChartData(
+                          sections: sections,
+                          sectionsSpace: 2,
+                          centerSpaceRadius: 30,
                         ),
                       ),
-                    )
-                  : PieChart(
-                      PieChartData(
-                        sections: sections,
-                        sectionsSpace: 2,
-                        centerSpaceRadius: 30,
-                      ),
-                    ),
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildRecentTrips() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'أحدث الرحلات',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Cairo',
+    return HoverLift(
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'أحدث الرحلات',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: AdminColors.textPrimary,
+                  fontFamily: 'Tajawal',
+                ),
               ),
-            ),
             const SizedBox(height: 12),
             if (_recentTrips.isEmpty)
               const Padding(
@@ -380,7 +428,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   'لا توجد رحلات مسجلة بعد.',
                   style: TextStyle(
                     color: AdminColors.textSecondary,
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                   ),
                 ),
               )
@@ -419,6 +467,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ],
         ),
       ),
-    );
+    ));
   }
 }

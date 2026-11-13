@@ -32,34 +32,125 @@ class AdminTripsRepository {
     return List<Map<String, dynamic>>.from(rows);
   }
 
+  /// Includes the same `customers(profiles(full_name))` embed
+  /// [loadActiveTrips] does - [TripDetailPanel]'s own `_customerLabel`
+  /// only resolves a real name when it's there, otherwise silently
+  /// falling back to the guest phone/a dash. Used to open the panel for a
+  /// single trip that isn't necessarily in the active-trips list (e.g.
+  /// AdminShell's incoming-call overlay, which only ever has a trip id).
   Future<Map<String, dynamic>?> loadTripById(String id) async {
-    return await _client.from('trips').select().eq('id', id).maybeSingle();
+    return await _client
+        .from('trips')
+        .select('*, customers(profiles(full_name, phone))')
+        .eq('id', id)
+        .maybeSingle();
   }
 
   static const activeStatuses = [
     'searching',
     'accepted',
     'arrived',
+    // An open trip's "board passenger" action sets status straight to
+    // 'boarded' rather than 'in_progress' - see the same fix/comment in
+    // RideRepository._activeStatuses.
+    'boarded',
     'in_progress',
   ];
 
   /// Live Operations feed: currently active trips with customer/captain
   /// names embedded via the existing FK relationships (trips -> customers
   /// -> profiles, trips -> captains -> profiles) - no new columns/tables.
+  /// `captains!trips_captain_id_fkey` (not bare `captains(...)`) is
+  /// required: trips gained a second FK to captains (subscribed_captain_id,
+  /// 20260812000056_captain_subscriptions.sql), so an unqualified embed is
+  /// now ambiguous and PostgREST rejects it (PGRST201).
   Future<List<Map<String, dynamic>>> loadActiveTrips() async {
     final rows = await _client
         .from('trips')
         .select(
           '*, customers(profiles(full_name, phone)), '
-          'captains(profiles(full_name, phone))',
+          'captains!trips_captain_id_fkey(profiles(full_name, phone))',
         )
         .inFilter('status', activeStatuses)
         .order('requested_at', ascending: false);
     return List<Map<String, dynamic>>.from(rows);
   }
 
+  /// How many captains are currently eligible to see [trip] on their own
+  /// "طلب جديد" screen, mirroring the exact rule in trips' "Open trip
+  /// requests are visible to active captains" RLS policy
+  /// (20260801000046_delivery_service.sql): approved + online, and for a
+  /// delivery specifically a motorcycle captain who opted into deliveries -
+  /// a ride has no further vehicle_type restriction there, so any approved
+  /// online captain counts. There's no log of who actually saw a given
+  /// request at the moment it went out (nothing persists that), so this is
+  /// a live count of who could see it right now, not a historical one -
+  /// only meaningful alongside a trip still in 'searching'.
+  Future<int> countEligibleCaptains(Map<String, dynamic> trip) async {
+    var query = _client
+        .from('captains')
+        .select()
+        .eq('status', 'approved')
+        .eq('is_online', true);
+
+    if ((trip['service_type'] as String?) == 'delivery') {
+      query = query.eq('vehicle_type', 'motorcycle').eq('accepts_delivery', true);
+    }
+
+    final response = await query.count(CountOption.exact);
+    return response.count;
+  }
+
+  /// The persisted per-captain log behind "كم كابتن يراها" -
+  /// `trip_captain_offers` (20261101000118_trip_captain_offers.sql) is
+  /// snapshotted by a DB trigger the instant a request is created (every
+  /// captain who was eligible to receive it right then) and resolved by
+  /// another trigger the instant it leaves 'searching' (whoever ended up
+  /// with it marked 'accepted', everyone else 'missed'). A trip placed
+  /// before this migration shipped has no rows here at all - that's not a
+  /// bug, there's simply nothing recorded for it.
+  Future<List<Map<String, dynamic>>> loadCaptainOffers(String tripId) async {
+    final rows = await _client
+        .from('trip_captain_offers')
+        .select('*, captains(profiles(full_name, phone))')
+        .eq('trip_id', tripId)
+        .order('offered_at');
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
   Future<void> updateAdminNotes(String tripId, String notes) async {
     await _client.from('trips').update({'admin_notes': notes}).eq('id', tripId);
+  }
+
+  /// Corrects a trip's pickup and/or destination (address + coordinates)
+  /// after the fact - e.g. the customer's app dropped the pin in the wrong
+  /// spot, or picked the wrong place from search. A plain owner-or-admin
+  /// update (RLS: `Trip owner, assigned captain, or admin can update`,
+  /// 20260712000026_admin_rls.sql) - no RPC needed, same as
+  /// [updateAdminNotes]. [destinationAddress]/[destinationLat]/
+  /// [destinationLng] are only sent when non-null, so calling this for an
+  /// Open Trip (no destination yet) only ever touches the pickup fields.
+  Future<void> updateRoute(
+    String tripId, {
+    required String pickupAddress,
+    required double pickupLat,
+    required double pickupLng,
+    String? destinationAddress,
+    double? destinationLat,
+    double? destinationLng,
+  }) async {
+    await _client
+        .from('trips')
+        .update({
+          'pickup_address': pickupAddress,
+          'pickup_lat': pickupLat,
+          'pickup_lng': pickupLng,
+          if (destinationAddress != null)
+            'destination_address': destinationAddress,
+          if (destinationLat != null) 'destination_lat': destinationLat,
+          if (destinationLng != null) 'destination_lng': destinationLng,
+        })
+        .eq('id', tripId);
   }
 
   Future<void> cancel(String tripId, String reason) async {

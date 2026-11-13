@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
 import '../../../core/constants/colors.dart';
-import '../../../providers/app_state_provider.dart';
+import '../../../core/services/wallet_repository.dart';
 import 'payment_gateway_service.dart';
 import 'payment_provider_config.dart';
 
@@ -13,9 +12,12 @@ enum _PaymentStage { form, processing, success, failure }
 /// shown (logo, colors, merchant fields, field lengths) — the layout,
 /// validation, processing/success/failure states are shared.
 ///
-/// On success, this screen itself credits the wallet and records the
-/// transaction (via [AppStateProvider.rechargeWallet]), so callers just
-/// push it and don't need any follow-up wiring.
+/// On a successful provider payment, this screen queues a wallet recharge
+/// request (see [WalletRepository.submitRechargeRequest]) - the payment
+/// itself succeeded, but the wallet balance only actually updates once an
+/// admin reviews and approves the request (the same review queue
+/// `recharge_requests` was always meant to back), so the success screen
+/// says "submitted for review", not "credited".
 class PaymentGatewayScreen extends StatefulWidget {
   final PaymentProviderConfig provider;
   final double initialAmount;
@@ -72,7 +74,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
       const SnackBar(
         content: Text(
           'تم نسخ رقم التاجر',
-          style: TextStyle(fontFamily: 'Cairo'),
+          style: TextStyle(fontFamily: 'El Messiri'),
         ),
         duration: Duration(seconds: 1),
       ),
@@ -94,10 +96,21 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
     if (!mounted) return;
 
     if (result.isSuccess) {
-      Provider.of<AppStateProvider>(
-        context,
-        listen: false,
-      ).rechargeWallet(_amount, widget.provider.displayName);
+      try {
+        await WalletRepository.instance.submitRechargeRequest(
+          amount: _amount,
+          method: widget.provider.displayName,
+        );
+      } catch (_) {
+        if (!mounted) return;
+        setState(() {
+          _stage = _PaymentStage.failure;
+          _failureReason =
+              'تم الدفع لكن تعذر إرسال طلب الشحن الآن. تواصل مع الدعم مع رقم العملية.';
+        });
+        return;
+      }
+      if (!mounted) return;
       setState(() {
         _stage = _PaymentStage.success;
         _transactionReference = result.transactionReference;
@@ -314,7 +327,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
                       style: TextStyle(
                         color: provider.onPrimaryColor,
                         fontSize: 11,
-                        fontFamily: 'Cairo',
+                        fontFamily: 'El Messiri',
                       ),
                     ),
                   ],
@@ -350,7 +363,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
                           color: provider.onPrimaryColor,
                           fontSize: 24,
                           fontWeight: FontWeight.w900,
-                          fontFamily: 'Cairo',
+                          fontFamily: 'El Messiri',
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -359,7 +372,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
                         style: TextStyle(
                           color: provider.onPrimaryColor.withOpacity(0.85),
                           fontSize: 12,
-                          fontFamily: 'Cairo',
+                          fontFamily: 'El Messiri',
                         ),
                       ),
                     ],
@@ -410,7 +423,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
                 style: const TextStyle(
                   fontSize: 11,
                   color: AppColors.secondaryText,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'El Messiri',
                 ),
               ),
               const SizedBox(height: 4),
@@ -420,7 +433,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: AppColors.darkText,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'El Messiri',
                 ),
               ),
             ],
@@ -457,7 +470,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 13,
-              fontFamily: 'Cairo',
+              fontFamily: 'El Messiri',
               color: AppColors.darkText,
             ),
           ),
@@ -491,7 +504,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
           style: const TextStyle(
             fontSize: 12,
             color: AppColors.secondaryText,
-            fontFamily: 'Cairo',
+            fontFamily: 'El Messiri',
           ),
         ),
         Text(
@@ -500,7 +513,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
             fontSize: emphasize ? 16 : 13,
             fontWeight: FontWeight.bold,
             color: color ?? AppColors.darkText,
-            fontFamily: 'Cairo',
+            fontFamily: 'El Messiri',
           ),
         ),
       ],
@@ -514,7 +527,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
         fontSize: 13,
         fontWeight: FontWeight.bold,
         color: AppColors.darkText,
-        fontFamily: 'Cairo',
+        fontFamily: 'El Messiri',
       ),
     );
   }
@@ -543,7 +556,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
               fontSize: 15,
               fontWeight: FontWeight.bold,
               color: AppColors.darkText,
-              fontFamily: 'Cairo',
+              fontFamily: 'El Messiri',
             ),
           ),
           const SizedBox(height: 8),
@@ -552,7 +565,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
             style: TextStyle(
               fontSize: 12,
               color: AppColors.secondaryText,
-              fontFamily: 'Cairo',
+              fontFamily: 'El Messiri',
             ),
           ),
         ],
@@ -581,22 +594,24 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
             ),
             const SizedBox(height: 20),
             const Text(
-              'تمت عملية الدفع بنجاح',
+              'تم إرسال طلب الشحن',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: AppColors.darkText,
-                fontFamily: 'Cairo',
+                fontFamily: 'El Messiri',
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'تم شحن ${_amount.toStringAsFixed(0)} أوقية إلى محفظتك عبر ${provider.displayName}.',
+              'تم الدفع بنجاح عبر ${provider.displayName}، وأُرسل طلب شحن بمبلغ '
+              '${_amount.toStringAsFixed(0)} أوقية للمراجعة. ستُضاف إلى '
+              'محفظتك بعد موافقة الإدارة.',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 13,
                 color: AppColors.secondaryText,
-                fontFamily: 'Cairo',
+                fontFamily: 'El Messiri',
               ),
             ),
             if (_transactionReference != null) ...[
@@ -615,7 +630,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
                   style: const TextStyle(
                     fontSize: 11,
                     color: AppColors.secondaryText,
-                    fontFamily: 'Cairo',
+                    fontFamily: 'El Messiri',
                   ),
                 ),
               ),
@@ -663,7 +678,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: AppColors.darkText,
-                fontFamily: 'Cairo',
+                fontFamily: 'El Messiri',
               ),
             ),
             const SizedBox(height: 8),
@@ -673,7 +688,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
               style: const TextStyle(
                 fontSize: 13,
                 color: AppColors.secondaryText,
-                fontFamily: 'Cairo',
+                fontFamily: 'El Messiri',
               ),
             ),
             const SizedBox(height: 32),

@@ -1,9 +1,35 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/colors.dart';
+import '../../core/services/support_ticket_repository.dart';
+import 'support_ticket_chat_screen.dart';
 
 class SupportScreen extends StatelessWidget {
   final bool showAppBar;
   const SupportScreen({super.key, this.showAppBar = false});
+
+  Future<void> _openLiveChat(BuildContext context) async {
+    try {
+      final ticketId = await SupportTicketRepository.instance
+          .getOrCreateMyTicket();
+      if (!context.mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => SupportTicketChatScreen(ticketId: ticketId),
+        ),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'تعذر فتح المحادثة الآن، حاول مرة أخرى.',
+            style: TextStyle(fontFamily: 'El Messiri'),
+          ),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +49,7 @@ class SupportScreen extends StatelessWidget {
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: AppColors.darkText,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'El Messiri',
                 ),
               ),
               const SizedBox(height: 16),
@@ -42,16 +68,16 @@ class SupportScreen extends StatelessWidget {
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: AppColors.darkText,
-                        fontFamily: 'Cairo',
+                        fontFamily: 'El Messiri',
                       ),
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      'فريق دعم الهدهد متاح على مدار الساعة لمساعدتك في أي استفسار.',
+                      'فريق دعم اترينـد متاح على مدار الساعة لمساعدتك في أي استفسار.',
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.secondaryText,
-                        fontFamily: 'Cairo',
+                        fontFamily: 'El Messiri',
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -62,17 +88,7 @@ class SupportScreen extends StatelessWidget {
                           icon: Icons.chat_bubble_outline_rounded,
                           label: 'محادثة مباشرة',
                           color: AppColors.primary,
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'جاري بدء محادثة دعم جديدة...',
-                                  style: TextStyle(fontFamily: 'Cairo'),
-                                ),
-                                backgroundColor: AppColors.primary,
-                              ),
-                            );
-                          },
+                          onTap: () => _openLiveChat(context),
                         ),
                         const SizedBox(width: 12),
                         _buildContactChannel(
@@ -85,7 +101,7 @@ class SupportScreen extends StatelessWidget {
                               const SnackBar(
                                 content: Text(
                                   'جاري الاتصال بخدمة العملاء الموحدة...',
-                                  style: TextStyle(fontFamily: 'Cairo'),
+                                  style: TextStyle(fontFamily: 'El Messiri'),
                                 ),
                                 backgroundColor: AppColors.success,
                               ),
@@ -103,7 +119,7 @@ class SupportScreen extends StatelessWidget {
                               const SnackBar(
                                 content: Text(
                                   'تم نسخ البريد الإلكتروني للدعم support@alhudhud.mr',
-                                  style: TextStyle(fontFamily: 'Cairo'),
+                                  style: TextStyle(fontFamily: 'El Messiri'),
                                 ),
                                 backgroundColor: AppColors.darkText,
                               ),
@@ -125,7 +141,7 @@ class SupportScreen extends StatelessWidget {
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: AppColors.darkText,
-                fontFamily: 'Cairo',
+                fontFamily: 'El Messiri',
               ),
             ),
             const SizedBox(height: 12),
@@ -149,7 +165,7 @@ class SupportScreen extends StatelessWidget {
             ),
             _buildFAQItem(
               'طرق الدفع المتوفرة بالتطبيق',
-              'يدعم الهدهد الدفع النقدي المباشر، والدفع بواسطة المحفظة الداخلية، بالإضافة لخدمات الدفع الوطنية مثل Bankily و Masrvi و Sedad بشكل سلس.',
+              'يدعم اترينـد الدفع النقدي المباشر، والدفع بواسطة المحفظة الداخلية، بالإضافة لخدمات الدفع الوطنية مثل Bankily و Masrvi و Sedad بشكل سلس.',
             ),
             _buildFAQItem(
               'شروط الأمان والسلامة في الرحلة',
@@ -189,7 +205,7 @@ class SupportScreen extends StatelessWidget {
                   color: color,
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'El Messiri',
                 ),
               ),
             ],
@@ -210,7 +226,7 @@ class SupportScreen extends StatelessWidget {
             fontSize: 14,
             fontWeight: FontWeight.bold,
             color: AppColors.darkText,
-            fontFamily: 'Cairo',
+            fontFamily: 'El Messiri',
           ),
         ),
         children: [
@@ -221,7 +237,7 @@ class SupportScreen extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 13,
                 color: AppColors.secondaryText,
-                fontFamily: 'Cairo',
+                fontFamily: 'El Messiri',
                 height: 1.5,
               ),
             ),

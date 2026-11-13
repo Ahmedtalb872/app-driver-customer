@@ -46,7 +46,16 @@ class AdminDispatchRepository {
     int? estimatedDurationMinutes,
     double? distanceKm,
     String? customerNote,
-    int timeoutSeconds = 45,
+    int timeoutSeconds = 300,
+    // 'ride' | 'delivery' - see 20260802000048_admin_dispatch_delivery.sql.
+    // Only relevant when 'delivery': recipientName/recipientPhone are then
+    // required server-side and vehicleType is forced to 'motorcycle'
+    // regardless of what's passed above, mirroring
+    // customer_request_trip's own delivery branch.
+    String serviceType = 'ride',
+    String? recipientName,
+    String? recipientPhone,
+    String? packageDescription,
   }) async {
     // Customer registration is optional (20260718000040_guest_dispatch_trip.sql):
     // if `customerPhone` doesn't match any registered account, the RPC still
@@ -71,6 +80,10 @@ class AdminDispatchRepository {
         'p_distance_km': distanceKm,
         'p_customer_note': customerNote,
         'p_timeout_seconds': timeoutSeconds,
+        'p_service_type': serviceType,
+        'p_recipient_name': recipientName,
+        'p_recipient_phone': recipientPhone,
+        'p_package_description': packageDescription,
       },
     );
     return Map<String, dynamic>.from(row as Map);

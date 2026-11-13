@@ -95,7 +95,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
         const SnackBar(
           content: Text(
             'تم حفظ الإعدادات بنجاح',
-            style: TextStyle(fontFamily: 'Cairo'),
+            style: TextStyle(fontFamily: 'Tajawal'),
           ),
         ),
       );
@@ -158,7 +158,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   SwitchListTile(
                     title: const Text(
                       'وضع الصيانة',
-                      style: TextStyle(fontFamily: 'Cairo'),
+                      style: TextStyle(fontFamily: 'Tajawal'),
                     ),
                     value: _maintenanceMode,
                     onChanged: (v) => setState(() => _maintenanceMode = v),
@@ -166,7 +166,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   SwitchListTile(
                     title: const Text(
                       'إجبار التحديث',
-                      style: TextStyle(fontFamily: 'Cairo'),
+                      style: TextStyle(fontFamily: 'Tajawal'),
                     ),
                     value: _forceUpdate,
                     onChanged: (v) => setState(() => _forceUpdate = v),
@@ -174,7 +174,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   SwitchListTile(
                     title: const Text(
                       'تفعيل تسجيل الكباتن',
-                      style: TextStyle(fontFamily: 'Cairo'),
+                      style: TextStyle(fontFamily: 'Tajawal'),
                     ),
                     value: _captainRegistrationEnabled,
                     onChanged: (v) =>

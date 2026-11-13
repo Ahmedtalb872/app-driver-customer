@@ -97,7 +97,7 @@ class _CaptainPickerDialogState extends State<_CaptainPickerDialog> {
     return AlertDialog(
       title: const Text(
         'اختر كابتن للتعيين',
-        style: TextStyle(fontFamily: 'Cairo'),
+        style: TextStyle(fontFamily: 'Tajawal'),
       ),
       content: SizedBox(
         width: 380,
@@ -134,7 +134,7 @@ class _CaptainPickerDialogState extends State<_CaptainPickerDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(_error!, style: const TextStyle(fontFamily: 'Cairo')),
+            Text(_error!, style: const TextStyle(fontFamily: 'Tajawal')),
             const SizedBox(height: 8),
             ElevatedButton(
               onPressed: _load,
@@ -148,7 +148,7 @@ class _CaptainPickerDialogState extends State<_CaptainPickerDialog> {
       return const Center(
         child: Text(
           'لا يوجد كباتن متاحون للتعيين حالياً.',
-          style: TextStyle(fontFamily: 'Cairo'),
+          style: TextStyle(fontFamily: 'Tajawal'),
         ),
       );
     }
@@ -161,17 +161,17 @@ class _CaptainPickerDialogState extends State<_CaptainPickerDialog> {
         return ListTile(
           title: Text(
             captain.fullName,
-            style: const TextStyle(fontFamily: 'Cairo'),
+            style: const TextStyle(fontFamily: 'Tajawal'),
           ),
           subtitle: Text(
             '${captain.phone ?? '-'} • ${captain.vehicleType ?? '-'}',
-            style: const TextStyle(fontFamily: 'Cairo'),
+            style: const TextStyle(fontFamily: 'Tajawal'),
           ),
           trailing: isCurrent
               ? const Text(
                   'الكابتن الحالي',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                     color: AdminColors.textSecondary,
                     fontSize: 11,
                   ),

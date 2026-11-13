@@ -45,7 +45,7 @@ class AdminTopBar extends StatelessWidget implements PreferredSizeWidget {
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
                 color: AdminColors.textPrimary,
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -69,7 +69,7 @@ class AdminTopBar extends StatelessWidget implements PreferredSizeWidget {
                       : 'المسؤول',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                   ),
                 ),
               ),
@@ -80,7 +80,7 @@ class AdminTopBar extends StatelessWidget implements PreferredSizeWidget {
                   style: const TextStyle(
                     fontSize: 12,
                     color: AdminColors.textSecondary,
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                   ),
                 ),
               ),
@@ -98,7 +98,7 @@ class AdminTopBar extends StatelessWidget implements PreferredSizeWidget {
                     Text(
                       'تسجيل الخروج',
                       style: TextStyle(
-                        fontFamily: 'Cairo',
+                        fontFamily: 'Tajawal',
                         color: AdminColors.error,
                       ),
                     ),
@@ -106,9 +106,24 @@ class AdminTopBar extends StatelessWidget implements PreferredSizeWidget {
                 ),
               ),
             ],
-            child: CircleAvatar(
-              radius: 18,
-              backgroundColor: AdminColors.primary.withValues(alpha: 0.1),
+            child: Container(
+              width: 36,
+              height: 36,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AdminColors.primary.withValues(alpha: 0.35),
+                    AdminColors.secondary.withValues(alpha: 0.2),
+                  ],
+                ),
+                border: Border.all(
+                  color: AdminColors.primary.withValues(alpha: 0.4),
+                ),
+              ),
               child: Text(
                 (profile?.fullName.isNotEmpty == true
                     ? profile!.fullName[0]
@@ -116,7 +131,7 @@ class AdminTopBar extends StatelessWidget implements PreferredSizeWidget {
                 style: const TextStyle(
                   color: AdminColors.primary,
                   fontWeight: FontWeight.bold,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                 ),
               ),
             ),

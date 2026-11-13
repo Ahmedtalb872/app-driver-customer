@@ -37,7 +37,7 @@ class PaymentMethodsScreen extends StatelessWidget {
                     'الثابتة في تطبيق الهاتف. تفعيل/تعطيل مزوّد مباشرة من هنا '
                     'يتطلب جدول payment_methods في قاعدة البيانات، وهو غير '
                     'موجود بعد.',
-                    style: TextStyle(fontFamily: 'Cairo', fontSize: 13),
+                    style: TextStyle(fontFamily: 'Tajawal', fontSize: 13),
                   ),
                 ),
               ],
@@ -98,7 +98,7 @@ class _ProviderCard extends StatelessWidget {
                   child: Text(
                     provider.displayName,
                     style: const TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: 'Tajawal',
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
                     ),
@@ -116,7 +116,7 @@ class _ProviderCard extends StatelessWidget {
                   child: const Text(
                     'مُفعّل',
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: 'Tajawal',
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                       color: AdminColors.success,
@@ -129,7 +129,7 @@ class _ProviderCard extends StatelessWidget {
             Text(
               provider.legalName,
               style: const TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
                 fontSize: 12,
                 color: AdminColors.textSecondary,
               ),
@@ -137,12 +137,12 @@ class _ProviderCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               '${provider.accountLabel}: ${provider.merchantAccountNumber}',
-              style: const TextStyle(fontFamily: 'Cairo', fontSize: 12),
+              style: const TextStyle(fontFamily: 'Tajawal', fontSize: 12),
             ),
             Text(
               'معرّف التاجر: ${provider.merchantId}',
               style: const TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: 'Tajawal',
                 fontSize: 12,
                 color: AdminColors.textSecondary,
               ),

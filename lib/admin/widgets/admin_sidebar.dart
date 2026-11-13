@@ -22,9 +22,24 @@ const List<AdminSidebarItem> adminSidebarItems = [
     route: '/admin/dashboard',
   ),
   AdminSidebarItem(
-    label: 'الكباتن',
+    label: 'كباتن السيارات',
     icon: Icons.local_taxi_rounded,
     route: '/admin/captains',
+  ),
+  AdminSidebarItem(
+    label: 'كباتن الدراجات',
+    icon: Icons.two_wheeler_rounded,
+    route: '/admin/motorcycle-captains',
+  ),
+  AdminSidebarItem(
+    label: 'الزبناء',
+    icon: Icons.people_alt_rounded,
+    route: '/admin/customers',
+  ),
+  AdminSidebarItem(
+    label: 'حسابات الأعمال',
+    icon: Icons.storefront_rounded,
+    route: '/admin/business-accounts',
   ),
   AdminSidebarItem(
     label: 'الرحلات',
@@ -37,12 +52,22 @@ const List<AdminSidebarItem> adminSidebarItems = [
     route: '/admin/live-operations',
   ),
   AdminSidebarItem(
-    label: 'إرسال مشوار يدوي',
+    label: 'الدعم والشكاوى',
+    icon: Icons.support_agent_rounded,
+    route: '/admin/support',
+  ),
+  AdminSidebarItem(
+    label: 'إرسال طلب يدوي',
     icon: Icons.add_location_alt_rounded,
     route: '/admin/dispatch',
   ),
   AdminSidebarItem(
-    label: 'المحافظ والمالية',
+    label: 'التقارير المالية',
+    icon: Icons.assessment_rounded,
+    route: '/admin/finance/reports',
+  ),
+  AdminSidebarItem(
+    label: 'المحافظ',
     icon: Icons.account_balance_wallet_rounded,
     route: '/admin/finance/wallets',
   ),
@@ -55,6 +80,16 @@ const List<AdminSidebarItem> adminSidebarItems = [
     label: 'طلبات السحب',
     icon: Icons.outbond_rounded,
     route: '/admin/finance/withdrawal',
+  ),
+  AdminSidebarItem(
+    label: 'مراجعة الاشتراكات الشهرية',
+    icon: Icons.gpp_maybe_rounded,
+    route: '/admin/finance/subscription-disputes',
+  ),
+  AdminSidebarItem(
+    label: 'سلفلي',
+    icon: Icons.bolt_rounded,
+    route: '/admin/selefli',
   ),
   AdminSidebarItem(
     label: 'وسائل الدفع',
@@ -87,9 +122,9 @@ const List<AdminSidebarItem> adminSidebarItems = [
     route: '/admin/notifications',
   ),
   AdminSidebarItem(
-    label: 'الدعم والشكاوى',
-    icon: Icons.support_agent_rounded,
-    route: '/admin/support',
+    label: 'حملات SMS',
+    icon: Icons.sms_rounded,
+    route: '/admin/sms-campaigns',
   ),
   AdminSidebarItem(
     label: 'التقييمات',
@@ -128,8 +163,11 @@ class AdminSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AdminColors.sidebarBackground,
       width: collapsed ? 76 : 260,
+      decoration: const BoxDecoration(
+        color: AdminColors.sidebarBackground,
+        border: Border(left: BorderSide(color: AdminColors.border)),
+      ),
       child: Column(
         children: [
           const SizedBox(height: 20),
@@ -138,25 +176,30 @@ class AdminSidebar extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
+                SizedBox(
+                  width: 40,
+                  height: 40,
+                  // BoxFit.cover inside a circular clip cropped most of the
+                  // logo's artwork away - contain always shows the full
+                  // mark (same fix as the customer app's login screens).
                   child: Image.asset(
-                    'assets/images/al-houdhoud-logo.png',
-                    width: 40,
-                    height: 40,
-                    fit: BoxFit.cover,
+                    'assets/images/trende-logo-mark.png',
+                    fit: BoxFit.contain,
                   ),
                 ),
                 if (!collapsed) ...[
                   const SizedBox(width: 10),
                   const Expanded(
                     child: Text(
-                      'الهدهد',
+                      'TRENDE',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AdminColors.textPrimary,
                         fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        fontFamily: 'Cairo',
+                        fontSize: 16,
+                        letterSpacing: 0.5,
+                        fontFamily: 'Tajawal',
                       ),
                     ),
                   ),
@@ -164,7 +207,9 @@ class AdminSidebar extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: AdminColors.border),
+          const SizedBox(height: 8),
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(vertical: 4),
@@ -208,17 +253,26 @@ class _SidebarTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = Container(
+    final content = AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       decoration: BoxDecoration(
         color: selected ? AdminColors.sidebarSelected : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
+        border: Border(
+          left: BorderSide(
+            color: selected ? AdminColors.primary : Colors.transparent,
+            width: 3,
+          ),
+        ),
       ),
       child: ListTile(
         dense: true,
         leading: Icon(
           item.icon,
-          color: selected ? AdminColors.accentLight : Colors.white70,
+          color: selected
+              ? AdminColors.sidebarSelectedText
+              : AdminColors.sidebarText,
           size: 20,
         ),
         title: collapsed
@@ -228,10 +282,12 @@ class _SidebarTile extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: selected ? Colors.white : Colors.white70,
+                  color: selected
+                      ? AdminColors.sidebarSelectedText
+                      : AdminColors.sidebarText,
                   fontWeight: selected ? FontWeight.bold : FontWeight.normal,
                   fontSize: 13,
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                 ),
               ),
         onTap: onTap,

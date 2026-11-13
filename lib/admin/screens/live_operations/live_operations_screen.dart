@@ -6,16 +6,18 @@ import '../../core/admin_colors.dart';
 import '../../models/captain_admin_view.dart';
 import '../../repositories/admin_captains_repository.dart';
 import '../../repositories/admin_trips_repository.dart';
+import '../../widgets/copyable_phone.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/status_badge.dart';
 import '../trips/trip_detail_panel.dart';
+import 'captains_map_view.dart';
 
 /// Live monitoring view: currently active trips and online captains, backed
 /// by Supabase Realtime (see `AdminTripsRepository.watchActiveTrips` /
-/// `AdminCaptainsRepository.watchOnlineCaptains`) instead of polling. Built
-/// entirely on the existing `trips`/`captains` tables - no new schema.
-/// There is no live captain-location column yet, so this is a live *list*
-/// view rather than a live map.
+/// `AdminCaptainsRepository.watchOnlineCaptains`/`watchCaptainLocations`)
+/// instead of polling. Built entirely on existing tables - no new schema;
+/// `captain_locations` was already being kept fresh by the captain app and
+/// already readable by an admin session, just never rendered as a map here.
 class LiveOperationsScreen extends StatefulWidget {
   const LiveOperationsScreen({super.key});
 
@@ -36,11 +38,14 @@ class _LiveOperationsScreenState extends State<LiveOperationsScreen> {
 
   StreamSubscription<List<Map<String, dynamic>>>? _tripsSub;
   StreamSubscription<List<CaptainAdminView>>? _captainsSub;
+  StreamSubscription<Map<String, CaptainLocation>>? _locationsSub;
   bool _loading = true;
   String? _error;
   List<Map<String, dynamic>> _activeTrips = [];
   List<CaptainAdminView> _onlineCaptains = [];
+  Map<String, CaptainLocation> _captainLocations = {};
   DateTime? _lastUpdated;
+  bool _showCaptainsMap = false;
 
   @override
   void initState() {
@@ -72,12 +77,19 @@ class _LiveOperationsScreenState extends State<LiveOperationsScreen> {
         _lastUpdated = DateTime.now();
       });
     });
+    _locationsSub = _captainsRepository.watchCaptainLocations().listen((
+      locations,
+    ) {
+      if (!mounted) return;
+      setState(() => _captainLocations = locations);
+    });
   }
 
   @override
   void dispose() {
     _tripsSub?.cancel();
     _captainsSub?.cancel();
+    _locationsSub?.cancel();
     super.dispose();
   }
 
@@ -122,7 +134,7 @@ class _LiveOperationsScreenState extends State<LiveOperationsScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(_error!, style: const TextStyle(fontFamily: 'Cairo')),
+            Text(_error!, style: const TextStyle(fontFamily: 'Tajawal')),
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: _manualRefresh,
@@ -157,7 +169,7 @@ class _LiveOperationsScreenState extends State<LiveOperationsScreen> {
               const Text(
                 'مباشر - تحديث فوري عبر Supabase Realtime',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Tajawal',
                   fontSize: 12,
                   color: AdminColors.textSecondary,
                 ),
@@ -167,7 +179,7 @@ class _LiveOperationsScreenState extends State<LiveOperationsScreen> {
                 Text(
                   'آخر تحديث: ${_lastUpdated!.hour.toString().padLeft(2, '0')}:${_lastUpdated!.minute.toString().padLeft(2, '0')}:${_lastUpdated!.second.toString().padLeft(2, '0')}',
                   style: const TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Tajawal',
                     fontSize: 12,
                     color: AdminColors.textSecondary,
                   ),
@@ -229,7 +241,7 @@ class _LiveOperationsScreenState extends State<LiveOperationsScreen> {
           const Text(
             'الرحلات النشطة الآن',
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: 'Tajawal',
               fontSize: 16,
               fontWeight: FontWeight.bold,
               color: AdminColors.textPrimary,
@@ -238,17 +250,44 @@ class _LiveOperationsScreenState extends State<LiveOperationsScreen> {
           const SizedBox(height: 12),
           _buildActiveTripsTable(),
           const SizedBox(height: 24),
-          const Text(
-            'الكباتن المتصلون الآن',
-            style: TextStyle(
-              fontFamily: 'Cairo',
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AdminColors.textPrimary,
-            ),
+          Row(
+            children: [
+              const Text(
+                'الكباتن المتصلون الآن',
+                style: TextStyle(
+                  fontFamily: 'Tajawal',
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AdminColors.textPrimary,
+                ),
+              ),
+              const Spacer(),
+              SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(
+                    value: false,
+                    label: Text('قائمة', style: TextStyle(fontFamily: 'Tajawal')),
+                    icon: Icon(Icons.list_rounded),
+                  ),
+                  ButtonSegment(
+                    value: true,
+                    label: Text('خريطة', style: TextStyle(fontFamily: 'Tajawal')),
+                    icon: Icon(Icons.map_rounded),
+                  ),
+                ],
+                selected: {_showCaptainsMap},
+                onSelectionChanged: (selection) =>
+                    setState(() => _showCaptainsMap = selection.first),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          _buildOnlineCaptainsList(),
+          _showCaptainsMap
+              ? CaptainsMapView(
+                  captains: _onlineCaptains,
+                  locations: _captainLocations,
+                )
+              : _buildOnlineCaptainsList(),
         ],
       ),
     );
@@ -273,7 +312,7 @@ class _LiveOperationsScreenState extends State<LiveOperationsScreen> {
           child: Center(
             child: Text(
               'لا توجد رحلات نشطة حالياً.',
-              style: TextStyle(fontFamily: 'Cairo'),
+              style: TextStyle(fontFamily: 'Tajawal'),
             ),
           ),
         ),
@@ -345,7 +384,7 @@ class _LiveOperationsScreenState extends State<LiveOperationsScreen> {
           child: Center(
             child: Text(
               'لا يوجد كباتن متصلون حالياً.',
-              style: TextStyle(fontFamily: 'Cairo'),
+              style: TextStyle(fontFamily: 'Tajawal'),
             ),
           ),
         ),
@@ -366,7 +405,7 @@ class _LiveOperationsScreenState extends State<LiveOperationsScreen> {
             return DataRow(
               cells: [
                 DataCell(Text(captain.fullName)),
-                DataCell(Text(captain.phone ?? '-')),
+                DataCell(CopyablePhone(captain.phone)),
                 DataCell(Text(captain.vehicleType ?? '-')),
                 DataCell(StatusBadge.success('متصل')),
               ],

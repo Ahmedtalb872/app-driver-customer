@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  static const Color primary = Color(0xFF0B8F87);
-  static const Color primaryDark = Color(0xFF086B65);
-  static const Color secondary = Color(0xFF14B8A6);
-  static const Color accent = Color(0xFFF59E0B);
-  static const Color background = Color(0xFFF8FAFC);
+  // Brand palette - matches the TRENDE logo's green (#006D36, same value
+  // as the splash screen's brand text, the launcher icon theme_color, and
+  // web/manifest.json). Previously left as the old Al Hodhod teal/gold
+  // during the rebrand's first pass (logo/text only) - every screen using
+  // these still showed the old colors until this changed.
+  static const Color primary = Color(0xFF006D36);
+  static const Color primaryDark = Color(0xFF004F27);
+  static const Color secondary = Color(0xFF00A651);
+  static const Color accent = Color(0xFF1A1A1A);
+  static const Color background = Color(0xFFEBEEF2);
   static const Color surface = Color(0xFFFFFFFF);
 
   static const Color darkText = Color(0xFF0F172A);
